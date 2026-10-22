@@ -19,6 +19,18 @@
   a:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,0,0,0.45); }
   .tag { margin-top: 26px; color: #555; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; }
 </style>
+<script>
+  // sk404Redirect: rotas do app que escapam pra raiz do dominio (o SPA chama goto("/login"))
+  // voltam sozinhas pro espelho em /skynetchat/
+  (function() {
+    var ROTAS = ["", "about", "affiliate-panel", "afiliado", "checkout", "dev", "dev-panel", "indique-ganhe", "login", "monetize", "novo", "politicos", "recovery", "sign-up", "termos", "v3", "voz", "perfil", "dev-api"];
+    var p = location.pathname.replace(/\/$/, "").replace(/^\//, "");
+    if (p.indexOf("skynetchat") === 0) return; // ja esta no espelho: 404 real
+    var rota = p.split("/")[0];
+    if (ROTAS.indexOf(rota) === -1) return;  // nao e rota conhecida: mostra 404
+    location.replace("/skynetchat/" + (rota ? rota + "/" : "") + location.search + location.hash);
+  })();
+</script>
 </head>
 <body>
   <div class="box">
