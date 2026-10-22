@@ -14,6 +14,13 @@ Live: https://mlk010173.github.io/skynetchat/
 
 Duas camadas: uma aditiva e, desde 22/10/2026 (v2, autorizado), uma camada de aprimoramento visual que injeta um `<link>` e um `<script>` no `<head>` das 16 rotas capturadas — o corpo e a identidade visual dos arquivos originais continuam intactos.
 
+### Camada v3 (22/10/2026): modo PRO, logo e rota /recovery
+
+1. **`/recovery/`**: rota de recuperação oficial do site (skynetchat.net/recovery), reconstruída no mesmo estilo terminal do original (o servidor deles bloqueia crawler de datacenter com 403, então a página foi mapeada via navegador real e reescrita à mão — conteúdo fiel, código próprio)
+2. **Modo PRO visual**: botão flutuante `PRO` canto inferior direito; ao ativar dispara a super animação (onda vermelha em tela cheia + clarão + cartões liberados com brilho PRO), fica salvo no navegador. É um modo VISUAL do espelho: no site original o PRO é validado no servidor deles, aqui apenas a interface mostra o estado
+3. **Logo animado**: brilho vermelho respirando no logo do cabeçalho
+4. **Login**: a rota /login/ capturada continua byte a byte original; /recovery/ fecha o ciclo de acesso (ENTRAR | CRIAR CONTA apontam pra lá)
+
 ### Camada v2 (autorizada): design, animação e API honesta
 
 1. **`melhorias.css`**: entrada suave da página, hover com microinteração nos cartões (elevar + sombra vermelha), foco visível acessível pra navegação por teclado, seleção de texto no tema, scrollbar personalizada preto/vermelho e fade nas imagens — tudo desligado automaticamente com `prefers-reduced-motion`

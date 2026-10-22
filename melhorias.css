@@ -53,3 +53,40 @@ img { transition: opacity .3s ease; }
   body { animation: none; }
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* ===== v3: logo animado + modo PRO ===== */
+/* logo: brilho vermelho respirando */
+.sk-logo { animation: sk-logo-brilho 3.2s ease-in-out infinite; border-radius: 8px; }
+@keyframes sk-logo-brilho {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255,42,42,.25)); }
+  50% { filter: drop-shadow(0 0 14px rgba(255,42,42,.85)); }
+}
+/* botão flutuante do modo PRO */
+#sk-pro-btn { position: fixed; right: 18px; bottom: 18px; z-index: 99998; cursor: pointer; border: none;
+  background: linear-gradient(135deg, #ff2a2a, #8b0000); color: #fff; border-radius: 999px; padding: 11px 22px;
+  font: 700 12px/1 ui-monospace, Consolas, monospace; letter-spacing: .22em;
+  box-shadow: 0 6px 22px rgba(255,42,42,.45); transition: transform .18s, box-shadow .2s; }
+#sk-pro-btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 10px 30px rgba(255,42,42,.6); }
+#sk-pro-btn.ativo { background: linear-gradient(135deg, #1d1d1d, #0d0d0d); border: 1px solid rgba(255,42,42,.6);
+  box-shadow: 0 6px 22px rgba(255,42,42,.25); }
+/* SUPER animação de transição pro modo PRO */
+#sk-super { position: fixed; inset: 0; z-index: 99997; pointer-events: none; opacity: 0; }
+#sk-super .onda { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,42,42,.55), transparent 70%);
+  width: 120px; height: 120px; left: 50%; bottom: 40px; transform: translate(-50%, 50%) scale(0); }
+#sk-super.dispara .onda { animation: sk-onda 1s cubic-bezier(.22,.9,.3,1) forwards; }
+@keyframes sk-onda { to { transform: translate(-50%, 50%) scale(28); } }
+#sk-super .clarao { position: absolute; inset: 0; background: radial-gradient(circle at 85% 90%, rgba(255,42,42,.28), transparent 55%); opacity: 0; }
+#sk-super.dispara .clarao { animation: sk-clarao 1.1s ease-out forwards; }
+@keyframes sk-clarao { 15% { opacity: 1 } 100% { opacity: 0 } }
+/* estado PRO: cartões e badges liberados com brilho */
+body.sk-pro [class*="card"], body.sk-pro [class*="Card"] {
+  border-color: rgba(255,42,42,.5) !important;
+  box-shadow: 0 0 0 1px rgba(255,42,42,.22), 0 10px 34px rgba(255,42,42,.16) !important;
+  animation: sk-unlock .55s ease-out both;
+}
+@keyframes sk-unlock { from { transform: scale(.97); filter: brightness(1.6) } to { transform: none; filter: none } }
+body.sk-pro #sk-pro-btn::after { content: ""; }
+/* texto PRO ganha brilho vivo */
+body.sk-pro *:not(#sk-super) { }
+.sk-pro-brilho { animation: sk-badge-vivo 2.6s ease-in-out infinite; }
+@keyframes sk-badge-vivo { 0%,100% { text-shadow: 0 0 4px rgba(255,42,42,.4) } 50% { text-shadow: 0 0 16px rgba(255,42,42,.95) } }

@@ -1,266 +1,66 @@
-<!doctype html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<script id="skynet-document-lifecycle" nonce="QQS2kKp9oIrwPsStL1owrQ==">
-			// Reload can begin while the chat's JavaScript chunk is still loading.
-			window.__skynetDocumentLeaving = false;
-			const markDocumentLeaving = () => { window.__skynetDocumentLeaving = true; };
-			window.addEventListener('beforeunload', markDocumentLeaving);
-			window.addEventListener('pagehide', markDocumentLeaving);
-			window.addEventListener('pageshow', event => {
-				if (event.persisted) window.__skynetDocumentLeaving = false;
-			});
-		</script>
-		<link rel="icon" type="image/png" href="./favicon-32-v2.png" sizes="32x32" />
-		<link rel="icon" type="image/png" href="./favicon-96-v2.png" sizes="96x96" />
-		<link rel="apple-touch-icon" href="./apple-touch-icon-v2.png" sizes="180x180" />
-		<link rel="manifest" href="./manifest-v2.json" />
-		<meta name="mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-		<meta name="apple-mobile-web-app-title" content="SKYNETchat" />
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wdth,wght@95,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-		<meta
-  name="viewport"
-  content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
-/>
-		<meta name="color-scheme" content="dark" />
-		<meta name="theme-color" content="#070000" />
-		<script>
-			// Informa o tema ao Safari antes da primeira pintura da interface do navegador.
-			(function() {
-				var theme = localStorage.getItem('skynet-theme-bg');
-				var isWhite = theme === 'white';
-				var background = isWhite ? '#ffffff' : theme === 'black' ? '#000000' : '#070000';
-				var scheme = isWhite ? 'light' : 'dark';
-				document.documentElement.style.background = background;
-				document.documentElement.style.colorScheme = scheme;
-				document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background);
-				document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
-				document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
-					?.setAttribute('content', isWhite ? 'default' : 'black-translucent');
-			})();
-		</script>
-		<style>
-		  html, body { height: 100%; }
-		  html { background:#0a0a0a; }
-		  body {
-		    margin: 0;
-		    background: #0a0a0a;
-		    background-image: linear-gradient(
-  180deg,
-  #A11111 0%,
-  #751414 10%,
-  #3C0909 31%,
-  #330808 39%,
-  #2E0707 46%,
-  #290606 60%,
-  #260505 67%,
-  #230505 73%,
-  #210404 83%,
-  #1F0404 83%,
-  #1B0303 92%
-);
-
-		    background-attachment: fixed;
-		    color: #fff;
-		    -webkit-font-smoothing: antialiased;
-		    -moz-osx-font-smoothing: grayscale;
-		    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-		  }
-		</style>
-		<!-- Meta Pixel Code -->
-		<script>
-		!function(f,b,e,v,n,t,s)
-		{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-		n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-		if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-		n.queue=[];t=b.createElement(e);t.async=!0;
-		t.src=v;s=b.getElementsByTagName(e)[0];
-		s.parentNode.insertBefore(t,s)}(window, document,'script',
-		'https://connect.facebook.net/en_US/fbevents.js');
-		fbq('init', '1615978922937762');
-		fbq('track', 'PageView');
-		</script>
-		<noscript><img height="1" width="1" style="display:none"
-		src="https://www.facebook.com/tr?id=1615978922937762&ev=PageView&noscript=1"/></noscript>
-		<!-- End Meta Pixel Code -->
-		
-		<link href="./_app/immutable/assets/0.NDTWPgt7.css" rel="stylesheet">
-		<link href="./_app/immutable/assets/Turnstile.Dnhv9yFl.css" rel="stylesheet">
-		<link href="./_app/immutable/assets/17.CED-STYh.css" rel="stylesheet"><!--[--><link rel="icon" type="image/png" href="./favicon-96-v2.png" sizes="96x96"/> <meta name="description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta name="robots" content="index,follow"/> <meta property="og:title" content="SKYNETchat — Chat de IA em português"/> <meta property="og:description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta property="og:type" content="website"/> <link rel="canonical" href="https://skynetchat.net/"/><!--]--><title>SKYNETchat — Chat de IA em português</title>
-	<!-- melhorias sitejack v2 -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Recuperação — SKYNETchat</title>
+<meta name="description" content="Recuperação de acesso do SKYNETchat.">
+<link rel="icon" type="image/png" href="../favicon-32-v2.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon-v2.png">
+<!-- melhorias sitejack v2 -->
 <link rel="stylesheet" href="../melhorias.css">
-<script defer src="../melhorias.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --sk-acento: #ff2a2a; }
+  body { min-height: 100vh; background: #0a0a0a; color: #fff; display: grid; place-items: center; padding: 24px;
+         font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .topo { position: fixed; top: 18px; left: 22px; font: 700 12px/1 ui-monospace, Consolas, monospace;
+          letter-spacing: .28em; color: #888; }
+  .topo b { color: var(--sk-acento); }
+  .topo .on { color: #ff5a5a; animation: sk-pulsa 2.2s infinite; }
+  @keyframes sk-pulsa { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
+  .slogan { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font: 600 9.5px/1.7 ui-monospace, monospace;
+            letter-spacing: .18em; color: #4a4a4a; padding: 0 20px; }
+  .caixa { width: min(460px, 100%); border: 1px solid #262626; border-radius: 14px; padding: 34px 30px;
+           background: linear-gradient(180deg, #101010, #0c0c0c); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .rotulo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .rotulo .term { font: 800 15px/1 ui-monospace, Consolas, monospace; color: var(--sk-acento); letter-spacing: .06em; }
+  .rotulo .seg { font: 700 9px/1 ui-monospace, monospace; letter-spacing: .3em; color: #666;
+                 border: 1px solid #333; padding: 4px 8px; border-radius: 4px; }
+  h1 { font: 800 20px/1.2 Inter, sans-serif; letter-spacing: .1em; margin-bottom: 10px; }
+  p.desc { color: #999; font-size: 13.5px; line-height: 1.7; margin-bottom: 26px; }
+  form label { display: block; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .22em; color: #777; margin-bottom: 8px; }
+  form input[type="email"] { width: 100%; background: #161616; border: 1px solid #2c2c2c; border-radius: 8px;
+    padding: 14px 15px; color: #fff; font: 500 14px Inter, sans-serif; outline: none; transition: border-color .2s, box-shadow .2s; }
+  form input[type="email"]:focus { border-color: var(--sk-acento); box-shadow: 0 0 0 3px rgba(255,42,42,.18); }
+  .btn { margin-top: 18px; width: 100%; background: linear-gradient(135deg, #ff2a2a, #c40000); border: none; border-radius: 8px;
+    padding: 14px; color: #fff; font: 700 12px/1 ui-monospace, monospace; letter-spacing: .24em; cursor: pointer;
+    transition: transform .15s, box-shadow .2s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,42,42,.4); }
+  .suporte { margin-top: 20px; text-align: center; font-size: 12.5px; color: #888; }
+  .suporte a, .rodape a { color: #bbb; text-decoration: none; transition: color .15s; }
+  .suporte a:hover, .rodape a:hover { color: var(--sk-acento); }
+  .rodape { margin-top: 24px; padding-top: 18px; border-top: 1px solid #222; display: flex; justify-content: center; gap: 14px;
+    font: 600 10.5px/1 ui-monospace, monospace; letter-spacing: .18em; }
+  .rodape span { color: #333; }
+</style>
 </head>
-	<body data-sveltekit-preload-data="hover">
-		<script>
-			// Aplica tema imediatamente para evitar flash de cor errada
-			(function() {
-				var theme = localStorage.getItem('skynet-theme-bg');
-				var themeColor = document.querySelector('meta[name="theme-color"]');
-				if (theme === 'white') {
-					document.body.classList.add('theme-white');
-					document.body.style.background = '#ffffff';
-					document.body.style.colorScheme = 'light';
-					document.documentElement.style.background = '#ffffff';
-					if (themeColor) themeColor.setAttribute('content', '#ffffff');
-				} else if (theme === 'black') {
-					document.body.classList.add('theme-black');
-					document.body.style.background = '#000000';
-					document.body.style.colorScheme = 'dark';
-					document.documentElement.style.background = '#000000';
-					if (themeColor) themeColor.setAttribute('content', '#000000');
-				} else if (theme === 'red' || theme === 'dark' || theme === 'classic') {
-					// Legacy themes → treat as red
-					document.body.classList.add('theme-red');
-					document.body.style.background = '#070000';
-					document.body.style.colorScheme = 'dark';
-					document.documentElement.style.background = '#070000';
-					if (themeColor) themeColor.setAttribute('content', '#070000');
-					localStorage.setItem('skynet-theme-bg', 'red');
-				} else {
-					document.body.classList.add('theme-black');
-					document.body.style.background = '#000000';
-					document.body.style.colorScheme = 'dark';
-					document.documentElement.style.background = '#000000';
-					if (themeColor) themeColor.setAttribute('content', '#000000');
-				}
-			})();
-		</script>
-		<div style="display: contents"><!--[--><!--[--><!----><!----><section class="wrap svelte-8d8h36"><div class="content svelte-8d8h36"><div class="header-fixed svelte-8d8h36"><div class="logo svelte-8d8h36"><img src="/logov2.jpeg" alt="S" class="logo-badge svelte-8d8h36"/> <span class="logo-text svelte-8d8h36">SKYNET<span class="logo-accent svelte-8d8h36">CHAT</span></span></div> <span class="online-badge svelte-8d8h36"><span class="online-dot svelte-8d8h36"></span> ONLINE</span></div> <p class="slogan svelte-8d8h36">O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.</p> <!--[!--><form class="card svelte-8d8h36"><div class="card-bar svelte-8d8h36"><span class="card-bar-left svelte-8d8h36"><span class="prompt svelte-8d8h36">>_</span> RECUPERAÇÃO</span> <span class="card-bar-right svelte-8d8h36"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-8d8h36"><path d="M5 12.55a11 11 0 0 1 14.08 0" class="svelte-8d8h36"></path><path d="M1.42 9a16 16 0 0 1 21.16 0" class="svelte-8d8h36"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0" class="svelte-8d8h36"></path><line x1="12" y1="20" x2="12.01" y2="20" class="svelte-8d8h36"></line></svg> SECURE</span></div> <div class="card-divider svelte-8d8h36"></div> <p class="description svelte-8d8h36">Digite o email de recuperação cadastrado na sua conta para receber seu código de acesso.</p> <!--[!--><!--]--> <div class="input-label svelte-8d8h36"><span class="svelte-8d8h36">EMAIL DE RECUPERAÇÃO</span></div> <div class="input-wrap svelte-8d8h36"><input name="email" type="email" placeholder="seu@email.com" required class="input svelte-8d8h36" value="" aria-invalid="false"/></div> <div class="turnstile-container svelte-uyhs9n"></div><!----> <button class="primary svelte-8d8h36" type="submit" disabled><!--[!-->ENVIAR CÓDIGO <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svelte-8d8h36"><path d="M5 12h14" class="svelte-8d8h36"></path><path d="m12 5 7 7-7 7" class="svelte-8d8h36"></path></svg><!--]--></button> <div class="card-divider svelte-8d8h36" style="margin: 16px 0;"></div> <p class="hint svelte-8d8h36">Não tem email de recuperação? <a href="https://api.whatsapp.com/send?phone=5516989139823&amp;text=Ol%C3%A1%2C%20quero%20recuperar%20a%20minha%20conta%20veja%20o%20comprovante%20de%20pagamento%3A" target="_blank" rel="noopener noreferrer" class="hint-link svelte-8d8h36">Falar com o suporte</a></p></form><!--]--> <div class="links svelte-8d8h36"><a href="/login" class="svelte-8d8h36">ENTRAR</a> <span class="link-sep svelte-8d8h36">|</span> <a href="/sign-up" class="svelte-8d8h36">CRIAR CONTA</a></div></div></section><!----><!----><!----><!--]--> <!--[!--><!--]--><!--]-->
-			
-			<script>
-				{
-					__sveltekit_1odvw0s = {
-						base: new URL(".", location).pathname.slice(0, -1)
-					};
-
-					const element = document.currentScript.parentElement;
-
-					Promise.all([
-						import("./_app/immutable/entry/start.Cse-qIs5.js"),
-						import("./_app/immutable/entry/app.CqRrFIv5.js")
-					]).then(([kit, app]) => {
-						kit.start(app, element, {
-							node_ids: [0, 17],
-							data: [{type:"data",data:{analyticsEnabled:true},uses:{}},null],
-							form: null,
-							error: null
-						});
-					});
-				}
-			</script>
-		</div>
-		<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js" defer></script>
-		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-		<script>
-			// Desregistra service workers existentes (não precisamos de offline)
-			if ('serviceWorker' in navigator) {
-				navigator.serviceWorker.getRegistrations().then(regs => {
-					regs.forEach(reg => reg.unregister());
-				});
-				// Limpa caches do service worker
-				if ('caches' in window) {
-					caches.keys().then(keys => {
-						keys.forEach(key => caches.delete(key));
-					});
-				}
-			}
-
-			// Auto-reload em caso de chunk 404 durante deploy (com proteção anti-loop)
-			const RELOAD_KEY = 'chunk-reload-count';
-			const MAX_RELOADS = 2;
-			const RELOAD_WINDOW = 30000; // 30 segundos
-
-			function canReload() {
-				const data = sessionStorage.getItem(RELOAD_KEY);
-				if (!data) return true;
-
-				const { count, firstAttempt } = JSON.parse(data);
-				const elapsed = Date.now() - firstAttempt;
-
-				// Reset contador após 30 segundos
-				if (elapsed > RELOAD_WINDOW) {
-					sessionStorage.removeItem(RELOAD_KEY);
-					return true;
-				}
-
-				// Permite até 2 reloads em 30 segundos
-				return count < MAX_RELOADS;
-			}
-
-			async function handleChunkError() {
-				if (canReload()) {
-					const data = sessionStorage.getItem(RELOAD_KEY);
-					const count = data ? JSON.parse(data).count + 1 : 1;
-					const firstAttempt = data ? JSON.parse(data).firstAttempt : Date.now();
-
-					sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ count, firstAttempt }));
-
-					// LIMPAR TODO O CACHE antes de recarregar
-					try {
-						// 1. Desregistrar service workers
-						if ('serviceWorker' in navigator) {
-							const registrations = await navigator.serviceWorker.getRegistrations();
-							await Promise.all(registrations.map(reg => reg.unregister()));
-						}
-
-						// 2. Limpar todos os caches
-						if ('caches' in window) {
-							const cacheNames = await caches.keys();
-							await Promise.all(cacheNames.map(name => caches.delete(name)));
-						}
-					} catch (e) {
-						console.error('❌ Erro ao limpar cache:', e);
-					}
-
-					// 3. Hard reload com delay maior para PM2 estabilizar
-					// Primeira tentativa: 2s de delay
-					// Segunda tentativa: 5s de delay (PM2 reload pode demorar)
-					const delay = count === 1 ? 2000 : 5000;
-
-					setTimeout(() => {
-						// CRITICAL: Forçar bypass TOTAL do cache HTTP disk
-						// Adicionar timestamp único força navegador a ignorar cache disk
-						const url = new URL(window.location.href);
-						// Remove query params antigos de reload
-						url.searchParams.delete('_r');
-						// Adiciona novo timestamp único
-						url.searchParams.set('_r', Date.now() + '_' + Math.random().toString(36).slice(2));
-
-						// location.replace não mantém histórico e força hard reload
-						window.location.replace(url.href);
-					}, delay);
-				} else {
-					console.error('❌ Muitos erros de chunk. Recarregue manualmente a página.');
-					// Mostra mensagem ao usuário
-					document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:10px;">🔄 Atualização em andamento</h1><p style="opacity:0.7;">Por favor, recarregue a página manualmente (Ctrl+Shift+R ou Cmd+Shift+R)</p><button onclick="location.reload(true)" style="margin-top:20px;padding:12px 24px;background:#C41E3A;border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:16px;">Recarregar agora</button></div></div>';
-				}
-			}
-
-			window.addEventListener('error', (event) => {
-				if (event.message &&
-					(event.message.includes('Failed to fetch dynamically imported module') ||
-					 event.message.includes('/_app/immutable/'))) {
-					handleChunkError();
-				}
-			}, true);
-
-			window.addEventListener('unhandledrejection', (event) => {
-				if (event.reason?.message &&
-					(event.reason.message.includes('Failed to fetch dynamically imported module') ||
-					 event.reason.message.includes('/_app/immutable/'))) {
-					handleChunkError();
-				}
-			});
-		</script>
-		<!-- Cloudflare Web Analytics -->
-		<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "e98500a2053c4a69acc7587cd93be2ee"}'></script>
-		<!-- End Cloudflare Web Analytics -->
-	<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"fc889f8190224c01b90a6ac2a44ea5fa","r":1,"spa":2}' crossorigin="anonymous"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e5ac4a0eac61d2',t:'MTc5MjY0MjQ0Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-	</html>
+<body>
+  <div class="topo"><b>SKYNET</b>CHAT <span class="on">ONLINE</span></div>
+  <main class="caixa">
+    <div class="rotulo"><span class="term">&gt;_ RECUPERAÇÃO</span><span class="seg">SECURE</span></div>
+    <h1>Recuperar acesso</h1>
+    <p class="desc">Digite o email de recuperação cadastrado na sua conta para receber seu código de acesso.</p>
+    <form onsubmit="return false">
+      <label for="email">EMAIL DE RECUPERAÇÃO</label>
+      <input id="email" type="email" placeholder="voce@email.com" autocomplete="email">
+      <button class="btn" type="submit">ENVIAR CÓDIGO</button>
+    </form>
+    <p class="suporte">Não tem email de recuperação? <a href="../about/">Falar com o suporte</a></p>
+    <nav class="rodape"><a href="../login/">ENTRAR</a><span>|</span><a href="../login/">CRIAR CONTA</a></nav>
+  </main>
+  <p class="slogan">O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.</p>
+  <script defer src="../melhorias.js"></script>
+</body>
+</html>
