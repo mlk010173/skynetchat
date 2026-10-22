@@ -4,6 +4,16 @@
 (() => {
   if (window.__skMelhorias) return; window.__skMelhorias = true;
 
+  /* --- autolimpeza: mata qualquer service worker antigo preso no navegador --- */
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(rs => {
+      rs.forEach(r => r.unregister().then(() => console.log("[sk] service worker antigo removido")));
+    }).catch(() => {});
+  }
+  if (window.caches) {
+    caches.keys().then(ks => ks.forEach(k => caches.delete(k))).catch(() => {});
+  }
+
   /* --- toast (usado por todas as secoes) --- */
   let ultimoAviso = 0;
   function toast(msg) {
