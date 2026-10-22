@@ -18,6 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Sintaxe dos arquivos JS da camada
+        run: for f in melhorias.js $(find . -name "*.js" -path "./dev-api/*"); do node --check "$f"; done
       - name: Verificar integridade SHA-1 de todos os arquivos
         run: |
           python3 - << 'PY'
