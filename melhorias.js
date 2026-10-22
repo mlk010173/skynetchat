@@ -17,7 +17,7 @@
   new MutationObserver(() => skOverlay()).observe(document.body, { childList: true, subtree: true });
 
   /* --- rotas internas absolutas viram caminho do espelho (evita 404 na raiz do dominio) --- */
-  const skRota = location.pathname.replace(/\/$/, "");
+  const skRota = "/" + location.pathname.split("/")[1]; // raiz do espelho, ex. /skynetchat
   document.addEventListener("click", e => {
     const a = e.target.closest("a"); if (!a) return;
     const h = a.getAttribute("href");
