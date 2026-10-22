@@ -21,7 +21,14 @@
   document.addEventListener("click", e => {
     const a = e.target.closest("a"); if (!a) return;
     const h = a.getAttribute("href");
-    if (!h || !h.startsWith("/") || h.startsWith("//") || h.startsWith("/api/")) return;
+    if (!h) return;
+    if (h.startsWith("//") || h.startsWith("/api/")) return;
+    if (!h.startsWith("/")) {
+      if (!/^[a-z0-9-]+$/i.test(h.split("?")[0])) return;
+      if (!location.pathname.startsWith(skRota)) return;
+      a.setAttribute("href", skRota + "/" + h);
+      return;
+    }
     try {
       const alvo = new URL(h, location.origin);
       if (alvo.origin !== location.origin) return;
