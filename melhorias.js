@@ -99,7 +99,7 @@
     + '<button class="sk-opt" data-sk-v="eleven">ElevenLabs<small>/api/tts-eleven</small></button></div>'
     + '<div class="sk-m-t">EXTRAS</div>'
     + '<button class="sk-opt sk-full" id="sk-m-pro">LIBERAR MODO PRO</button>'
-    + '<a class="sk-opt sk-full" href="/dev-api/" style="text-decoration:none;display:block;text-align:center">MAPA DE API <small>80 endpoints dev/admin</small></a>'
+    + '<a class="sk-opt sk-full" href="/dev-api/" style="text-decoration:none;display:block;text-align:center">MAPA DE API <small>todos os endpoints dev/admin extraídos</small></a>'
     + '</div>';
   document.body.appendChild(wrap);
 
