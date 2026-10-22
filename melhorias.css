@@ -90,3 +90,21 @@ body.sk-pro #sk-pro-btn::after { content: ""; }
 body.sk-pro *:not(#sk-super) { }
 .sk-pro-brilho { animation: sk-badge-vivo 2.6s ease-in-out infinite; }
 @keyframes sk-badge-vivo { 0%,100% { text-shadow: 0 0 4px rgba(255,42,42,.4) } 50% { text-shadow: 0 0 16px rgba(255,42,42,.95) } }
+
+/* ===== v4: painel de controle (cerebro/provedor/voz) ===== */
+#sk-menu-wrap { position: fixed; right: 14px; bottom: 64px; z-index: 99996; max-width: 320px; width: min(88vw, 320px); display: none; }
+#sk-menu-wrap.aberto { display: block; animation: sk-toast .25s ease-out both; }
+#sk-menu { background: #101010; border: 1px solid #2c2c2c; border-radius: 12px; padding: 16px 16px 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,42,42,.07); }
+.sk-m-t { font: 700 9.5px/1 ui-monospace, monospace; letter-spacing: .26em; color: #666; margin: 10px 0 8px; }
+.sk-m-t:first-child { margin-top: 0; }
+.sk-opts { display: flex; flex-wrap: wrap; gap: 7px; }
+.sk-opt { background: #171717; border: 1px solid #2a2a2a; color: #bbb; border-radius: 8px; padding: 8px 11px;
+  font: 600 12px/1.2 Inter, sans-serif; cursor: pointer; text-align: left; transition: all .15s; }
+.sk-opt small { display: block; font: 500 9.5px/1.3 ui-monospace, monospace; color: #555; letter-spacing: .04em; margin-top: 3px; }
+.sk-opt:hover { border-color: rgba(255,42,42,.5); color: #fff; transform: translateY(-1px); }
+.sk-opt.ativo { border-color: #ff2a2a; color: #fff; background: rgba(255,42,42,.12); box-shadow: 0 0 14px rgba(255,42,42,.25); }
+.sk-opt.sk-full { width: 100%; }
+body.sk-max .sk-badge-max { display: inline; }
+/* badge 4.5 MAX no topbar */
+.sk-badge-max { display: none; color: #ff2a2a; font-weight: 800; }

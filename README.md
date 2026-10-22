@@ -38,6 +38,13 @@ Duas camadas: uma aditiva e, desde 22/10/2026 (v2, autorizado), uma camada de ap
 
 Varredura do bundle público: as 19 rotas de página do SvelteKit estão TODAS neste repo (verificado contra os ids de rota e strings dos chunks em `_app/immutable/`). "/home", "/proc" e "/tmp" no bundle são falsos positivos de um runtime WASM embutido (emulação de filesystem), não rotas. O mapa de 80 endpoints de API extraído do bundle está em `docs/API-MAP.md`.
 
+## Camada v4 (22/10/2026): seletor de modelo, painel e rotas de acesso refeitas
+
+1. **Login e sign-up refeitos**: as páginas capturadas eram da versão de *manutenção* do site original (captura caiu durante atualização deles) — por isso login dava erro e criar conta não aparecia. Refeitas à mão no estilo terminal oficial, com o ciclo completo: ENTRAR | RECUPERAR | CRIAR CONTA
+2. **Seletor de modelo funcional**: o "SKYNETchat 4.5" do topo agora troca pra **4.5 MAX** (com pesquisa profunda) com a super animação de onda vermelha; clicar na opção MAX do seletor original do site também dispara
+3. **Painel de controle** (botão PAINEL): modelo cérebro (4.5 / 4.5 MAX), provedor (SKYNETchat / OpenAI, referenciado no cliente), voz (padrão /api/tts / ElevenLabs /api/tts-eleven) e modo PRO — preferências ficam no navegador
+4. **`/dev-api/`**: catálogo navegável com filtro dos 80 endpoints extraídos do bundle, incluindo os 16 de admin
+
 ## Limites honestos
 
 1. Isto é um clone **estático**: o espelho renderiza a interface, animações incluídas, mas as chamadas `/api/*` continuam apontando para o servidor original (elas não funcionam fora do domínio dele)
