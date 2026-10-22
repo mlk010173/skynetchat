@@ -1,0 +1,54 @@
+name: Validar e Publicar
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verificar integridade SHA-1 de todos os arquivos
+        run: |
+          python3 - << 'PY'
+          import hashlib, json, sys, os
+          m = json.load(open("manifest.json"))
+          arqs = m["arquivos"]
+          falhas = []
+          for caminho, esperado in sorted(arqs.items()):
+              if not os.path.exists(caminho):
+                  falhas.append(f"FALTANDO: {caminho}")
+                  continue
+              real = hashlib.sha1(open(caminho, "rb").read()).hexdigest()
+              if real != esperado:
+                  falhas.append(f"ALTERADO: {caminho}")
+          print(f"{len(arqs)} arquivos verificáveis, {len(falhas)} falhas")
+          if falhas:
+              print("\n".join(falhas))
+              sys.exit(1)
+          print("INTEGRIDADE OK — clone fiel byte a byte")
+          PY
+  publicar:
+    needs: validar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

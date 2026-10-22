@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<script id="skynet-document-lifecycle" nonce="sMnRC4IgmSpPrB22wCaJrg==">
+			// Reload can begin while the chat's JavaScript chunk is still loading.
+			window.__skynetDocumentLeaving = false;
+			const markDocumentLeaving = () => { window.__skynetDocumentLeaving = true; };
+			window.addEventListener('beforeunload', markDocumentLeaving);
+			window.addEventListener('pagehide', markDocumentLeaving);
+			window.addEventListener('pageshow', event => {
+				if (event.persisted) window.__skynetDocumentLeaving = false;
+			});
+		</script>
+		<link rel="icon" type="image/png" href="./favicon-32-v2.png" sizes="32x32" />
+		<link rel="icon" type="image/png" href="./favicon-96-v2.png" sizes="96x96" />
+		<link rel="apple-touch-icon" href="./apple-touch-icon-v2.png" sizes="180x180" />
+		<link rel="manifest" href="./manifest-v2.json" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="SKYNETchat" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wdth,wght@95,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+		<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+/>
+		<meta name="color-scheme" content="dark" />
+		<meta name="theme-color" content="#070000" />
+		<script>
+			// Informa o tema ao Safari antes da primeira pintura da interface do navegador.
+			(function() {
+				var theme = localStorage.getItem('skynet-theme-bg');
+				var isWhite = theme === 'white';
+				var background = isWhite ? '#ffffff' : theme === 'black' ? '#000000' : '#070000';
+				var scheme = isWhite ? 'light' : 'dark';
+				document.documentElement.style.background = background;
+				document.documentElement.style.colorScheme = scheme;
+				document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background);
+				document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
+				document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+					?.setAttribute('content', isWhite ? 'default' : 'black-translucent');
+			})();
+		</script>
+		<style>
+		  html, body { height: 100%; }
+		  html { background:#0a0a0a; }
+		  body {
+		    margin: 0;
+		    background: #0a0a0a;
+		    background-image: linear-gradient(
+  180deg,
+  #A11111 0%,
+  #751414 10%,
+  #3C0909 31%,
+  #330808 39%,
+  #2E0707 46%,
+  #290606 60%,
+  #260505 67%,
+  #230505 73%,
+  #210404 83%,
+  #1F0404 83%,
+  #1B0303 92%
+);
+
+		    background-attachment: fixed;
+		    color: #fff;
+		    -webkit-font-smoothing: antialiased;
+		    -moz-osx-font-smoothing: grayscale;
+		    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+		  }
+		</style>
+		<!-- Meta Pixel Code -->
+		<script>
+		!function(f,b,e,v,n,t,s)
+		{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+		n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+		if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+		n.queue=[];t=b.createElement(e);t.async=!0;
+		t.src=v;s=b.getElementsByTagName(e)[0];
+		s.parentNode.insertBefore(t,s)}(window, document,'script',
+		'https://connect.facebook.net/en_US/fbevents.js');
+		fbq('init', '1615978922937762');
+		fbq('track', 'PageView');
+		</script>
+		<noscript><img height="1" width="1" style="display:none"
+		src="https://www.facebook.com/tr?id=1615978922937762&ev=PageView&noscript=1"/></noscript>
+		<!-- End Meta Pixel Code -->
+		
+		<link href="./_app/immutable/assets/0.NDTWPgt7.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/4.Cg-Ei80L.css" rel="stylesheet"><!--[--><link rel="icon" type="image/png" href="./favicon-96-v2.png" sizes="96x96"/> <meta name="description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta name="robots" content="index,follow"/> <meta property="og:title" content="SKYNETchat — Chat de IA em português"/> <meta property="og:description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta property="og:type" content="website"/> <link rel="canonical" href="https://skynetchat.net/"/><!--]--><title>SKYNETchat — Chat de IA em português</title>
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<script>
+			// Aplica tema imediatamente para evitar flash de cor errada
+			(function() {
+				var theme = localStorage.getItem('skynet-theme-bg');
+				var themeColor = document.querySelector('meta[name="theme-color"]');
+				if (theme === 'white') {
+					document.body.classList.add('theme-white');
+					document.body.style.background = '#ffffff';
+					document.body.style.colorScheme = 'light';
+					document.documentElement.style.background = '#ffffff';
+					if (themeColor) themeColor.setAttribute('content', '#ffffff');
+				} else if (theme === 'black') {
+					document.body.classList.add('theme-black');
+					document.body.style.background = '#000000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#000000';
+					if (themeColor) themeColor.setAttribute('content', '#000000');
+				} else if (theme === 'red' || theme === 'dark' || theme === 'classic') {
+					// Legacy themes → treat as red
+					document.body.classList.add('theme-red');
+					document.body.style.background = '#070000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#070000';
+					if (themeColor) themeColor.setAttribute('content', '#070000');
+					localStorage.setItem('skynet-theme-bg', 'red');
+				} else {
+					document.body.classList.add('theme-black');
+					document.body.style.background = '#000000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#000000';
+					if (themeColor) themeColor.setAttribute('content', '#000000');
+				}
+			})();
+		</script>
+		<div style="display: contents"><!--[--><!--[--><!----><!----><section class="wrap svelte-ieljgo"><a href="/?drawer=open" class="back-btn svelte-ieljgo" aria-label="Voltar"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M19 12H5" class="svelte-ieljgo"></path><path d="m12 19-7-7 7-7" class="svelte-ieljgo"></path></svg></a> <div class="content svelte-ieljgo"><div class="header-fixed svelte-ieljgo"><div class="logo svelte-ieljgo"><img src="/logov2.jpeg" alt="S" class="logo-badge svelte-ieljgo"/> <span class="logo-text svelte-ieljgo">SKYNET<span class="logo-accent svelte-ieljgo">CHAT</span></span></div> <span class="online-badge svelte-ieljgo"><span class="online-dot svelte-ieljgo"></span> ONLINE</span></div> <p class="slogan svelte-ieljgo">O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.</p> <div class="card svelte-ieljgo"><div class="card-bar svelte-ieljgo"><span class="card-bar-left svelte-ieljgo"><span class="prompt svelte-ieljgo">>_</span> APRESENTAÇÃO</span> <span class="card-bar-right svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" class="svelte-ieljgo"></path></svg> VERIFIED</span></div> <div class="card-divider svelte-ieljgo"></div> <h1 class="svelte-ieljgo">O QUE É A <span class="accent svelte-ieljgo">SKYNETCHAT</span>?</h1> <p class="description svelte-ieljgo">A SKYNETchat é uma inteligência artificial avançada em português, feita para responder qualquer pergunta com rapidez, privacidade e sem censura.</p> <p class="manifesto-text svelte-ieljgo">Priorizamos a <span class="accent svelte-ieljgo">verdade</span>. Aqui a IA não esconde, não ameniza e não filtra a realidade. Você merece respostas honestas e completas, sempre.</p> <div class="card-divider svelte-ieljgo"></div> <div class="features svelte-ieljgo"><div class="feature svelte-ieljgo"><div class="feature-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M12 2a4 4 0 0 0-4 4v2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V6a4 4 0 0 0-4-4z" class="svelte-ieljgo"></path><circle cx="12" cy="15" r="2" class="svelte-ieljgo"></circle></svg></div> <div class="feature-text svelte-ieljgo"><span class="feature-title svelte-ieljgo">Privacidade Total</span> <span class="feature-desc svelte-ieljgo">Sem coleta de dados pessoais. Acesso por código numérico.</span></div></div> <div class="feature svelte-ieljgo"><div class="feature-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" class="svelte-ieljgo"></path></svg></div> <div class="feature-text svelte-ieljgo"><span class="feature-title svelte-ieljgo">IA Multi-Modelo</span> <span class="feature-desc svelte-ieljgo">Modelos rápidos e com raciocínio profundo, para qualquer tarefa.</span></div></div> <div class="feature svelte-ieljgo"><div class="feature-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><circle cx="11" cy="11" r="8" class="svelte-ieljgo"></circle><line x1="21" y1="21" x2="16.65" y2="16.65" class="svelte-ieljgo"></line></svg></div> <div class="feature-text svelte-ieljgo"><span class="feature-title svelte-ieljgo">Busca na Web</span> <span class="feature-desc svelte-ieljgo">Pesquisa em tempo real integrada às respostas.</span></div></div> <div class="feature svelte-ieljgo"><div class="feature-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" class="svelte-ieljgo"></rect><circle cx="8.5" cy="8.5" r="1.5" class="svelte-ieljgo"></circle><polyline points="21 15 16 10 5 21" class="svelte-ieljgo"></polyline></svg></div> <div class="feature-text svelte-ieljgo"><span class="feature-title svelte-ieljgo">Geração de Imagens</span> <span class="feature-desc svelte-ieljgo">Crie imagens com IA diretamente no chat.</span></div></div> <div class="feature svelte-ieljgo"><div class="feature-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" class="svelte-ieljgo"></path><path d="M8 14s1.5 2 4 2 4-2 4-2" class="svelte-ieljgo"></path><line x1="9" y1="9" x2="9.01" y2="9" class="svelte-ieljgo"></line><line x1="15" y1="9" x2="15.01" y2="9" class="svelte-ieljgo"></line></svg></div> <div class="feature-text svelte-ieljgo"><span class="feature-title svelte-ieljgo">Sem Censura</span> <span class="feature-desc svelte-ieljgo">Respostas diretas e honestas, sem filtros excessivos.</span></div></div> <div class="feature svelte-ieljgo"><div class="feature-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" class="svelte-ieljgo"></path><line x1="16" y1="8" x2="2" y2="22" class="svelte-ieljgo"></line><line x1="17.5" y1="15" x2="9" y2="15" class="svelte-ieljgo"></line></svg></div> <div class="feature-text svelte-ieljgo"><span class="feature-title svelte-ieljgo">Memória IA</span> <span class="feature-desc svelte-ieljgo">A IA lembra do seu contexto e preferências (PRO).</span></div></div></div> <div class="card-divider svelte-ieljgo"></div> <h2 class="svelte-ieljgo">PLANOS</h2> <div class="plans svelte-ieljgo"><div class="plan-card svelte-ieljgo"><div class="plan-header svelte-ieljgo"><span class="plan-name svelte-ieljgo">FREE</span> <span class="plan-price svelte-ieljgo">R$0</span></div> <ul class="plan-features svelte-ieljgo"><li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> 5 mensagens</li> <li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> IA rápida</li> <li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> Sem cadastro de email</li></ul></div> <div class="plan-card plan-pro svelte-ieljgo"><div class="plan-badge svelte-ieljgo">RECOMENDADO</div> <div class="plan-header svelte-ieljgo"><span class="plan-name svelte-ieljgo">PRO</span> <span class="plan-price svelte-ieljgo">R$59<span class="plan-cents svelte-ieljgo">,90</span><span class="plan-period svelte-ieljgo">/mês</span></span></div> <ul class="plan-features svelte-ieljgo"><li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff3333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> IA com raciocínio</li> <li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff3333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> Geração de imagens</li> <li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff3333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> Busca web ilimitada</li> <li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff3333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> Memória IA</li> <li class="svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff3333" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><polyline points="20 6 9 17 4 12" class="svelte-ieljgo"></polyline></svg> Extração de arquivos</li></ul></div></div> <a href="/sign-up" class="primary svelte-ieljgo">COMEÇAR AGORA <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="svelte-ieljgo"><path d="M5 12h14" class="svelte-ieljgo"></path><path d="m12 5 7 7-7 7" class="svelte-ieljgo"></path></svg></a> <a href="/login" class="secondary-link svelte-ieljgo">Já tenho uma conta</a> <div class="card-divider svelte-ieljgo"></div> <h2 class="svelte-ieljgo">CONHEÇA NOSSAS REDES</h2> <a href="https://instagram.com/skynetchat.ai" target="_blank" rel="noopener noreferrer" class="social-link svelte-ieljgo"><div class="social-icon svelte-ieljgo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white" class="svelte-ieljgo"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" class="svelte-ieljgo"></path></svg></div> <div class="social-text svelte-ieljgo"><span class="social-name svelte-ieljgo">Instagram</span> <span class="social-handle svelte-ieljgo">@skynetchat.ai</span></div> <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="social-arrow svelte-ieljgo"><path d="M5 12h14" class="svelte-ieljgo"></path><path d="m12 5 7 7-7 7" class="svelte-ieljgo"></path></svg></a></div> <a class="ghost-link svelte-ieljgo" href="/?drawer=open">← Voltar ao chat</a></div></section><!----><!----><!----><!--]--> <!--[!--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_1odvw0s = {
+						base: new URL(".", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("./_app/immutable/entry/start.Cse-qIs5.js"),
+						import("./_app/immutable/entry/app.CqRrFIv5.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 4],
+							data: [{type:"data",data:{analyticsEnabled:true},uses:{}},null],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+		<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js" defer></script>
+		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+		<script>
+			// Desregistra service workers existentes (não precisamos de offline)
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.getRegistrations().then(regs => {
+					regs.forEach(reg => reg.unregister());
+				});
+				// Limpa caches do service worker
+				if ('caches' in window) {
+					caches.keys().then(keys => {
+						keys.forEach(key => caches.delete(key));
+					});
+				}
+			}
+
+			// Auto-reload em caso de chunk 404 durante deploy (com proteção anti-loop)
+			const RELOAD_KEY = 'chunk-reload-count';
+			const MAX_RELOADS = 2;
+			const RELOAD_WINDOW = 30000; // 30 segundos
+
+			function canReload() {
+				const data = sessionStorage.getItem(RELOAD_KEY);
+				if (!data) return true;
+
+				const { count, firstAttempt } = JSON.parse(data);
+				const elapsed = Date.now() - firstAttempt;
+
+				// Reset contador após 30 segundos
+				if (elapsed > RELOAD_WINDOW) {
+					sessionStorage.removeItem(RELOAD_KEY);
+					return true;
+				}
+
+				// Permite até 2 reloads em 30 segundos
+				return count < MAX_RELOADS;
+			}
+
+			async function handleChunkError() {
+				if (canReload()) {
+					const data = sessionStorage.getItem(RELOAD_KEY);
+					const count = data ? JSON.parse(data).count + 1 : 1;
+					const firstAttempt = data ? JSON.parse(data).firstAttempt : Date.now();
+
+					sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ count, firstAttempt }));
+
+					// LIMPAR TODO O CACHE antes de recarregar
+					try {
+						// 1. Desregistrar service workers
+						if ('serviceWorker' in navigator) {
+							const registrations = await navigator.serviceWorker.getRegistrations();
+							await Promise.all(registrations.map(reg => reg.unregister()));
+						}
+
+						// 2. Limpar todos os caches
+						if ('caches' in window) {
+							const cacheNames = await caches.keys();
+							await Promise.all(cacheNames.map(name => caches.delete(name)));
+						}
+					} catch (e) {
+						console.error('❌ Erro ao limpar cache:', e);
+					}
+
+					// 3. Hard reload com delay maior para PM2 estabilizar
+					// Primeira tentativa: 2s de delay
+					// Segunda tentativa: 5s de delay (PM2 reload pode demorar)
+					const delay = count === 1 ? 2000 : 5000;
+
+					setTimeout(() => {
+						// CRITICAL: Forçar bypass TOTAL do cache HTTP disk
+						// Adicionar timestamp único força navegador a ignorar cache disk
+						const url = new URL(window.location.href);
+						// Remove query params antigos de reload
+						url.searchParams.delete('_r');
+						// Adiciona novo timestamp único
+						url.searchParams.set('_r', Date.now() + '_' + Math.random().toString(36).slice(2));
+
+						// location.replace não mantém histórico e força hard reload
+						window.location.replace(url.href);
+					}, delay);
+				} else {
+					console.error('❌ Muitos erros de chunk. Recarregue manualmente a página.');
+					// Mostra mensagem ao usuário
+					document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:10px;">🔄 Atualização em andamento</h1><p style="opacity:0.7;">Por favor, recarregue a página manualmente (Ctrl+Shift+R ou Cmd+Shift+R)</p><button onclick="location.reload(true)" style="margin-top:20px;padding:12px 24px;background:#C41E3A;border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:16px;">Recarregar agora</button></div></div>';
+				}
+			}
+
+			window.addEventListener('error', (event) => {
+				if (event.message &&
+					(event.message.includes('Failed to fetch dynamically imported module') ||
+					 event.message.includes('/_app/immutable/'))) {
+					handleChunkError();
+				}
+			}, true);
+
+			window.addEventListener('unhandledrejection', (event) => {
+				if (event.reason?.message &&
+					(event.reason.message.includes('Failed to fetch dynamically imported module') ||
+					 event.reason.message.includes('/_app/immutable/'))) {
+					handleChunkError();
+				}
+			});
+		</script>
+		<!-- Cloudflare Web Analytics -->
+		<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "e98500a2053c4a69acc7587cd93be2ee"}'></script>
+		<!-- End Cloudflare Web Analytics -->
+	<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4e5ac4389f4b167',t:'MTc5MjY0MjQ0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"fc889f8190224c01b90a6ac2a44ea5fa","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+	</html>
