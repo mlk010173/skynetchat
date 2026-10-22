@@ -4,6 +4,18 @@
 (() => {
   if (window.__skMelhorias) return; window.__skMelhorias = true;
 
+  /* --- remove o falso overlay "Atualização em andamento" (logica de update do app original, sem servico no espelho) --- */
+  const skOverlay = () => {
+    document.querySelectorAll("div, section, aside").forEach(el => {
+      if (el.childElementCount > 0 && /Atualiza\u00e7\u00e3o em andamento/.test(el.textContent) && /Recarregar agora/i.test(el.textContent)) {
+        const pai = el.closest("div[class*=fixed], div[class*=overlay], div[class*=backdrop]") || el;
+        pai.remove();
+      }
+    });
+  };
+  skOverlay();
+  new MutationObserver(() => skOverlay()).observe(document.body, { childList: true, subtree: true });
+
   /* --- rotas internas absolutas viram caminho do espelho (evita 404 na raiz do dominio) --- */
   const skRota = location.pathname.replace(/\/$/, "");
   document.addEventListener("click", e => {
