@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Meu Perfil — SKYNETchat</title>
+<meta name="description" content="Recuperação de acesso do SKYNETchat.">
+<link rel="icon" type="image/png" href="../favicon-32-v2.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon-v2.png">
+<!-- melhorias sitejack v2 -->
+<link rel="stylesheet" href="../melhorias.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root { --sk-acento: #ff2a2a; }
+  body { min-height: 100vh; background: #0a0a0a; color: #fff; display: grid; place-items: center; padding: 24px;
+         font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+  .topo { position: fixed; top: 18px; left: 22px; font: 700 12px/1 ui-monospace, Consolas, monospace;
+          letter-spacing: .28em; color: #888; }
+  .topo b { color: var(--sk-acento); }
+  .topo .on { color: #ff5a5a; animation: sk-pulsa 2.2s infinite; }
+  @keyframes sk-pulsa { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
+  .slogan { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font: 600 9.5px/1.7 ui-monospace, monospace;
+            letter-spacing: .18em; color: #4a4a4a; padding: 0 20px; }
+  .caixa { width: min(460px, 100%); border: 1px solid #262626; border-radius: 14px; padding: 34px 30px;
+           background: linear-gradient(180deg, #101010, #0c0c0c); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .rotulo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .rotulo .term { font: 800 15px/1 ui-monospace, Consolas, monospace; color: var(--sk-acento); letter-spacing: .06em; }
+  .rotulo .seg { font: 700 9px/1 ui-monospace, monospace; letter-spacing: .3em; color: #666;
+                 border: 1px solid #333; padding: 4px 8px; border-radius: 4px; }
+  h1 { font: 800 20px/1.2 Inter, sans-serif; letter-spacing: .1em; margin-bottom: 10px; }
+  p.desc { color: #999; font-size: 13.5px; line-height: 1.7; margin-bottom: 26px; }
+  form label { display: block; font: 700 10px/1 ui-monospace, monospace; letter-spacing: .22em; color: #777; margin-bottom: 8px; }
+  form input[type="email"] { width: 100%; background: #161616; border: 1px solid #2c2c2c; border-radius: 8px;
+    padding: 14px 15px; color: #fff; font: 500 14px Inter, sans-serif; outline: none; transition: border-color .2s, box-shadow .2s; }
+  form input[type="email"]:focus { border-color: var(--sk-acento); box-shadow: 0 0 0 3px rgba(255,42,42,.18); }
+  .btn { margin-top: 18px; width: 100%; background: linear-gradient(135deg, #ff2a2a, #c40000); border: none; border-radius: 8px;
+    padding: 14px; color: #fff; font: 700 12px/1 ui-monospace, monospace; letter-spacing: .24em; cursor: pointer;
+    transition: transform .15s, box-shadow .2s; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,42,42,.4); }
+  .suporte { margin-top: 20px; text-align: center; font-size: 12.5px; color: #888; }
+  .suporte a, .rodape a { color: #bbb; text-decoration: none; transition: color .15s; }
+  .suporte a:hover, .rodape a:hover { color: var(--sk-acento); }
+  .rodape { margin-top: 24px; padding-top: 18px; border-top: 1px solid #222; display: flex; justify-content: center; gap: 14px;
+    font: 600 10.5px/1 ui-monospace, monospace; letter-spacing: .18em; }
+  .rodape span { color: #333; }
+</style>
+</head>
+<body>
+  <div class="topo"><b>SKYNET</b>CHAT <span class="on">ONLINE</span></div>
+  <main class="caixa">
+    <div class="rotulo"><span class="term">&gt;_ PERFIL</span><span class="seg">SECURE</span></div>
+    <h1>Meu Perfil</h1>
+    <p class="desc">Dados da conta, plano e preferências do SKYNETchat.</p>
+    
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+      <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#ff2a2a,#8b0000);display:grid;place-items:center;font:800 22px/1 Inter,sans-serif;color:#fff">S</div>
+      <div>
+        <div style="font:700 16px/1.3 Inter,sans-serif">Visitante do espelho</div>
+        <div style="color:#777;font-size:12.5px">conta local · sem login no espelho</div>
+      </div>
+    </div>
+    <div style="border:1px solid #222;border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.26em;color:#777;margin-bottom:10px">PLANO</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font:600 13px Inter,sans-serif;color:#ccc">Grátis</span>
+        <a href="../checkout/?source=profile_panel" style="background:linear-gradient(135deg,#ff2a2a,#c40000);color:#fff;text-decoration:none;font:700 10px/1 ui-monospace,monospace;letter-spacing:.2em;padding:9px 14px;border-radius:7px">ASSINAR PRO</a>
+      </div>
+    </div>
+    <div style="border:1px solid #222;border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.26em;color:#777;margin-bottom:10px">TEMA DE FUNDO</div>
+      <span style="font:600 13px Inter,sans-serif;color:#ccc">BLACK</span>
+    </div>
+    <div style="border:1px solid #222;border-radius:10px;padding:16px;margin-bottom:14px">
+      <div style="font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.26em;color:#777;margin-bottom:10px">PREFERÊNCIAS</div>
+      <div style="font:500 12.5px Inter,sans-serif;color:#999;line-height:1.8">Modelo, provedor e voz são escolhidos no PAINEL e ficam salvos neste navegador.</div>
+    </div>
+    <p class="suporte">Quer entrar de verdade? <a href="../login/">Fazer login</a></p>
+    <nav class="rodape"><a href="../login/">ENTRAR</a><span>|</span><a href="../sign-up/">CRIAR CONTA</a></nav>
+  </main>
+  <p class="slogan">O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.</p>
+  <script defer src="../melhorias.js"></script>
+</body>
+</html>
