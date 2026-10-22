@@ -34,6 +34,10 @@ Duas camadas: uma aditiva e, desde 22/10/2026 (v2, autorizado), uma camada de ap
 4. **`.nojekyll`**: serve os chunks do SvelteKit sem underscore ser ignorado
 5. **README** com este mapa de rotas e documentação honesta de limites
 
+## Engenharia reversa completa (22/10/2026)
+
+Varredura do bundle público: as 19 rotas de página do SvelteKit estão TODAS neste repo (verificado contra os ids de rota e strings dos chunks em `_app/immutable/`). "/home", "/proc" e "/tmp" no bundle são falsos positivos de um runtime WASM embutido (emulação de filesystem), não rotas. O mapa de 80 endpoints de API extraído do bundle está em `docs/API-MAP.md`.
+
 ## Limites honestos
 
 1. Isto é um clone **estático**: o espelho renderiza a interface, animações incluídas, mas as chamadas `/api/*` continuam apontando para o servidor original (elas não funcionam fora do domínio dele)

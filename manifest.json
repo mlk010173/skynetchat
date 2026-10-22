@@ -2,7 +2,7 @@
  "arquivos": {
   ".nojekyll": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
   "404.html": "8046f8faf687afd4d45530d9330f1289bd02e69a",
-  "README.md": "1a838269a085d5e06969722d6c01e16bc6c8c7d4",
+  "README.md": "ae5dab8e47117c7b74f79c0ed8471a3173e28913",
   "__data.json": "e4a0307291c22833d0875ceb1502ee42625167e8",
   "_app/immutable/assets/0.NDTWPgt7.css": "53f594eaf5c2d2e7c2218be754462f876aa91fd3",
   "_app/immutable/assets/10.D3Dub_VJ.css": "a82d3e57b397dea7bb3ea1c361ed39baf32d2ccc",
@@ -174,6 +174,7 @@
   "crawler2.py": "38affab46677d853813615891f6343ca142c601f",
   "dev-panel/index.html": "9588f186f21cbf21eae1a60b8bce2a8b8bca3df9",
   "dev/security": "199a715aaa5167572f60751f71fe9cb29acbac22",
+  "docs/API-MAP.md": "11c326641d3261ee56fdc8e7a42e51d8988b4c49",
   "favicon-32-v2.png": "fbcd35ac6be0786ad8c5384dc03c10ab8c7ca2c0",
   "favicon-96-v2.png": "4c54ab2d6003fed74d57caef172fd2cb44de495e",
   "fundo-recado.png": "7a134f4ecd6fa5f6948248b6a2705aacaf0e68d5",
