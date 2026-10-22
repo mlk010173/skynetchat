@@ -22,6 +22,36 @@ jobs:
         with: { node-version: 20 }
       - name: Sintaxe dos arquivos JS da camada
         run: for f in melhorias.js $(find . -name "*.js" -path "./dev-api/*"); do node --check "$f"; done
+      - name: Checar links internos (nenhum href/src pode apontar pra arquivo inexistente)
+        run: |
+          python3 - << 'PY'
+          import re, os, urllib.parse
+          problemas = []
+          for root, _, fs in os.walk('.'):
+              if '.git' in root: continue
+              for f in fs:
+                  if not f.endswith(('.html', '.js')): continue
+                  p = os.path.relpath(os.path.join(root, f), '.')
+                  base = os.path.dirname(p)
+                  for m in re.finditer(r'(?:href|src)\s*=\s*["\']([^"\'#]+)["\']', open(p, encoding='utf-8', errors='ignore').read()):
+                      u = m.group(1)
+                      if u.startswith(('http', 'data:', 'mailto:', 'javascript:', 'blob:', '//', '$', 'about:')): continue
+                      u = u.split('?')[0].split('#')[0]
+                      if not u: continue
+                      r = u.lstrip('/') if u.startswith('/') else os.path.normpath(os.path.join(base, u))
+                      r = urllib.parse.unquote(r)
+                      if '$' in r or r.startswith('_app/immutable/chunks/'): continue
+                      alvo = r if u.startswith('/') else r
+                      caminho = alvo if os.path.exists(alvo) else os.path.join(alvo, 'index.html')
+                      if not (os.path.isfile(alvo) and not alvo.endswith('/') or os.path.exists(caminho)):
+                          pass
+                      existe = os.path.isfile(alvo) or os.path.exists(os.path.join(alvo, 'index.html')) or os.path.isfile(os.path.join(alvo, 'index.html'))
+                      if not existe and not os.path.isfile(alvo):
+                          problemas.append(p + ' -> ' + u)
+          if problemas:
+              print('\n'.join(problemas[:40])); print('TOTAL QUEBRADOS:', len(problemas)); raise SystemExit(1)
+          print('links internos OK')
+          PY
       - name: Verificar integridade SHA-1 de todos os arquivos
         run: |
           python3 - << 'PY'

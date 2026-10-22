@@ -4,6 +4,23 @@
 (() => {
   if (window.__skMelhorias) return; window.__skMelhorias = true;
 
+  /* --- rotas internas absolutas viram caminho do espelho (evita 404 na raiz do dominio) --- */
+  const skRota = location.pathname.replace(/\/$/, "");
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a"); if (!a) return;
+    const h = a.getAttribute("href");
+    if (!h || !h.startsWith("/") || h.startsWith("//") || h.startsWith("/api/")) return;
+    try {
+      const alvo = new URL(h, location.origin);
+      if (alvo.origin !== location.origin) return;
+      if (!alvo.pathname.startsWith(skRota)) {
+        alvo.pathname = skRota + alvo.pathname;
+        if (!/\.[a-z0-9]+$/i.test(alvo.pathname)) alvo.pathname += "/";
+        a.setAttribute("href", alvo.pathname + alvo.search);
+      }
+    } catch (err) {}
+  }, true);
+
   /* --- autolimpeza: mata qualquer service worker antigo preso no navegador --- */
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then(rs => {
