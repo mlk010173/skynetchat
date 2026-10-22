@@ -10,11 +10,18 @@ Live: https://mlk010173.github.io/skynetchat/
 2. **Assets completos**: chunks SvelteKit (`_app/immutable/`), CSS, fontes KaTeX, imagens, PWA
 3. **Animações e lógica**: o JS do site é servido como capturado, sem alteração
 
-## Melhorias adicionadas (sem tocar na interface capturada)
+## Melhorias adicionadas
 
-Foi decisão deliberada **não alterar nenhum arquivo capturado** — o valor deste repo é a fidelidade. As melhorias são aditivas:
+Duas camadas: uma aditiva e, desde 22/10/2026 (v2, autorizado), uma camada de aprimoramento visual que injeta um `<link>` e um `<script>` no `<head>` das 16 rotas capturadas — o corpo e a identidade visual dos arquivos originais continuam intactos.
 
-1. **`manifest.json`**: SHA-1 de todos os 202 arquivos — qualquer byte alterado é detectável
+### Camada v2 (autorizada): design, animação e API honesta
+
+1. **`melhorias.css`**: entrada suave da página, hover com microinteração nos cartões (elevar + sombra vermelha), foco visível acessível pra navegação por teclado, seleção de texto no tema, scrollbar personalizada preto/vermelho e fade nas imagens — tudo desligado automaticamente com `prefers-reduced-motion`
+2. **`melhorias.js`**: chamadas `/api/*` do site original não funcionam num espelho estático — em vez de falhar em silêncio no console, a camada responde com JSON honesto (status 501, `espelho: true`) e avisa o visitante com um toast no tema, no máximo 1x por 30s
+
+### Camada v1 (integridade)
+
+1. **`manifest.json`**: SHA-1 de todos os arquivos — qualquer byte alterado é detectável
 2. **GitHub Actions** (`.github/workflows/deploy.yml`): a cada push, valida a integridade de cada arquivo contra o manifest (o deploy só acontece se todos os SHA-1 baterem) e publica no Pages
 3. **`404.html`**: página de erro personalizada no tema do site (preto/vermelho), em vez do 404 genérico do GitHub
 4. **`.nojekyll`**: serve os chunks do SvelteKit sem underscore ser ignorado

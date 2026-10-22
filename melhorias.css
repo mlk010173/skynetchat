@@ -1,0 +1,55 @@
+/* ===== melhorias sitejack v2 — camada aditiva, tema original preservado =====
+   Entradas suaves, hover com microinteração, foco acessível, scrollbar no tema,
+   e estilo do aviso de espelho. Tudo respeitando prefers-reduced-motion. */
+
+:root { --sk-acento: #ff2a2a; }
+
+@keyframes sk-entrada { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sk-toast { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: none } }
+
+/* entrada suave da página */
+body { animation: sk-entrada .35s ease-out both; }
+html { scroll-behavior: smooth; }
+
+/* seleção no tema */
+::selection { background: rgba(255, 42, 42, .35); color: #fff; }
+
+/* foco visível acessível (navegação por teclado) */
+:focus-visible { outline: 2px solid var(--sk-acento); outline-offset: 2px; border-radius: 4px; }
+
+/* microinterações: cartões e botões */
+a, button, [role="button"] { transition: color .15s ease, background-color .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+[class*="card"], [class*="Card"], [class*="item-menu"], [class*="CardRoot"] {
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+[class*="card"]:hover, [class*="Card"]:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(255, 42, 42, .14);
+  border-color: rgba(255, 42, 42, .35);
+}
+
+/* imagens: fade ao carregar */
+img { transition: opacity .3s ease; }
+
+/* scrollbar no tema preto/vermelho */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--sk-acento); background-clip: content-box; border: 2px solid transparent; }
+
+/* aviso de espelho (toast da camada JS) */
+#sk-toast {
+  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  z-index: 99999; max-width: min(92vw, 480px);
+  background: #141414; color: #eee; font: 500 13px/1.5 Inter, "Segoe UI", system-ui, sans-serif;
+  border: 1px solid rgba(255, 42, 42, .45); border-radius: 10px;
+  padding: 10px 16px; box-shadow: 0 8px 30px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 42, 42, .08);
+  animation: sk-toast .3s ease-out both; pointer-events: none;
+}
+#sk-toast b { color: var(--sk-acento); }
+
+/* movimento reduzido: desligar tudo */
+@media (prefers-reduced-motion: reduce) {
+  body { animation: none; }
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+}
