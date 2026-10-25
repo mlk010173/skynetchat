@@ -2,8 +2,6 @@
 
 // CONFIGURAÇÕES — tema, modelo padrão e notificações, persistidos no Supabase (user_settings).
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/client-auth";
 import { BASE } from "@/lib/api";
 
@@ -11,7 +9,6 @@ type Settings = { theme: "black" | "white"; default_model: string; notifications
 
 export default function SettingsPage() {
   const supabase = getSupabase();
-  const router = useRouter();
   const [loaded, setLoaded] = useState(false);
   const [theme, setTheme] = useState<"black" | "white">("black");
   const [model, setModel] = useState("gpt-4o-mini");
@@ -22,7 +19,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) { router.replace(BASE + "/login"); return; }
+      if (!data.session) { location.replace(BASE + "/login/"); return; }
       document.documentElement.dataset.theme = document.documentElement.dataset.theme || "black";
       setTheme((document.documentElement.dataset.theme as "black" | "white") || "black");
 
@@ -33,7 +30,7 @@ export default function SettingsPage() {
       }
       setLoaded(true);
     });
-  }, [supabase, router]);
+  }, [supabase]);
 
   async function persist(patch: Partial<Settings>) {
     if (!supabase) return;
@@ -61,7 +58,7 @@ export default function SettingsPage() {
       <div className="page-card">
         <div className="page-head">
           <span>&gt;_ CONFIGURAÇÕES</span>
-          <Link href={BASE + "/"} className="page-close">✕</Link>
+          <a href={`${BASE}/`} className="page-close">✕</a>
         </div>
 
         <section className="form-block">
@@ -95,7 +92,7 @@ export default function SettingsPage() {
 
         {status && <div className="auth-status">{status}</div>}
 
-        <Link href={BASE + "/account"} className="page-link">← CONTA E PERFIL</Link>
+        <a href={`${BASE}/account/`} className="page-link">← CONTA E PERFIL</a>
       </div>
     </main>
   );

@@ -2,14 +2,11 @@
 
 // CONTA / PERFIL — dados reais da sessão Supabase, troca de senha real.
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/client-auth";
 import { BASE } from "@/lib/api";
 
 export default function AccountPage() {
   const supabase = getSupabase();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [since, setSince] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -19,11 +16,11 @@ export default function AccountPage() {
 
   useEffect(() => {
     supabase?.auth.getSession().then(async ({ data }) => {
-      if (!data.session) { router.replace(BASE + "/login"); return; }
+      if (!data.session) { location.replace(BASE + "/login/"); return; }
       setEmail(data.session.user.email ?? "");
       setSince(new Date(data.session.user.created_at).toLocaleDateString("pt-BR"));
     });
-  }, [supabase, router]);
+  }, [supabase]);
 
   async function changePassword(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +36,7 @@ export default function AccountPage() {
 
   async function logout() {
     await supabase?.auth.signOut();
-    router.replace(BASE + "/");
+    location.replace(BASE + "/");
   }
 
   const initial = email ? email[0].toUpperCase() : "S";
@@ -49,7 +46,7 @@ export default function AccountPage() {
       <div className="page-card">
         <div className="page-head">
           <span>&gt;_ CONTA E PERFIL</span>
-          <Link href={BASE + "/"} className="page-close">✕</Link>
+          <a href={`${BASE}/`} className="page-close">✕</a>
         </div>
 
         <section className="profile-block">
@@ -80,7 +77,7 @@ export default function AccountPage() {
           </p>
         </section>
 
-        <Link href={BASE + "/settings"} className="page-link">⚙ CONFIGURAÇÕES</Link>
+        <a href={`${BASE}/settings/`} className="page-link">⚙ CONFIGURAÇÕES</a>
       </div>
     </main>
   );

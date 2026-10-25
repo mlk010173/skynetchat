@@ -3,8 +3,6 @@
 // AUTENTICAÇÃO — mesmo layout do skynetchat.net (terminal SECURE),
 // auth 100% real via Supabase. Rotas: /login, /sign-up, /recover.
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/client-auth";
 import { BASE } from "@/lib/api";
 
@@ -12,7 +10,6 @@ export type AuthMode = "entrar" | "criar" | "recuperar";
 
 export default function AuthPage({ mode }: { mode: AuthMode }) {
   const supabase = getSupabase();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -32,14 +29,14 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           setStatus(error.message.includes("Invalid login") ? "Credenciais inválidas." : error.message);
           return;
         }
-        router.replace(BASE + "/");
+        location.replace(BASE + "/");
       } else if (mode === "criar") {
         if (password.length < 8) { setStatus("A senha precisa ter ao menos 8 caracteres."); return; }
         if (password !== password2) { setStatus("As senhas não coincidem."); return; }
         if (!accepted) { setStatus("Confirme os termos para criar sua conta."); return; }
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) { setStatus(error.message); return; }
-        router.replace(BASE + "/");
+        location.replace(BASE + "/");
       } else {
         if (!email) { setStatus("Informe seu e-mail."); return; }
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -124,7 +121,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
             />
             <label className="auth-check">
               <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-              Confirmo ter +18 anos e aceito os <Link href={BASE + "/terms/"} className="auth-inline-link">Termos de Serviço e Privacidade</Link>.
+              Confirmo ter +18 anos e aceito os <a href={`${BASE}/terms/`} className="auth-inline-link">Termos de Serviço e Privacidade</a>.
             </label>
             <p className="auth-note">Sua conta será salva no sistema e você entrará automaticamente.</p>
           </>
@@ -134,11 +131,11 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         {status && <div className="auth-status">{status}</div>}
 
         <div className="auth-links">
-          {mode !== "entrar" && <Link href={BASE + "/login/"}>ENTRAR</Link>}
+          {mode !== "entrar" && <a href={`${BASE}/login/`}>ENTRAR</a>}
           {mode !== "entrar" && <span className="auth-sep">|</span>}
-          {mode !== "criar" && <Link href={BASE + "/sign-up/"}>CRIAR CONTA</Link>}
+          {mode !== "criar" && <a href={`${BASE}/sign-up/`}>CRIAR CONTA</a>}
           {mode !== "criar" && <span className="auth-sep">|</span>}
-          {mode !== "recuperar" && <Link href={BASE + "/recover/"}>RECUPERAR ACESSO</Link>}
+          {mode !== "recuperar" && <a href={`${BASE}/recover/`}>RECUPERAR ACESSO</a>}
         </div>
       </form>
 
@@ -150,7 +147,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         <span>⇌ ZERO-TRUST</span>
       </footer>
 
-      <Link href={BASE + "/"} className="auth-back">← voltar ao chat (modo anônimo)</Link>
+      <a href={`${BASE}/`} className="auth-back">← voltar ao chat (modo anônimo)</a>
     </main>
   );
 }
