@@ -80,7 +80,7 @@ export default function LoginPage() {
               placeholder="mínimo 6 caracteres"
             />
           </div>
-          <button className="btn btn-primary btn-full" disabled={busy}>
+          <button className="btn-primary-full" disabled={busy}>
             {busy ? "…" : mode === "signin" ? "ENTRAR ▸" : "CRIAR CONTA ▸"}
           </button>
         </form>
