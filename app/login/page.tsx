@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getSupabase } from "@/lib/client-auth";
+import { BASE } from "@/lib/api";
 
 type Mode = "signin" | "signup" | "forgot";
 
@@ -39,7 +40,7 @@ export default function LoginPage() {
         if (error) setMsg({ text: error.message, ok: false });
         else {
           setMsg({ text: "Acesso liberado. Redirecionando…", ok: true });
-          window.location.href = "/";
+          window.location.href = `${BASE}/`;
         }
       }
     } finally {
@@ -55,7 +56,7 @@ export default function LoginPage() {
   return (
     <div className="login-page">
       <div className="login-box">
-        <h1>SKY<span>HUB</span></h1>
+        <h1>SKY<span>NET</span></h1>
         <p className="sub">
           {mode === "forgot" ? "recuperação de senha" : "console de acesso — conta real no Supabase"}
         </p>
@@ -120,14 +121,14 @@ export default function LoginPage() {
 
         <div className="login-alt">
           {mode === "forgot" ? (
-            <a href="/login" onClick={() => setMode("signin")}>← voltar ao login</a>
+            <a href="`${BASE}/login/`" onClick={() => setMode("signin")}>← voltar ao login</a>
           ) : (
             <a href="#" onClick={(e) => { e.preventDefault(); setMode("forgot"); setMsg(null); }}>
               esqueci minha senha
             </a>
           )}
           <br />
-          <a href="/">← voltar ao chat (modo anônimo)</a>
+          <a href="`${BASE}/`">← voltar ao chat (modo anônimo)</a>
         </div>
       </div>
     </div>

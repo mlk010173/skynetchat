@@ -1,12 +1,12 @@
-export const metadata = { title: "Sobre o SKYHUB" };
+export const metadata = { title: "Sobre o SKYNET" };
 
 export default function AboutPage() {
   return (
     <div className="doc-page">
-      <h1>SKY<span>HUB</span></h1>
+      <h1>SKY<span>NET</span></h1>
       <p>Chat de IA com estética de terminal e infraestrutura própria.</p>
 
-      <h2>O que é o SKYHUB?</h2>
+      <h2>O que é o SKYNET?</h2>
       <p>
         Uma inteligência artificial em português com frontend e backend próprios: servidor real,
         contas reais, histórico salvo em banco de dados. Nada aqui é simulação ou espelho de outro
@@ -28,7 +28,7 @@ export default function AboutPage() {
         vivem apenas no servidor e nunca chegam ao navegador.
       </p>
 
-      <a className="back btn-ghost" href="/">← Voltar ao chat</a>
+      <a className="back btn-ghost" href="/skynetchat/">← Voltar ao chat</a>
     </div>
   );
 }

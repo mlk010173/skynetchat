@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase, SessionLike } from "@/lib/client-auth";
+import { api, BASE } from "@/lib/api";
 
 interface Conv { id: string; title: string; updated_at: string }
 interface Msg { role: "user" | "assistant"; content: string }
@@ -17,6 +18,7 @@ export default function ChatPage() {
   const [theme, setTheme] = useState<"theme-black" | "theme-white">("theme-black");
   const [models, setModels] = useState<string[]>(MODELS_DEFAULT);
   const [model, setModel] = useState<string>(MODELS_DEFAULT[0]);
+  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
   const [convs, setConvs] = useState<Conv[]>([]);
   const [activeConv, setActiveConv] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -27,17 +29,16 @@ export default function ChatPage() {
 
   const showToast = useCallback((m: string) => {
     setToast(m);
-    setTimeout(() => setToast(null), 5000);
+    setTimeout(() => setToast(null), 6000);
   }, []);
 
   // tema persistido
   useEffect(() => {
-    const saved = window.localStorage.getItem("skyhub-theme");
-    if (saved === "theme-white") setTheme("theme-white");
+    if (window.localStorage.getItem("skynet-theme") === "theme-white") setTheme("theme-white");
   }, []);
   useEffect(() => {
     document.body.className = theme;
-    window.localStorage.setItem("skyhub-theme", theme);
+    window.localStorage.setItem("skynet-theme", theme);
   }, [theme]);
 
   // mobile: drawer começa fechado
@@ -54,45 +55,41 @@ export default function ChatPage() {
       supabase.auth.onAuthStateChange((_e, s) => setSession(s));
       setReady(true);
     })();
-    fetch("/api/models")
-      .then((r) => r.json())
-      .then((d) => { if (d.models?.length) { setModels(d.models); setModel(d.models[0]); } })
+    api("models")
+      .then((d) => {
+        if (d.ok && Array.isArray(d.models) && d.models.length) {
+          setModels(d.models as string[]);
+          setModel((d.models as string[])[0]);
+        }
+        if (typeof d.ai_configured === "boolean") setAiConfigured(d.ai_configured);
+      })
       .catch(() => {});
   }, [supabase]);
 
   const loadConvs = useCallback(async () => {
-    if (!supabase || !session) { setConvs([]); return; }
-    const res = await fetch("/api/conversations", {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    const data = await res.json().catch(() => null);
-    if (data?.ok) setConvs(data.conversations);
-  }, [supabase, session]);
+    if (!session) { setConvs([]); return; }
+    const data = await api("conversations", { token: session.access_token });
+    if (data.ok && Array.isArray(data.conversations)) setConvs(data.conversations as Conv[]);
+  }, [session]);
 
   useEffect(() => { loadConvs(); }, [loadConvs]);
 
   const openConv = useCallback(async (id: string) => {
-    if (!supabase || !session) return;
-    const res = await fetch(`/api/conversations/${id}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    const data = await res.json().catch(() => null);
-    if (data?.ok) {
+    if (!session) return;
+    const data = await api(`conversations?id=${id}`, { token: session.access_token });
+    if (data.ok && Array.isArray(data.messages)) {
       setActiveConv(id);
-      setMsgs(data.messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })));
+      setMsgs(data.messages as Msg[]);
       setDrawerView("history");
       if (window.innerWidth < 860) setDrawerOpen(false);
     } else {
       showToast("Não foi possível abrir a conversa.");
     }
-  }, [supabase, session, showToast]);
+  }, [session, showToast]);
 
   async function deleteConv(id: string) {
-    if (!supabase || !session) return;
-    await fetch(`/api/conversations/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
+    if (!session) return;
+    await api(`conversations?id=${id}`, { method: "DELETE", token: session.access_token });
     setConvs((c) => c.filter((x) => x.id !== id));
     if (activeConv === id) { setActiveConv(null); setMsgs([]); }
   }
@@ -111,23 +108,19 @@ export default function ChatPage() {
     setMsgs((m) => [...m, { role: "user", content }]);
     setBusy(true);
     try {
-      const res = await fetch("/api/chat", {
+      const data = await api("chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ conversationId: activeConv, content, model }),
+        body: { conversationId: activeConv, content, model },
+        token: session?.access_token ?? null,
       });
-      const data = await res.json().catch(() => null);
-      if (!data?.ok) {
-        setMsgs((m) => [...m, { role: "assistant", content: `> ERRO: ${data?.error ?? `HTTP ${res.status}`}` }]);
-        showToast(data?.error ?? "Falha na chamada do servidor.");
+      if (!data.ok) {
+        setMsgs((m) => [...m, { role: "assistant", content: `> ${data.error ?? "Erro desconhecido."}` }]);
+        showToast(String(data.error ?? "Falha na chamada do servidor."));
         return;
       }
-      setMsgs((m) => [...m, { role: "assistant", content: data.reply }]);
-      if (data.conversationId && data.conversationId !== activeConv) setActiveConv(data.conversationId);
-      if (session) loadConvs();
+      setMsgs((m) => [...m, { role: "assistant", content: String(data.reply) }]);
+      if (data.conversationId && data.conversationId !== activeConv) setActiveConv(String(data.conversationId));
+      loadConvs();
     } catch {
       showToast("Sem conexão com o servidor.");
     } finally {
@@ -171,7 +164,7 @@ export default function ChatPage() {
     <div className="shell">
       <aside className={`drawer ${drawerOpen ? "" : "collapsed"}`} aria-label="Menu">
         <div className="drawer-head">
-          <a className="brand" href="/">SKY<span className="brand-red">HUB</span></a>
+          <a className="brand" href={`${BASE}/`}>SKY<span className="brand-red">NET</span></a>
           <button className="icon-btn" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu">✕</button>
         </div>
 
@@ -186,7 +179,7 @@ export default function ChatPage() {
               <div className="nav-sep" />
 
               {soon("Indique e Ganhe", "Convide amigos e ganhe benefícios")}
-              {soon("Monetize com SKYHUB", "Novo")}
+              {soon("Monetize com SKYNET", "Novo")}
               {soon("Imagens", "Gere e explore imagens com IA")}
               {soon("Conversas em grupo", "Colabore com múltiplos agentes")}
               {soon("Codex", "Código, scripts e automação")}
@@ -197,7 +190,7 @@ export default function ChatPage() {
               <button
                 className="nav-item"
                 onClick={() => {
-                  if (!logged) { showToast("Entre para ver seu histórico."); setDrawerOpen(false); window.location.href = "/login"; return; }
+                  if (!logged) { showToast("Entre para ver seu histórico."); window.location.href = `${BASE}/login/`; return; }
                   setDrawerView("history");
                 }}
               >
@@ -206,12 +199,12 @@ export default function ChatPage() {
                 {logged && <span className="badge badge-new">{convs.length}</span>}
               </button>
 
-              <a className="nav-item" href="/about">
+              <a className="nav-item" href={`${BASE}/about/`}>
                 <span className="nav-ico">◎</span>
-                <span className="nav-label">Conheça o SKYHUB<br /><span className="nav-sub">Descubra como funciona o projeto</span></span>
+                <span className="nav-label">Conheça o SKYNET<br /><span className="nav-sub">Descubra como funciona o projeto</span></span>
               </a>
 
-              <a className="nav-item" href="mailto:suporte@skyhub.app?subject=Suporte%20SKYHUB">
+              <a className="nav-item" href="mailto:suporte@skynet.app?subject=Suporte%20SKYNET">
                 <span className="nav-ico">✉</span>
                 <span className="nav-label">Suporte<br /><span className="nav-sub">Tire dúvidas e fale com o suporte</span></span>
               </a>
@@ -251,8 +244,8 @@ export default function ChatPage() {
               {theme === "theme-black" ? "BLACK" : "WHITE"}
             </button>
           </div>
-          <a href="/terms">Termos de Serviço</a>
-          <span>SKYHUB v1.0 — código próprio</span>
+          <a href={`${BASE}/terms/`}>Termos de Serviço</a>
+          <span>SKYNET v1.0 — código próprio</span>
         </div>
       </aside>
 
@@ -263,22 +256,22 @@ export default function ChatPage() {
               <button className="drawer-open-btn" onClick={() => setDrawerOpen(true)} aria-label="Abrir menu">☰</button>
             )}
             <span className="model-chip">
-              <span className="dot" />
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                aria-label="Modelo de IA"
-              >
+              <span className="dot" style={aiConfigured === false ? { background: "var(--red)", boxShadow: "0 0 6px var(--red)" } : undefined} />
+              <select value={model} onChange={(e) => setModel(e.target.value)} aria-label="Modelo de IA">
                 {models.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </span>
           </div>
           <div className="header-right">
-            <span className="header-status">{logged ? "conta ativa" : "modo anônimo"}</span>
+            <span className="header-status">
+              {aiConfigured === false
+                ? "IA não configurada"
+                : logged ? "conta ativa" : "modo anônimo"}
+            </span>
             {logged ? (
               <button className="btn-ghost" onClick={logout}>SAIR</button>
             ) : (
-              <a className="btn-login" href="/login">Fazer login</a>
+              <a className="btn-login" href={`${BASE}/login/`}>Fazer login</a>
             )}
           </div>
         </header>
@@ -286,12 +279,18 @@ export default function ChatPage() {
         <div className="content">
           {!inChat ? (
             <div className="hero">
-              <div className="hero-kicker">SKYHUB // ONLINE</div>
-              <h1>Apresentamos o SKY<span>HUB</span></h1>
+              <div className="hero-kicker">SKYNET // ONLINE</div>
+              <h1>Apresentamos o SKY<span>NET</span></h1>
               <p className="hero-sub">
                 Sua inteligência artificial com servidor, conta e histórico de verdade.
                 Sem espelho, sem simulação — tudo aqui é real.
               </p>
+              {aiConfigured === false && (
+                <p className="hero-sub" style={{ color: "var(--red)" }}>
+                  ⚠ O provedor de IA ainda não tem chave configurada. Contas, histórico e
+                  telas já funcionam; o chat responderá assim que a chave for definida.
+                </p>
+              )}
               <div className="chips">
                 <button className="chip" onClick={() => send("Faça uma busca atualizada sobre as principais notícias de tecnologia desta semana.")}>Buscar na web</button>
                 <button className="chip" onClick={() => send("Escreva uma função em JavaScript que valida CPF e me explique o código.")}>Programar</button>
@@ -304,13 +303,13 @@ export default function ChatPage() {
               <div className="chat-inner">
                 {msgs.map((m, i) => (
                   <div key={i} className={`msg ${m.role === "assistant" ? "msg-ai" : "msg-user"}`}>
-                    <div className="msg-role">{m.role === "user" ? "você" : "skyhub"}</div>
+                    <div className="msg-role">{m.role === "user" ? "você" : "skynet"}</div>
                     <div className="msg-body">{m.content}</div>
                   </div>
                 ))}
                 {busy && (
                   <div className="msg msg-ai">
-                    <div className="msg-role">skyhub</div>
+                    <div className="msg-role">skynet</div>
                     <div className="msg-body typing"><span>●</span><span>●</span><span>●</span></div>
                   </div>
                 )}

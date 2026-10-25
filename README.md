@@ -1,25 +1,34 @@
-# SKYHUB
+# SKYNET
 
 Chat de IA com estética de terminal (preto/vermelho), **100% código novo e próprio** — sem código,
 assets ou interface capturados de qualquer outro site. Tudo é real: servidor, banco, contas, login,
 recuperação de senha e chat.
 
-## Stack
+**No ar:** https://mlk010173.github.io/skynetchat/
+
+## Arquitetura
 
 | Camada | Tecnologia |
 |---|---|
-| Frontend + API | Next.js 15 (App Router), deploy na Vercel (serverless) |
-| Conta + histórico | Supabase (Postgres + Auth + Row Level Security) |
+| Frontend | Next.js 15 exportado como site estático → GitHub Pages (branch `gh-pages`) |
+| Backend | Edge Functions do Supabase (`chat`, `models`, `conversations`) |
+| Conta + histórico | Supabase Auth + Postgres com Row Level Security |
 | Chat | qualquer provedor compatível com a API OpenAI (OpenAI, Groq, OpenRouter…) |
 | Testes | `node --test` (built-in) + `tsc --noEmit` |
-| CI | GitHub Actions — testes, tipos e build em cada push |
+
+```
+Browser ──> Edge Functions (Supabase) ──> Provedor de IA
+   │              │
+   └── Supabase Auth (login/logout/recuperação)
+                  └── Postgres (conversas, mensagens, rate limit) com RLS
+```
 
 ## Funcionalidades
 
 - **Chat real** com o modelo escolhido (o seletor troca o modelo de verdade)
-- **Modo anônimo**: funciona sem conta, limite de 20 mensagens/hora por IP, sem histórico
+- **Modo anônimo**: sem conta, limite de 20 mensagens/hora por IP (persistido no banco)
 - **Contas reais**: cadastro, login, logout, esqueci a senha e redefinição por email
-- **Histórico persistido** no Supabase, com RLS (cada usuário só acessa as próprias conversas)
+- **Histórico persistido** com RLS (cada usuário só acessa as próprias conversas)
 - **Temas** BLACK/WHITE persistidos no navegador
 - **Zero simulação**: itens ainda não implementados aparecem como "EM BREVE" e avisam honestamente
 
@@ -27,77 +36,66 @@ recuperação de senha e chat.
 
 ```
 app/
-  page.tsx                    # chat + menu lateral + hero
-  login/page.tsx              # entrar / criar conta / esqueci a senha
-  reset/page.tsx              # redefinição de senha via link de email
-  about/page.tsx              # Conheça o SKYHUB
-  terms/page.tsx              # Termos de Serviço
-  api/chat/route.ts           # chat real: valida, persiste e chama o provedor de IA
-  api/models/route.ts         # lista de modelos do seletor
-  api/conversations/route.ts  # lista de conversas do usuário
-  api/conversations/[id]/…    # mensagens, renomear, apagar
+  page.tsx                       # chat + menu lateral + hero
+  login/page.tsx                 # entrar / criar conta / esqueci a senha
+  reset/page.tsx                 # redefinição de senha via link de email
+  about/page.tsx                 # Conheça o SKYNET
+  terms/page.tsx                 # Termos de Serviço
 lib/
-  client-auth.ts              # cliente Supabase do browser (singleton)
-  supabase-admin.ts           # cliente service role do servidor + validação de token
-  ai.ts                       # chamada ao provedor de IA (OpenAI-compatível)
-  models.ts                   # modelos configuráveis por env
-  rate-limit.ts               # limite de uso anônimo por IP
-supabase/schema.sql           # schema + índices + RLS
-tests/                        # testes unitários (node --test)
+  api.ts                         # chamadas às edge functions
+  client-auth.ts                 # cliente Supabase do browser (singleton)
+  models.ts                      # lógica de modelos (usada pelos testes como especificação)
+supabase/
+  schema.sql                     # schema + índices + RLS (versionado e reproduzível)
+  functions/
+    chat/index.ts                # chat real: auth opcional, rate limit, persistência, IA
+    models/index.ts              # lista de modelos + estado honesto da IA
+    conversations/index.ts       # listar/abrir/renomear/apagar conversas
+tests/                           # testes unitários (node --test)
 ```
 
 ## Variáveis de ambiente
 
-Veja `.env.example`. Nunca comite `.env` com valores reais.
+Veja `.env.example`.
 
-| Variável | Onde | O que é |
-|---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Vercel + local | URL do projeto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel + local | chave anônima (pública) |
-| `SUPABASE_SERVICE_ROLE_KEY` | **somente servidor** | chave service role — nunca no frontend |
-| `OPENAI_API_KEY` | **somente servidor** | chave do provedor de IA |
-| `OPENAI_BASE_URL` | servidor | opcional. Ex. Groq: `https://api.groq.com/openai/v1` |
-| `SKYHUB_MODELS` | servidor | opcional. Ex. `llama-3.3-70b-versatile,gpt-4o-mini` |
+**Frontend** (públicas, definidas no build do export):
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BASE_PATH`
+
+**Edge Functions** (secrets no dashboard do Supabase → Edge Functions → Secrets):
+`OPENAI_API_KEY` (obrigatória para o chat responder), `OPENAI_BASE_URL`, `SKYNET_MODELS`
 
 ## Desenvolvimento local
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha as chaves
+cp .env.example .env.local   # preencha as variáveis públicas
 npm run dev
 ```
 
-## Testes
+As edge functions ficam em `supabase/functions/` — aponte as chamadas de dev para o
+projeto Supabase configurando `NEXT_PUBLIC_SUPABASE_URL`.
 
-```bash
-node --test        # testes unitários
-npx tsc --noEmit   # tipos
-npm run build       # build de produção
-```
+## Publicar (deploy)
 
-O CI (`.github/workflows/ci.yml`) roda os três em cada push/PR.
+1. Banco: rode `supabase/schema.sql` no SQL Editor do projeto Supabase
+2. Secrets: configure `OPENAI_API_KEY` (e opcionais) nos secrets das funções
+3. Build do site estático:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon> \
+   npm run build     # gera out/
+   ```
+4. Publique o conteúdo de `out/` na branch `gh-pages` (GitHub Pages)
 
-## Deploy na Vercel
-
-1. Crie um projeto na Vercel importando este repositório (framework Next.js detectado automaticamente)
-2. Configure as variáveis de ambiente da tabela acima (as de `NEXT_PUBLIC_*` em Production e Preview)
-3. Rode `supabase/schema.sql` no SQL Editor do projeto Supabase
-4. No Supabase → Authentication → URL Configuration, adicione a URL de produção às **Redirect URLs**
-5. Deploy. Testes pós-deploy: `/api/models` deve listar os modelos; criar conta e conversar deve gravar a conversa
+Alternativa: o projeto também pode ser hospedado na Vercel (basta remover
+`output: "export"` do `next.config.mjs` e portar as edge functions de volta para rotas de API).
 
 ## Segurança
 
-- Chaves de servidor (`SERVICE_ROLE`, `OPENAI_API_KEY`) nunca chegam ao browser
-- RLS no banco + validação de dono em cada rota de API (duas camadas)
-- Limite de uso anônimo por IP; mensagens limitadas a 4000 caracteres; contexto a 30 mensagens
-- Cabeçalhos de segurança (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`)
-- Tokens de sessão e dados sensíveis não aparecem em logs
+- `SUPABASE_SERVICE_ROLE_KEY` e `OPENAI_API_KEY` vivem apenas nas edge functions — nunca no frontend
+- RLS no banco + verificação de dono em cada função (duas camadas)
+- Rate limit anônimo por IP persistido no banco (20 msgs/hora)
+- Mensagens limitadas a 4000 caracteres; contexto a 30 mensagens
+- CORS restrito nos métodos; JWT validado em toda operação autenticada
 
 MIT
-
-## Nota sobre este repositório
-
-O projeto SKYHUB nasceu no repositório `skyhub` e foi consolidado aqui, no `skynetchat`.
-A branch `espelho-estatico` preserva o antigo espelho estático do skynetchat.net
-(que permanece publicado em https://mlk010173.github.io/skynetchat/ via GitHub Pages).
-Todo o histórico da `main` é do SKYHUB — código 100% novo, sem nada capturado.

@@ -42,3 +42,12 @@ create policy "dono le mensagens"
       where c.id = conversation_id and c.user_id = auth.uid()
     )
   );
+
+-- Rate limit do modo anônimo (usado pelas edge functions com service role)
+create table if not exists anon_requests (
+  id bigserial primary key,
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_anon_requests_ip_time on anon_requests (ip, created_at);
+alter table anon_requests enable row level security;

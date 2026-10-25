@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SKYHUB",
-  description: "SKYHUB — chat de IA com servidor, conta e histórico de verdade. Estética de terminal, código 100% próprio.",
+  title: "SKYNET",
+  description: "SKYNET — chat de IA com servidor, conta e histórico de verdade. Estética de terminal, código 100% próprio.",
 };
 
 export const viewport: Viewport = {
@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 
 const themeScript = `
 try {
-  var t = localStorage.getItem("skyhub-theme");
+  var t = localStorage.getItem("skynet-theme");
   document.body.className = t === "theme-white" ? "theme-white" : "theme-black";
 } catch (e) {}
 `;

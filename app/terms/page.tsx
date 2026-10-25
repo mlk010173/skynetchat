@@ -1,4 +1,4 @@
-export const metadata = { title: "Termos de Serviço — SKYHUB" };
+export const metadata = { title: "Termos de Serviço — SKYNET" };
 
 export default function TermsPage() {
   return (
@@ -8,13 +8,13 @@ export default function TermsPage() {
 
       <h2>1. O que é o serviço</h2>
       <p>
-        O SKYHUB é uma interface de chat para modelos de inteligência artificial. O serviço é
+        O SKYNET é uma interface de chat para modelos de inteligência artificial. O serviço é
         fornecido "como está", sem garantia de disponibilidade contínua.
       </p>
 
       <h2>2. Uso aceitável</h2>
       <p>
-        Não use o SKYHUB para atividades ilegais, para gerar conteúdo que cause dano real a
+        Não use o SKYNET para atividades ilegais, para gerar conteúdo que cause dano real a
         pessoas, para ataques a sistemas ou para violar direitos de terceiros.
       </p>
 
@@ -42,7 +42,7 @@ export default function TermsPage() {
         qualquer momento solicitando a exclusão ao suporte.
       </p>
 
-      <a className="back btn-ghost" href="/">← Voltar ao chat</a>
+      <a className="back btn-ghost" href="/skynetchat/">← Voltar ao chat</a>
     </div>
   );
 }

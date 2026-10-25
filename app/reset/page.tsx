@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/client-auth";
+import { BASE } from "@/lib/api";
 
 /**
  * Página de redefinição de senha.
@@ -47,7 +48,7 @@ export default function ResetPage() {
         setMsg({ text: error.message, ok: false });
       } else {
         setMsg({ text: "Senha atualizada! Redirecionando…", ok: true });
-        setTimeout(() => { window.location.href = "/"; }, 1200);
+        setTimeout(() => { window.location.href = `${BASE}/`; }, 1200);
       }
     } finally {
       setBusy(false);
@@ -97,7 +98,7 @@ export default function ResetPage() {
         )}
 
         <div className={`login-msg ${msg?.ok ? "ok" : "err"}`}>{msg?.text ?? ""}</div>
-        <div className="login-alt"><a href="/login">← voltar ao login</a></div>
+        <div className="login-alt"><a href={`${BASE}/login/`}>← voltar ao login</a></div>
       </div>
     </div>
   );

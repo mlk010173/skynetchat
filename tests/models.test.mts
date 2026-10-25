@@ -2,17 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getModels, isValidModel, getProviderBaseUrl } from "../lib/models.ts";
 
-test("sem SKYHUB_MODELS usa lista padrão", () => {
-  delete process.env.SKYHUB_MODELS;
+test("sem SKYNET_MODELS usa lista padrão", () => {
+  delete process.env.SKYNET_MODELS;
   assert.deepEqual(getModels(), ["gpt-4o-mini", "gpt-4o"]);
 });
 
-test("SKYHUB_MODELS é parseado corretamente (vírgulas e espaços)", () => {
-  process.env.SKYHUB_MODELS = "llama-3.3-70b-versatile , gpt-4o-mini ,  ";
+test("SKYNET_MODELS é parseado corretamente (vírgulas e espaços)", () => {
+  process.env.SKYNET_MODELS = "llama-3.3-70b-versatile , gpt-4o-mini ,  ";
   assert.deepEqual(getModels(), ["llama-3.3-70b-versatile", "gpt-4o-mini"]);
   assert.equal(isValidModel("llama-3.3-70b-versatile"), true);
   assert.equal(isValidModel("modelo-inexistente"), false);
-  delete process.env.SKYHUB_MODELS;
+  delete process.env.SKYNET_MODELS;
 });
 
 test("base URL do provedor remove barras finais", () => {

@@ -1,7 +1,7 @@
-/** Modelos disponíveis no seletor. Configurável por env SKYHUB_MODELS. */
+/** Modelos disponíveis no seletor. Configurável por env SKYNET_MODELS. */
 
 export function getModels(): string[] {
-  const raw = process.env.SKYHUB_MODELS ?? "";
+  const raw = process.env.SKYNET_MODELS ?? "";
   const list = raw
     .split(",")
     .map((m) => m.trim())
