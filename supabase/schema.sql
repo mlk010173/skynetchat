@@ -112,3 +112,54 @@ create or replace function match_memories(
   order by m.embedding <=> p_embedding
   limit p_count;
 $$;
+-- ============ CONTA / PERFIL / CONFIGURAÇÕES / NOTIFICAÇÕES ============
+
+-- 1) Configurações por usuário (tema, modelo padrão, notificações)
+create table if not exists user_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  theme text not null default 'black' check (theme in ('black','white')),
+  default_model text not null default 'gpt-4o-mini',
+  notifications_enabled boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+
+alter table user_settings enable row level security;
+create policy "user_settings_select_own" on user_settings for select using (auth.uid() = user_id);
+create policy "user_settings_upsert_own" on user_settings for insert with check (auth.uid() = user_id);
+create policy "user_settings_update_own" on user_settings for update using (auth.uid() = user_id);
+
+-- 2) Notificações reais do sistema
+create table if not exists notifications (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null default 'system' check (kind in ('system','welcome','account','warning')),
+  title text not null,
+  body text not null default '',
+  read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+alter table notifications enable row level security;
+create policy "notifications_select_own" on notifications for select using (auth.uid() = user_id);
+create policy "notifications_update_own" on notifications for update using (auth.uid() = user_id);
+
+-- 3) Novo usuário: configurações padrão + notificação de boas-vindas
+create or replace function on_new_user() returns trigger as $$
+begin
+  insert into user_settings (user_id) values (new.id) on conflict do nothing;
+  insert into notifications (user_id, kind, title, body) values (
+    new.id, 'welcome',
+    'Bem-vindo ao SKYNET',
+    'Sua conta foi criada com sucesso. Seu histórico fica salvo no servidor e sincroniza entre dispositivos.'
+  );
+  return new;
+end $$ language plpgsql security definer;
+
+drop trigger if exists trg_on_new_user on auth.users;
+create trigger trg_on_new_user after insert on auth.users
+  for each row execute function on_new_user();
+
+-- 4) Notificações em tempo real
+do $$ begin
+  alter publication supabase_realtime add table notifications;
+exception when duplicate_object then null; end $$;

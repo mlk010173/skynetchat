@@ -1,136 +1,166 @@
 "use client";
 
-import { useState } from "react";
+// LOGIN — mesmo layout do skynetchat.net (terminal de autenticação),
+// autenticação 100% real via Supabase (entrar / criar conta / recuperar acesso).
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getSupabase } from "@/lib/client-auth";
 import { BASE } from "@/lib/api";
 
-type Mode = "signin" | "signup" | "forgot";
+type Mode = "entrar" | "criar" | "recuperar";
 
 export default function LoginPage() {
   const supabase = getSupabase();
-  const [mode, setMode] = useState<Mode>("signin");
+  const router = useRouter();
+  const [mode, setMode] = useState<Mode>("entrar");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [password2, setPassword2] = useState("");
+  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    // já logado → direto ao chat
+    supabase?.auth.getSession().then(({ data }) => {
+      if (data.session) router.replace(BASE + "/");
+    });
+  }, [supabase, router]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!supabase) {
-      setMsg({ text: "Supabase não configurado no servidor. Contate o administrador.", ok: false });
-      return;
-    }
+    if (busy || !supabase) return;
+    setStatus("");
     setBusy(true);
-    setMsg(null);
+
     try {
-      if (mode === "forgot") {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset`,
-        });
-        if (error) setMsg({ text: error.message, ok: false });
-        else setMsg({ text: "Link de recuperação enviado! Confira seu email.", ok: true });
-        return;
-      }
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) setMsg({ text: error.message, ok: false });
-        else setMsg({ text: "Conta criada! Se o projeto exigir confirmação, confirme pelo email antes de entrar.", ok: true });
-      } else {
+      if (mode === "entrar") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) setMsg({ text: error.message, ok: false });
-        else {
-          setMsg({ text: "Acesso liberado. Redirecionando…", ok: true });
-          window.location.href = `${BASE}/`;
+        if (error) {
+          setStatus(error.message.includes("Invalid login")
+            ? "Credenciais inválidas."
+            : error.message);
+          return;
         }
+        router.replace(BASE + "/");
+      } else if (mode === "criar") {
+        if (password.length < 8) { setStatus("A senha precisa ter ao menos 8 caracteres."); return; }
+        if (password !== password2) { setStatus("As senhas não coincidem."); return; }
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) { setStatus(error.message); return; }
+        router.replace(BASE + "/");
+      } else {
+        if (!email) { setStatus("Informe seu e-mail."); return; }
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${location.origin}${BASE}/reset`,
+        });
+        setStatus(error ? error.message : "Link de recuperação enviado. Verifique seu e-mail.");
       }
     } finally {
       setBusy(false);
     }
   }
 
-  const tabs: { id: Mode; label: string }[] = [
-    { id: "signin", label: "ENTRAR" },
-    { id: "signup", label: "CRIAR CONTA" },
-  ];
+  const labels =
+    mode === "criar"
+      ? { action: "CRIAR CONTA ▸", hint: "Defina e-mail e senha para criar sua conta real." }
+      : mode === "recuperar"
+        ? { action: "ENVIAR LINK ▸", hint: "Enviaremos um link de recuperação para o seu e-mail." }
+        : { action: "ENTRAR ▸", hint: "Autentique-se com e-mail e senha da sua conta." };
 
   return (
-    <div className="login-page">
-      <div className="login-box">
-        <h1>SKY<span>NET</span></h1>
-        <p className="sub">
-          {mode === "forgot" ? "recuperação de senha" : "console de acesso — conta real no Supabase"}
-        </p>
+    <main className="auth-shell">
+      <header className="auth-header">
+        <div className="auth-logo" aria-hidden="true">S</div>
+        <div>
+          <div className="auth-brand">SKYNETCHAT</div>
+          <div className="auth-online">● ONLINE</div>
+        </div>
+      </header>
 
-        {mode !== "forgot" && (
-          <div className="login-tabs">
-            {tabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className={`login-tab ${mode === t.id ? "active" : ""}`}
-                onClick={() => { setMode(t.id); setMsg(null); }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+      <p className="auth-manifesto">
+        O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.
+      </p>
+
+      <form className="auth-card" onSubmit={submit}>
+        <div className="auth-card-head">
+          <span>&gt;_ AUTENTICAÇÃO</span>
+          <span className="auth-secure">📡 SECURE</span>
+        </div>
+
+        <p className="auth-hint">{labels.hint}</p>
+
+        <label className="auth-label" htmlFor="email">E-MAIL</label>
+        <input
+          id="email"
+          type="email"
+          required={mode !== "recuperar"}
+          autoComplete="email"
+          placeholder="voce@exemplo.com"
+          className="auth-input"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        {mode !== "recuperar" && (
+          <>
+            <label className="auth-label" htmlFor="password">SENHA</label>
+            <input
+              id="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete={mode === "criar" ? "new-password" : "current-password"}
+              placeholder="••••••••"
+              className="auth-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <div className="auth-meter">{password.length}/8</div>
+          </>
         )}
 
-        <form onSubmit={submit}>
-          <div className="field">
-            <label htmlFor="email">email</label>
+        {mode === "criar" && (
+          <>
+            <label className="auth-label" htmlFor="password2">CONFIRMAR SENHA</label>
             <input
-              id="email"
-              type="email"
+              id="password2"
+              type="password"
               required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="voce@exemplo.com"
+              minLength={8}
+              autoComplete="new-password"
+              placeholder="••••••••"
+              className="auth-input"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
             />
-          </div>
+          </>
+        )}
 
-          {mode !== "forgot" && (
-            <div className="field">
-              <label htmlFor="password">senha</label>
-              <input
-                id="password"
-                type="password"
-                required
-                minLength={6}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="mínimo 6 caracteres"
-              />
-            </div>
-          )}
+        <button className="auth-submit" disabled={busy} type="submit">
+          {labels.action}
+        </button>
 
-          <button className="btn-primary-full" disabled={busy}>
-            {busy
-              ? "…"
-              : mode === "signin"
-                ? "ENTRAR ▸"
-                : mode === "signup"
-                  ? "CRIAR CONTA ▸"
-                  : "ENVIAR LINK ▸"}
-          </button>
-        </form>
+        {status && <div className="auth-status">{status}</div>}
 
-        <div className={`login-msg ${msg?.ok ? "ok" : "err"}`}>{msg?.text ?? ""}</div>
-
-        <div className="login-alt">
-          {mode === "forgot" ? (
-            <a href="`${BASE}/login/`" onClick={() => setMode("signin")}>← voltar ao login</a>
-          ) : (
-            <a href="#" onClick={(e) => { e.preventDefault(); setMode("forgot"); setMsg(null); }}>
-              esqueci minha senha
-            </a>
-          )}
-          <br />
-          <a href="`${BASE}/`">← voltar ao chat (modo anônimo)</a>
+        <div className="auth-links">
+          <button type="button" className={mode === "entrar" ? "active" : ""} onClick={() => { setMode("entrar"); setStatus(""); }}>ENTRAR</button>
+          <span className="auth-sep">|</span>
+          <button type="button" className={mode === "criar" ? "active" : ""} onClick={() => { setMode("criar"); setStatus(""); }}>CRIAR CONTA</button>
+          <span className="auth-sep">|</span>
+          <button type="button" className={mode === "recuperar" ? "active" : ""} onClick={() => { setMode("recuperar"); setStatus(""); }}>RECUPERAR ACESSO</button>
         </div>
-      </div>
-    </div>
+      </form>
+
+      <footer className="auth-badges">
+        <span>○ E2E</span>
+        <span className="auth-sep">|</span>
+        <span>🔏 AES-256</span>
+        <span className="auth-sep">|</span>
+        <span>⇌ ZERO-TRUST</span>
+      </footer>
+
+      <Link href={BASE + "/"} className="auth-back">← voltar ao chat (modo anônimo)</Link>
+    </main>
   );
 }

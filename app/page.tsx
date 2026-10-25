@@ -25,6 +25,9 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [notifs, setNotifs] = useState<{ id: number; kind: string; title: string; body: string; read: boolean; created_at: string }[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
   const [search, setSearch] = useState("");
   const [searching, setSearching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,6 +90,50 @@ export default function ChatPage() {
   }, [search, session]);
 
   useEffect(() => { loadConvs(); }, [loadConvs]);
+
+  // notificações reais do sistema (carrega + tempo real)
+  const loadNotifs = useCallback(async () => {
+    if (!supabase || !session?.user?.id) { setNotifs([]); setNotifCount(0); return; }
+    const { data } = await supabase
+      .from("notifications")
+      .select("id, kind, title, body, read, created_at")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (data) {
+      setNotifs(data);
+      setNotifCount(data.filter((n) => !n.read).length);
+    }
+  }, [supabase, session?.user?.id]);
+
+  useEffect(() => { loadNotifs(); }, [loadNotifs]);
+
+  useEffect(() => {
+    if (!supabase || !session?.user?.id) return;
+    const channel = supabase
+      .channel(`notifs-${session.user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${session.user.id}` },
+        (payload) => {
+          const n = payload.new as { id: number; kind: string; title: string; body: string; read: boolean; created_at: string };
+          setNotifs((cur) => [n, ...cur].slice(0, 30));
+          setNotifCount((c) => c + 1);
+          showToast(`🔔 ${n.title}`);
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [supabase, session?.user?.id]);
+
+  async function markAllRead() {
+    if (!supabase || !session?.user?.id) return;
+    const unread = notifs.filter((n) => !n.read).map((n) => n.id);
+    if (!unread.length) return;
+    await supabase.from("notifications").update({ read: true }).in("id", unread);
+    setNotifs((cur) => cur.map((n) => ({ ...n, read: true })));
+    setNotifCount(0);
+  }
 
   // sincronização em tempo real entre dispositivos (Supabase Realtime)
   useEffect(() => {
@@ -240,6 +287,23 @@ export default function ChatPage() {
                 <span className="nav-label">Conheça o SKYNET<br /><span className="nav-sub">Descubra como funciona o projeto</span></span>
               </a>
 
+              {logged ? (
+                <>
+                  <a className="nav-item" href={`${BASE}/account/`}>
+                    <span className="nav-ico">◉</span>
+                    <span className="nav-label">Conta e perfil<br /><span className="nav-sub">E-mail, senha e sessão</span></span>
+                  </a>
+                  <a className="nav-item" href={`${BASE}/settings/`}>
+                    <span className="nav-ico">⚙</span>
+                    <span className="nav-label">Configurações<br /><span className="nav-sub">Tema, modelo e notificações</span></span>
+                  </a>
+                </>
+              ) : (
+                <a className="nav-item" href={`${BASE}/login/`}>
+                  <span className="nav-ico">◉</span>
+                  <span className="nav-label">Conta e perfil<br /><span className="nav-sub">Entre para acessar</span></span>
+                </a>
+              )}
               <a className="nav-item" href="mailto:suporte@skynet.app?subject=Suporte%20SKYNET">
                 <span className="nav-ico">✉</span>
                 <span className="nav-label">Suporte<br /><span className="nav-sub">Tire dúvidas e fale com o suporte</span></span>
@@ -308,6 +372,27 @@ export default function ChatPage() {
             </span>
           </div>
           <div className="header-right">
+            {logged && (
+              <div className="notif-wrap">
+                <button className="btn-bell" onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) markAllRead(); }} aria-label="Notificações">
+                  ◉{notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
+                </button>
+                {notifOpen && (
+                  <div className="notif-panel">
+                    <div className="notif-head">⌁ NOTIFICAÇÕES</div>
+                    {notifs.length === 0 ? (
+                      <div className="notif-empty">// nenhuma notificação</div>
+                    ) : notifs.map((n) => (
+                      <div key={n.id} className={"notif-item" + (n.read ? "" : " unread")}>
+                        <div className="notif-title">{n.read ? "" : "● "}{n.title}</div>
+                        <div className="notif-body">{n.body}</div>
+                        <div className="notif-time">{new Date(n.created_at).toLocaleString("pt-BR")}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <span className="header-status">
               {aiConfigured === false
                 ? "IA não configurada"
