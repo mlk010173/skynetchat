@@ -17,8 +17,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit() {
     if (busy || !supabase) return;
     setStatus("");
     setBusy(true);
@@ -81,7 +80,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
         O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.
       </p>
 
-      <form className="auth-card" onSubmit={submit}>
+      <div className="auth-card">
         <div className="auth-card-head">
           <span>{cfg.title}</span>
           <span className="auth-secure">📡 SECURE</span>
@@ -127,7 +126,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           </>
         )}
 
-        <button className="auth-submit" disabled={busy} type="submit">{cfg.action}</button>
+        <button className="auth-submit" disabled={busy} type="button" onClick={submit}>{cfg.action}</button>
         {status && <div className="auth-status">{status}</div>}
 
         <div className="auth-links">
@@ -137,7 +136,7 @@ export default function AuthPage({ mode }: { mode: AuthMode }) {
           {mode !== "criar" && <span className="auth-sep">|</span>}
           {mode !== "recuperar" && <a href={`${BASE}/recover/`}>RECUPERAR ACESSO</a>}
         </div>
-      </form>
+      </div>
 
       <footer className="auth-badges">
         <span>○ E2E</span>

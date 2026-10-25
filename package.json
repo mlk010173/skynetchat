@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test"
+    "test": "node --test",
+    "postbuild": "node -e \"require('fs').writeFileSync('out/.nojekyll','')\"",
+    "e2e": "node tests/e2e-login.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -18,6 +20,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "playwright": "^1.64.1",
     "typescript": "^5.6.0"
   }
 }

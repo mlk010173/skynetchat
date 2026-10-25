@@ -22,8 +22,7 @@ export default function AccountPage() {
     });
   }, [supabase]);
 
-  async function changePassword(e: React.FormEvent) {
-    e.preventDefault();
+  async function changePassword() {
     if (busy || !supabase) return;
     if (newPass.length < 8) { setStatus("A nova senha precisa ter ao menos 8 caracteres."); return; }
     if (newPass !== newPass2) { setStatus("As senhas não coincidem."); return; }
@@ -57,7 +56,7 @@ export default function AccountPage() {
           </div>
         </section>
 
-        <form className="form-block" onSubmit={changePassword}>
+        <div className="form-block">
           <div className="form-title">TROCAR SENHA</div>
           <label className="auth-label" htmlFor="np">NOVA SENHA</label>
           <input id="np" type="password" className="auth-input" value={newPass} minLength={8}
@@ -65,9 +64,9 @@ export default function AccountPage() {
           <label className="auth-label" htmlFor="np2">CONFIRMAR NOVA SENHA</label>
           <input id="np2" type="password" className="auth-input" value={newPass2} minLength={8}
             placeholder="••••••••" onChange={(e) => setNewPass2(e.target.value)} autoComplete="new-password" />
-          <button className="auth-submit" disabled={busy} type="submit">ALTERAR ▸</button>
+          <button className="auth-submit" disabled={busy} type="button" onClick={changePassword}>ALTERAR ▸</button>
           {status && <div className="auth-status">{status}</div>}
-        </form>
+        </div>
 
         <section className="form-block">
           <div className="form-title">SESSÃO</div>
