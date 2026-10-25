@@ -94,3 +94,10 @@ O CI (`.github/workflows/ci.yml`) roda os três em cada push/PR.
 - Tokens de sessão e dados sensíveis não aparecem em logs
 
 MIT
+
+## Nota sobre este repositório
+
+O projeto SKYHUB nasceu no repositório `skyhub` e foi consolidado aqui, no `skynetchat`.
+A branch `espelho-estatico` preserva o antigo espelho estático do skynetchat.net
+(que permanece publicado em https://mlk010173.github.io/skynetchat/ via GitHub Pages).
+Todo o histórico da `main` é do SKYHUB — código 100% novo, sem nada capturado.
