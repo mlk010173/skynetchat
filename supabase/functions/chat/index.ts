@@ -1,6 +1,7 @@
-// Edge Function: chat — SKYNET (repo mlk010173/skynetchat)
-// Chat real com rate-limit anônimo no banco, autenticação Supabase,
-// histórico persistido e chamada a provedor OpenAI-compatível.
+// Edge Function: chat — SKYNET
+// Chat real com: autenticação opcional, rate-limit anônimo no banco,
+// histórico persistido, MEMÓRIA VETORIAL (pgvector) entre conversas e
+// resposta em STREAMING (SSE) de qualquer provedor OpenAI-compatível.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const CORS: Record<string, string> = {
@@ -14,6 +15,9 @@ const json = (body: unknown, status = 200) =>
     status,
     headers: { ...CORS, "Content-Type": "application/json" },
   });
+
+const sseHeaders = { ...CORS, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" };
+const sse = (event: unknown) => new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
 
 const service = () =>
   createClient(
@@ -68,7 +72,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // ---- provedor de IA configurado? (verificado antes de qualquer persistência) ----
+  // ---- provedor de IA configurado? (antes de qualquer persistência) ----
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) {
     return json({
@@ -76,6 +80,42 @@ Deno.serve(async (req) => {
       configured: false,
       error: "IA ainda não configurada: defina OPENAI_API_KEY nos secrets desta função (Dashboard → Edge Functions → chat → Secrets).",
     }, 503);
+  }
+  const baseUrl = (Deno.env.get("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/+$/, "");
+  const models = (Deno.env.get("SKYNET_MODELS") ?? "gpt-4o-mini,gpt-4o")
+    .split(",").map((m) => m.trim()).filter(Boolean);
+  const model = body.model && models.includes(body.model) ? body.model : models[0];
+
+  // ---- memória vetorial: embeddings da mensagem (melhor esforço) ----
+  const embedModel = Deno.env.get("SKYNET_EMBEDDING_MODEL") ?? "text-embedding-3-small";
+  let userEmbedding: number[] | null = null;
+  try {
+    const embRes = await fetch(`${baseUrl}/embeddings`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: embedModel, input: content.slice(0, 2000) }),
+    });
+    const embData = await embRes.json().catch(() => null);
+    if (embRes.ok && Array.isArray(embData?.data?.[0]?.embedding)) {
+      userEmbedding = embData.data[0].embedding;
+    }
+  } catch { /* memória é opcional — o chat continua sem ela */ }
+
+  // ---- memórias relevantes de OUTRAS conversas (pgvector) ----
+  let memories: string[] = [];
+  if (userId && userEmbedding) {
+    try {
+      const { data: mem } = await svc.rpc("match_memories", {
+        p_user: userId,
+        p_conv: body.conversationId ?? null,
+        p_embedding: userEmbedding,
+        p_threshold: 0.75,
+        p_count: 8,
+      });
+      if (Array.isArray(mem)) {
+        memories = mem.map((m: { role: string; content: string }) => `${m.role === "user" ? "usuário" : "skynet"}: ${m.content}`.slice(0, 400));
+      }
+    } catch { /* sem memórias, segue o chat */ }
   }
 
   // ---- conversa (persistência apenas para usuários logados) ----
@@ -96,8 +136,8 @@ Deno.serve(async (req) => {
     if (cErr) return json({ ok: false, error: "Falha ao criar conversa." }, 500);
   }
 
-  // ---- contexto das últimas 30 mensagens ----
-  const context: { role: string; content: string }[] = [{ role: "user", content }];
+  // ---- contexto das últimas 30 mensagens + memórias ----
+  const messages: { role: string; content: string }[] = [];
   if (userId && convId) {
     const { data: history } = await svc
       .from("messages")
@@ -106,57 +146,122 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(30);
     if (history?.length) {
-      for (const m of history.reverse()) context.unshift({ role: m.role, content: m.content });
+      for (const m of history.reverse()) messages.push({ role: m.role, content: m.content });
     }
+  }
+  const systemParts = [
+    "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português.",
+  ];
+  if (memories.length) {
+    systemParts.push(
+      `Memórias relevantes de conversas anteriores deste usuário (use se forem úteis):\n- ${memories.join("\n- ")}`,
+    );
+  }
+  const llmMessages = [
+    { role: "system", content: systemParts.join("\n\n") },
+    ...messages,
+    { role: "user", content },
+  ];
+
+  // ---- salva a mensagem do usuário (com embedding, se houver) ----
+  if (userId && convId) {
     const { error: mErr } = await svc
       .from("messages")
-      .insert({ conversation_id: convId, role: "user", content });
+      .insert({
+        conversation_id: convId,
+        role: "user",
+        content,
+        ...(userEmbedding ? { embedding: userEmbedding } : {}),
+      });
     if (mErr) return json({ ok: false, error: "Falha ao salvar mensagem." }, 500);
   }
 
-  const baseUrl = (Deno.env.get("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/+$/, "");
-  const models = (Deno.env.get("SKYNET_MODELS") ?? "gpt-4o-mini,gpt-4o")
-    .split(",").map((m) => m.trim()).filter(Boolean);
-  const model = body.model && models.includes(body.model) ? body.model : models[0];
+  // ---- streaming da resposta (SSE) ----
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const res = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model,
+            messages: llmMessages,
+            max_tokens: 1024,
+            temperature: 0.7,
+            stream: true,
+          }),
+        });
 
-  let reply: string;
-  try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português." },
-          ...context,
-        ],
-        max_tokens: 1024,
-        temperature: 0.7,
-      }),
-    });
-    const data = await res.json().catch(() => null);
-    if (!res.ok || !data?.choices?.[0]?.message?.content) {
-      return json({
-        ok: false,
-        error: `Provedor de IA respondeu com erro (${res.status}). Verifique a chave/modelo configurados.`,
-      }, 502);
-    }
-    reply = data.choices[0].message.content as string;
-  } catch {
-    return json({ ok: false, error: "Sem conexão com o provedor de IA." }, 502);
-  }
+        if (!res.ok || !res.body) {
+          const errText = await res.text().catch(() => "");
+          controller.enqueue(sse({
+            ok: false,
+            error: `Provedor de IA respondeu com erro (${res.status}). ${errText.slice(0, 200)}`,
+          }));
+          controller.close();
+          return;
+        }
 
-  // ---- persiste a resposta ----
-  if (userId && convId) {
-    const { error: rErr } = await svc
-      .from("messages")
-      .insert({ conversation_id: convId, role: "assistant", content: reply });
-    if (rErr) return json({ ok: false, error: "Falha ao salvar resposta." }, 500);
-    await svc.from("conversations").update({ updated_at: new Date().toISOString() }).eq("id", convId);
-  }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let full = "";
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith("data:")) continue;
+            const payload = trimmed.slice(5).trim();
+            if (payload === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(payload);
+              const delta = parsed?.choices?.[0]?.delta?.content;
+              if (delta) {
+                full += delta;
+                controller.enqueue(sse({ delta }));
+              }
+            } catch { /* ignora fragmentos parciais */ }
+          }
+        }
 
-  return json({ ok: true, reply, conversationId: convId, model });
+        // persiste a resposta completa (com embedding, se houver)
+        if (full) {
+          if (userId && convId) {
+            let replyEmbedding: number[] | null = null;
+            try {
+              const embRes = await fetch(`${baseUrl}/embeddings`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ model: embedModel, input: full.slice(0, 2000) }),
+              });
+              const embData = await embRes.json().catch(() => null);
+              if (embRes.ok && Array.isArray(embData?.data?.[0]?.embedding)) {
+                replyEmbedding = embData.data[0].embedding;
+              }
+            } catch { /* opcional */ }
+            await svc.from("messages").insert({
+              conversation_id: convId,
+              role: "assistant",
+              content: full,
+              ...(replyEmbedding ? { embedding: replyEmbedding } : {}),
+            });
+          }
+          controller.enqueue(sse({ done: true, conversationId: convId, model }));
+        } else {
+          controller.enqueue(sse({ ok: false, error: "O provedor de IA não retornou conteúdo." }));
+        }
+        controller.close();
+      } catch (err) {
+        controller.enqueue(sse({ ok: false, error: "Sem conexão com o provedor de IA." }));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, { headers: sseHeaders });
 });

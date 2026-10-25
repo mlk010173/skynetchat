@@ -51,3 +51,64 @@ create table if not exists anon_requests (
 );
 create index if not exists idx_anon_requests_ip_time on anon_requests (ip, created_at);
 alter table anon_requests enable row level security;
+-- 1) updated_at automático nas conversas quando chega mensagem
+create or replace function touch_conversation() returns trigger as $$
+begin
+  update conversations set updated_at = now() where id = new.conversation_id;
+  return new;
+end $$ language plpgsql;
+drop trigger if exists trg_touch_conversation on messages;
+create trigger trg_touch_conversation after insert on messages
+  for each row execute function touch_conversation();
+
+-- 2) busca full-text em português no conteúdo das mensagens
+alter table messages add column if not exists search_text tsvector
+  generated always as (to_tsvector('portuguese', coalesce(content, ''))) stored;
+create index if not exists idx_messages_search on messages using gin (search_text);
+
+-- 3) memória de longo prazo do agente: embeddings vetoriais (pgvector)
+create extension if not exists vector;
+alter table messages add column if not exists embedding vector(1536);
+create index if not exists idx_messages_embedding on messages
+  using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+
+-- 4) busca de conversas por título OU conteúdo das mensagens
+create or replace function search_conversations(uid uuid, q text)
+returns setof conversations language sql stable as $$
+  select c.* from conversations c
+  where c.user_id = uid and (
+    c.title ilike '%' || q || '%' or exists (
+      select 1 from messages m
+      where m.conversation_id = c.id
+        and m.search_text @@ websearch_to_tsquery('portuguese', q)))
+  order by c.updated_at desc
+  limit 50;
+$$;
+
+-- 5) sincronização em tempo real entre dispositivos
+do $$ begin
+  alter publication supabase_realtime add table conversations;
+exception when duplicate_object then null; end $$;
+do $$ begin
+  alter publication supabase_realtime add table messages;
+exception when duplicate_object then null; end $$;
+
+-- 6) limpeza automática da tabela de rate-limit (pg_cron, a cada hora)
+create extension if not exists pg_cron;
+select cron.schedule('cleanup-anon-requests', '5 * * * *',
+  $$delete from anon_requests where created_at < now() - interval '3 hours'$$);
+
+-- 7) RPC de memória: mensagens mais parecidas de outras conversas do usuário
+create or replace function match_memories(
+  p_user uuid, p_conv uuid, p_embedding vector(1536), p_threshold float, p_count int
+) returns table (role text, content text, similarity float) language sql stable as $$
+  select m.role, m.content, 1 - (m.embedding <=> p_embedding) as similarity
+  from messages m
+  join conversations c on c.id = m.conversation_id
+  where c.user_id = p_user
+    and m.conversation_id <> coalesce(p_conv, m.conversation_id)
+    and m.embedding is not null
+    and 1 - (m.embedding <=> p_embedding) > p_threshold
+  order by m.embedding <=> p_embedding
+  limit p_count;
+$$;

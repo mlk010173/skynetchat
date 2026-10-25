@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSupabase, SessionLike } from "@/lib/client-auth";
-import { api, BASE } from "@/lib/api";
+import { api, streamChat, BASE } from "@/lib/api";
 
 interface Conv { id: string; title: string; updated_at: string }
 interface Msg { role: "user" | "assistant"; content: string }
@@ -25,6 +25,8 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [searching, setSearching] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((m: string) => {
@@ -72,7 +74,33 @@ export default function ChatPage() {
     if (data.ok && Array.isArray(data.conversations)) setConvs(data.conversations as Conv[]);
   }, [session]);
 
+  // busca no histórico (debounce 300ms)
+  useEffect(() => {
+    if (!session || !search.trim()) return;
+    const t = setTimeout(async () => {
+      setSearching(true);
+      const data = await api(`conversations?q=${encodeURIComponent(search.trim())}`, { token: session.access_token });
+      if (data.ok && Array.isArray(data.conversations)) setConvs(data.conversations as Conv[]);
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search, session]);
+
   useEffect(() => { loadConvs(); }, [loadConvs]);
+
+  // sincronização em tempo real entre dispositivos (Supabase Realtime)
+  useEffect(() => {
+    if (!supabase || !session?.user?.id) return;
+    const channel = supabase
+      .channel(`convs-${session.user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversations", filter: `user_id=eq.${session.user.id}` },
+        () => loadConvs(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [supabase, session?.user?.id, loadConvs]);
 
   const openConv = useCallback(async (id: string) => {
     if (!session) return;
@@ -106,26 +134,34 @@ export default function ChatPage() {
     if (!content || busy) return;
     setInput("");
     setMsgs((m) => [...m, { role: "user", content }]);
+    setMsgs((m) => [...m, { role: "assistant", content: "" }]);
     setBusy(true);
-    try {
-      const data = await api("chat", {
-        method: "POST",
-        body: { conversationId: activeConv, content, model },
-        token: session?.access_token ?? null,
-      });
-      if (!data.ok) {
-        setMsgs((m) => [...m, { role: "assistant", content: `> ${data.error ?? "Erro desconhecido."}` }]);
-        showToast(String(data.error ?? "Falha na chamada do servidor."));
-        return;
-      }
-      setMsgs((m) => [...m, { role: "assistant", content: String(data.reply) }]);
-      if (data.conversationId && data.conversationId !== activeConv) setActiveConv(String(data.conversationId));
-      loadConvs();
-    } catch {
-      showToast("Sem conexão com o servidor.");
-    } finally {
-      setBusy(false);
-    }
+    await streamChat(
+      { conversationId: activeConv, content, model },
+      session?.access_token ?? null,
+      {
+        onDelta: (delta) => setMsgs((m) => {
+          const copy = [...m];
+          copy[copy.length - 1] = { ...copy[copy.length - 1], content: copy[copy.length - 1].content + delta };
+          return copy;
+        }),
+        onDone: (info) => {
+          if (info.conversationId && info.conversationId !== activeConv) setActiveConv(info.conversationId);
+          loadConvs();
+        },
+        onError: (message) => {
+          setMsgs((m) => {
+            const copy = [...m];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant" && last.content === "") copy.pop();
+            else copy[copy.length - 1] = { ...last, content: `> ${message}` };
+            return copy;
+          });
+          showToast(message);
+        },
+      },
+    );
+    setBusy(false);
   }
 
   useEffect(() => {
@@ -216,6 +252,15 @@ export default function ChatPage() {
                 <span className="nav-label">Voltar ao menu</span>
               </button>
               <div className="nav-title">Histórico</div>
+              <input
+                className="conv-search"
+                type="search"
+                placeholder="buscar em conversas…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); if (!e.target.value.trim()) loadConvs(); }}
+                aria-label="Buscar no histórico"
+              />
+              {searching && <div className="conv-empty">// buscando…</div>}
               {!logged && <div className="conv-empty">// entre para salvar conversas</div>}
               {logged && convs.length === 0 && <div className="conv-empty">// nenhuma conversa ainda</div>}
               {convs.map((c) => (
@@ -307,7 +352,7 @@ export default function ChatPage() {
                     <div className="msg-body">{m.content}</div>
                   </div>
                 ))}
-                {busy && (
+                {busy && (!msgs.length || msgs[msgs.length - 1].content === "") && (
                   <div className="msg msg-ai">
                     <div className="msg-role">skynet</div>
                     <div className="msg-body typing"><span>●</span><span>●</span><span>●</span></div>

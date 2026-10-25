@@ -608,3 +608,19 @@ input, textarea, select { font-family: inherit; }
   .hero h1 { font-size: 24px; }
   .hero-cards { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 }
+
+/* busca no histórico */
+.conv-search {
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+.conv-search:focus { border-color: var(--red); }
+.conv-search::placeholder { color: var(--dim); }

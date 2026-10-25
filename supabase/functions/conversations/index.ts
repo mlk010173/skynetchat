@@ -11,6 +11,8 @@ const CORS: Record<string, string> = {
   "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
 };
 
+interface ConvRow { id: string; title: string; updated_at: string }
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -38,14 +40,26 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
 
-  // ---- lista ----
+  const q = url.searchParams.get("q")?.trim();
+
+  // ---- lista (com busca opcional por título ou conteúdo das mensagens) ----
   if (req.method === "GET" && !id) {
-    const { data: conversations, error } = await svc
-      .from("conversations")
-      .select("id, title, updated_at")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
-      .limit(100);
+    let conversations: ConvRow[] | null = null;
+    let error: unknown = null;
+    if (q) {
+      const r = await svc.rpc("search_conversations", { uid: userId, q });
+      conversations = r.data as ConvRow[] | null;
+      error = r.error;
+    } else {
+      const r = await svc
+        .from("conversations")
+        .select("id, title, updated_at")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      conversations = r.data as ConvRow[] | null;
+      error = r.error;
+    }
     if (error) return json({ ok: false, error: "Falha ao listar conversas." }, 500);
     return json({ ok: true, conversations });
   }
