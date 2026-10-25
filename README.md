@@ -13,7 +13,11 @@ recuperação de senha e chat.
 | Frontend | Next.js 15 exportado como site estático → GitHub Pages (branch `gh-pages`) |
 | Backend | Edge Functions do Supabase (`chat`, `models`, `conversations`) |
 | Conta + histórico | Supabase Auth + Postgres com Row Level Security |
-| Chat | qualquer provedor compatível com a API OpenAI (OpenAI, Groq, OpenRouter…) |
+| Chat | qualquer provedor compatível com a API OpenAI (OpenAI, Groq, OpenRouter…) — resposta em **streaming** |
+| Busca | **full-text em português** (tsvector + GIN) por título e conteúdo das mensagens |
+| Memória | **pgvector**: embeddings por mensagem; o agente lembra de conversas passadas |
+| Tempo real | **Supabase Realtime**: histórico sincronizado entre dispositivos |
+| Limpeza | **pg_cron**: rotina horária que apaga requisições anônimas antigas |
 | Testes | `node --test` (built-in) + `tsc --noEmit` |
 
 ```
@@ -26,6 +30,11 @@ Browser ──> Edge Functions (Supabase) ──> Provedor de IA
 ## Funcionalidades
 
 - **Chat real** com o modelo escolhido (o seletor troca o modelo de verdade)
+- **Streaming** com efeito de digitação (SSE palavra a palavra)
+- **Busca no histórico** por título ou conteúdo das mensagens
+- **Memória de longo prazo**: mensagens recebem embeddings (1536d) e conversas novas
+  recebem contexto das mais parecidas de conversas antigas (`match_memories`)
+- **Sincronização em tempo real** entre abas/dispositivos (canal `conversations`)
 - **Modo anônimo**: sem conta, limite de 20 mensagens/hora por IP (persistido no banco)
 - **Contas reais**: cadastro, login, logout, esqueci a senha e redefinição por email
 - **Histórico persistido** com RLS (cada usuário só acessa as próprias conversas)
@@ -48,9 +57,10 @@ lib/
 supabase/
   schema.sql                     # schema + índices + RLS (versionado e reproduzível)
   functions/
-    chat/index.ts                # chat real: auth opcional, rate limit, persistência, IA
+    chat/index.ts                # chat real: auth opcional, rate limit, memória vetorial, streaming SSE
     models/index.ts              # lista de modelos + estado honesto da IA
-    conversations/index.ts       # listar/abrir/renomear/apagar conversas
+    conversations/index.ts       # listar/abrir/renomear/apagar/buscar conversas
+    mock-llm/index.ts            # emulador OpenAI-compatível para testes E2E (sem IA real)
 tests/                           # testes unitários (node --test)
 ```
 
@@ -62,7 +72,8 @@ Veja `.env.example`.
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_BASE_PATH`
 
 **Edge Functions** (secrets no dashboard do Supabase → Edge Functions → Secrets):
-`OPENAI_API_KEY` (obrigatória para o chat responder), `OPENAI_BASE_URL`, `SKYNET_MODELS`
+`OPENAI_API_KEY` (obrigatória para o chat responder), `OPENAI_BASE_URL`, `SKYNET_MODELS`,
+`SKYNET_EMBEDDING_MODEL` (padrão `text-embedding-3-small`, 1536 dimensões)
 
 ## Desenvolvimento local
 
