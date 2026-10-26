@@ -93,23 +93,84 @@ export function extrairResultados(html, limite = 6) {
   return itens;
 }
 
-async function pesquisarWeb(consulta) {
-  const q = String(consulta ?? "").trim().slice(0, 300);
-  if (!q) return { ok: false, erro: "consulta vazia" };
-  const alvos = ["https://html.duckduckgo.com/html/", "https://lite.duckduckgo.com/lite/"];
-  for (const alvo of alvos) {
+export function extrairRSS(xml, fonte, limite = 5) {
+  const out = [];
+  for (const bruto of String(xml ?? "").split(/<item>/i).slice(1)) {
+    if (out.length >= limite) break;
+    const corpo = bruto.split(/<\/item>/i)[0];
+    const semCdata = (t) => String(t ?? "").replace(/<!\[CDATA\[|\]\]>/g, "");
+    const titulo = htmlParaTexto(semCdata(corpo.match(/<title>([\s\S]*?)<\/title>/i)?.[1])).slice(0, 180);
+    const url = semCdata(corpo.match(/<link>([\s\S]*?)<\/link>/i)?.[1]).trim();
+    const trecho = htmlParaTexto(semCdata(corpo.match(/<description>([\s\S]*?)<\/description>/i)?.[1])).slice(0, 260);
+    const data = semCdata(corpo.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1]).trim();
+    if (titulo && /^https?:\/\//i.test(url)) {
+      out.push({ titulo, url, trecho, fonte, ...(data ? { quando: data } : {}) });
+    }
+  }
+  return out;
+}
+
+async function buscarRSS(url, fonte, limite) {
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": UA, accept: "application/rss+xml, application/xml, text/xml" },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return [];
+    return extrairRSS(await res.text(), fonte, limite);
+  } catch { return []; }
+}
+
+async function buscarWikipedia(consulta) {
+  try {
+    const res = await fetch(`https://pt.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(consulta)}&format=json&utf8=1&srlimit=3`, {
+      headers: { "user-agent": UA }, signal: AbortSignal.timeout(10000),
+    });
+    const d = await res.json();
+    return (d?.query?.search ?? []).map((r) => ({
+      titulo: r.title,
+      url: "https://pt.wikipedia.org/wiki/" + encodeURIComponent(String(r.title).replace(/ /g, "_")),
+      trecho: htmlParaTexto(r.snippet).slice(0, 260),
+      fonte: "wikipedia",
+    }));
+  } catch { return []; }
+}
+
+async function buscarDuckDuckGo(consulta) {
+  for (const alvo of ["https://html.duckduckgo.com/html/", "https://lite.duckduckgo.com/lite/"]) {
     try {
       const res = await fetch(alvo, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA },
-        body: new URLSearchParams({ q }).toString(),
+        body: new URLSearchParams({ q: consulta }).toString(),
         signal: AbortSignal.timeout(12000),
       });
-      const resultados = extrairResultados(await res.text(), 6);
-      if (resultados.length) return { ok: true, consulta: q, fonte: alvo, quando: new Date().toISOString(), resultados };
+      const achados = extrairResultados(await res.text(), 4).map((r) => ({ ...r, fonte: "duckduckgo" }));
+      if (achados.length) return achados;
     } catch { /* tenta o proximo */ }
   }
-  return { ok: false, erro: "nenhum resultado obtido agora" };
+  return [];
+}
+
+async function pesquisarWeb(consulta) {
+  const q = String(consulta ?? "").trim().slice(0, 300);
+  if (!q) return { ok: false, erro: "consulta vazia" };
+  const enc = encodeURIComponent(q);
+  const [noticias, web, wiki] = await Promise.all([
+    buscarRSS(`https://news.google.com/rss/search?q=${enc}&hl=pt-BR&gl=BR&ceid=BR:pt-419`, "noticias", 4),
+    buscarRSS(`https://www.bing.com/search?q=${enc}&format=rss&setlang=pt-BR`, "web", 5),
+    buscarWikipedia(q),
+  ]);
+  let resultados = [...noticias, ...web, ...wiki];
+  if (!resultados.length) resultados = await buscarDuckDuckGo(q);
+  const vistos = new Set();
+  const unicos = [];
+  for (const r of resultados) {
+    if (vistos.has(r.url) || unicos.length >= 8) continue;
+    vistos.add(r.url); unicos.push(r);
+  }
+  if (!unicos.length) return { ok: false, erro: "nenhuma fonte respondeu agora" };
+  return { ok: true, consulta: q, quando: new Date().toISOString(), fontes: ["google-news", "bing", "wikipedia"], resultados: unicos };
 }
 
 async function abrirPagina(alvo) {
@@ -146,7 +207,7 @@ async function executar(linha) {
 }
 
 const FERRAMENTAS = [
-  { nome: "web_pesquisar", desc: "Pesquisa na web agora (tempo real) e devolve titulo, link e trecho", entrada: "consulta", endpoint: "POST /tools/web_pesquisar" },
+  { nome: "web_pesquisar", desc: "Pesquisa na web agora (Google News + Bing + Wikipedia) e devolve titulo, link e trecho", entrada: "consulta", endpoint: "POST /tools/web_pesquisar" },
   { nome: "abrir", desc: "Abre uma pagina https e devolve o texto principal", entrada: "url", endpoint: "POST /tools/abrir" },
   { nome: "terminal", desc: "Executa um binario da whitelist (ls, cat, grep, node, python3, git, df...)", entrada: "cmd", endpoint: "POST /tools/terminal", protegida: true },
   { nome: "memoria_salvar", desc: "Grava um fato na memoria do agente (requer Supabase configurado no Render)", entrada: "texto", endpoint: "POST /tools/memoria_salvar" },

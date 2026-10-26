@@ -57,3 +57,14 @@ test("pesquisa vazia responde honesto (sem rede)", async () => {
   assert.equal(d.ok, false);
   assert.match(d.erro, /consulta vazia/);
 });
+
+test("extrairRSS le o XML de noticias", () => {
+  const xml = `<rss><channel><item><title>Manchete X</title><link>https://exemplo.com/n</link><description>Resumo <b>X</b></description><pubDate>Sun, 25 Oct 2026 12:20:00 GMT</pubDate></item></channel></rss>`;
+  const r = A.extrairRSS(xml, "noticias");
+  assert.equal(r.length, 1);
+  assert.equal(r[0].titulo, "Manchete X");
+  assert.equal(r[0].url, "https://exemplo.com/n");
+  assert.equal(r[0].fonte, "noticias");
+  assert.match(r[0].trecho, /Resumo/);
+  assert.match(r[0].quando, /2026/);
+});
