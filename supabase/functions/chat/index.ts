@@ -179,6 +179,11 @@ Deno.serve(async (req) => {
     if (mErr) return json({ ok: false, error: "Falha ao salvar mensagem." }, 500);
   }
 
+  // ---- memoria automatica do agente (memory id = usuario): guarda fatos duraveis do chat ----
+  if (userId && content.length < 500 && /\b(lembre|lembra|guarde|anote|memorize|meu nome|eu sou|eu tenho|prefiro|minha|meu|moro|trabalho|nasci)\b/i.test(content)) {
+    try { await svc.from("agent_memory").insert({ email: userId, texto: content.slice(0, 500) }); } catch { /* opcional */ }
+  }
+
   // ---- streaming da resposta (SSE) ----
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

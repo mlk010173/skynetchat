@@ -200,6 +200,18 @@
     if (path === "/api/subscription" || path === "/api/plan" || path === "/api/user" || path === "/api/me" || path === "/api/limits") {
       return resposta(Object.assign({ ok: true, ativo: true }, DESBLOQUEIO));
     }
+    if (path === "/api/tts" || path === "/api/speak" || path === "/api/tts-eleven") {
+      var vozTxt = String(corpo.texto || corpo.text || corpo.content || corpo.q || "").slice(0, 3000);
+      var falou = false;
+      try {
+        if (vozTxt && window.speechSynthesis) {
+          var utt = new SpeechSynthesisUtterance(vozTxt);
+          utt.lang = corpo.idioma || "pt-BR"; utt.rate = 1; utt.pitch = 1;
+          window.speechSynthesis.cancel(); window.speechSynthesis.speak(utt); falou = true;
+        }
+      } catch (e) {}
+      return resposta({ ok: true, falado: falou, modo: "voz do navegador (gratis, sem chave)", texto: vozTxt, url: null });
+    }
     if (path === "/api/models") { var rm = await fetch(SUPA + "/functions/v1/models", { headers: cab }); return new Response(await rm.text(), { status: rm.status, headers: { "content-type": "application/json" } }); }
 
     if (path.indexOf("/api/chat") === 0 || path === "/api/title" || path === "/api/classify-intent" || path === "/api/code-repair") {
@@ -279,6 +291,43 @@
     return resposta({ ok: false, disponivel: false, rota: path, motivo: "Rota desconhecida para a interface.", ligado_ao_backend: false }, 200);
   }
 
+
+  function escaparHtml(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function montarWidgetNoticias() {
+    try {
+      if (/login|sign-?up|cadastro|recovery|recuperar|acessar|entrar/i.test(location.pathname)) return;
+      if (document.getElementById("skynet-news")) return;
+      var el = document.createElement("div");
+      el.id = "skynet-news";
+      el.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:2147483000;width:290px;font:13px/1.35 system-ui,sans-serif;background:rgba(12,12,16,.93);color:#fff;border:1px solid rgba(255,45,45,.45);border-radius:14px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.5)";
+      el.innerHTML = '<div style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#ff2d2d"></span><b style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Skynet - ao vivo</b><span id="skynet-news-x" style="margin-left:auto;cursor:pointer;opacity:.6">x</span></div><div id="skynet-news-t" style="margin-top:6px;min-height:36px;transition:opacity .35s,transform .35s;opacity:0;transform:translateY(6px)">carregando noticias...</div>';
+      document.body.appendChild(el);
+      document.getElementById("skynet-news-x").onclick = function () { el.remove(); };
+      var itens = [], i = 0;
+      function mostra() {
+        var t = document.getElementById("skynet-news-t");
+        if (!t || !itens.length) return;
+        var n = itens[i % itens.length];
+        t.style.opacity = 0; t.style.transform = "translateY(6px)";
+        setTimeout(function () {
+          t.innerHTML = '<a href="' + escaparHtml(n.link) + '" target="_blank" rel="noopener" style="color:#fff;text-decoration:none">' + escaparHtml(n.titulo) + '</a><div style="opacity:.55;font-size:11px;margin-top:3px">' + escaparHtml(n.fonte || "web") + '</div>';
+          t.style.opacity = 1; t.style.transform = "translateY(0)"; i++;
+        }, 350);
+      }
+      function carregar() {
+        fetch(AGENT + "/tools/web_pesquisar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ consulta: "noticias do brasil hoje" }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { itens = (d.resultados || []).slice(0, 6); if (itens.length) mostra(); })
+          .catch(function () {});
+      }
+      carregar(); setInterval(carregar, 600000); setInterval(mostra, 9000);
+    } catch (e) {}
+  }
+
   var fetchOriginal = window.fetch ? window.fetch.bind(window) : null;
   window.fetch = function (input, init) {
     try {
@@ -293,6 +342,7 @@
     return /login|sign-?up|cadastro|recovery|recuperar|acessar|entrar/i.test(p);
   }
 
-  window.__skynetBridge = { versao: "2.4.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarWidgetNoticias); else montarWidgetNoticias();
+  window.__skynetBridge = { versao: "2.5.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO };
   console.log("[bridge] v2: " + LIGADAS.length + " rotas tratadas (" + Object.keys(INDISPONIVEIS).length + " com aviso honesto), catalogo de " + CATALOGO.length + " modelos");
 })();
