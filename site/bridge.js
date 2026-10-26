@@ -243,28 +243,43 @@
     var p = (location.pathname || "") + (document.title || "");
     return /login|sign-?up|cadastro|recovery|recuperar|acessar|entrar/i.test(p);
   }
+  function acharAlvoTurnstile() {
+    var alvos = document.querySelectorAll("button, [role=button], a");
+    for (var i = 0; i < alvos.length; i++) {
+      var t = (alvos[i].textContent || "").trim().toUpperCase();
+      if (/ENTRAR|CRIAR CONTA|CONTINUAR|ACESSAR|VALIDAR|CONFIRMAR/.test(t)) return alvos[i];
+    }
+    return document.querySelector("form") || document.querySelector("main") || document.body;
+  }
   function montarTurnstile() {
-    if (!TURNSTILE_SITE_KEY || !paginaDeConta()) return;
-    if (document.querySelector(".cf-turnstile")) return;
-    var alvo = document.querySelector("form button[type=submit]") || document.querySelector("form") || document.querySelector("main") || document.body;
-    if (!alvo) return;
+    if (!TURNSTILE_SITE_KEY || !paginaDeConta()) return false;
+    if (document.querySelector(".cf-turnstile")) return true;
+    var alvo = acharAlvoTurnstile();
+    if (!alvo) return false;
     window.__skynetTurnstileOk = function (t) { turnstileToken = t; };
     var caixa = document.createElement("div");
     caixa.className = "cf-turnstile";
     caixa.style.margin = "12px 0";
+    caixa.style.minHeight = "65px";
     caixa.setAttribute("data-sitekey", TURNSTILE_SITE_KEY);
     caixa.setAttribute("data-callback", "__skynetTurnstileOk");
-    caixa.setAttribute("data-theme", "auto");
-    if (alvo.tagName === "FORM") alvo.insertBefore(caixa, alvo.firstChild); else alvo.parentNode.insertBefore(caixa, alvo);
+    caixa.setAttribute("data-theme", "dark");
+    var pai = alvo.parentNode || document.body;
+    pai.insertBefore(caixa, alvo);
     if (!document.querySelector("script[data-turnstile]")) {
       var sc = document.createElement("script");
       sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
       sc.async = true; sc.defer = true; sc.setAttribute("data-turnstile", "1");
       document.head.appendChild(sc);
     } else if (window.turnstile) { try { window.turnstile.render(caixa); } catch (e) {} }
+    return true;
   }
+  var tentativasTurnstile = 0;
+  var relogioTurnstile = setInterval(function () {
+    tentativasTurnstile++;
+    if (montarTurnstile() || tentativasTurnstile > 30) clearInterval(relogioTurnstile);
+  }, 500);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarTurnstile); else montarTurnstile();
-  setTimeout(montarTurnstile, 1500);
 
   window.__skynetBridge = { versao: "2.1.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO, turnstile: Boolean(TURNSTILE_SITE_KEY) };
   console.log("[bridge] v2: " + LIGADAS.length + " rotas tratadas (" + Object.keys(INDISPONIVEIS).length + " com aviso honesto), catalogo de " + CATALOGO.length + " modelos");
