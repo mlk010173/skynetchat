@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { getSession, supabase, API } from "../lib.js";
+import { codeAuth, getSession, supabase } from "../lib.js";
 
 /** /account — modal de conta no estilo do site real: abas Conta/Segurança/Assinatura. */
 export default function Account() {
@@ -15,9 +15,34 @@ export default function Account() {
 
   useEffect(() => { if (params.get("tab")) setTab(params.get("tab")); }, [params]);
   const [guest, setGuest] = useState(false);
+  const [nick, setNick] = useState("");
+  const [nickBusy, setNickBusy] = useState(false);
+  const [nickMsg, setNickMsg] = useState("");
+  const [myCode, setMyCode] = useState("");
+  const [codeBusy, setCodeBusy] = useState(false);
   useEffect(() => {
-    getSession().then((s) => { if (s?.user) setUser(s.user); else setGuest(true); });
+    getSession().then((s) => {
+      if (s?.user) { setUser(s.user); setNick(String(s.user.user_metadata?.nickname ?? "")); }
+      else setGuest(true);
+    });
   }, []);
+
+  async function salvarNick() {
+    if (nickBusy) return;
+    setNickBusy(true); setNickMsg("");
+    const { error } = await supabase.auth.updateUser({ data: { nickname: nick.trim() } });
+    setNickBusy(false);
+    setNickMsg(error ? "falha ao salvar" : "// salvo — a IA vai te chamar assim");
+  }
+
+  async function carregarCodigo() {
+    setCodeBusy(true);
+    const s = await getSession();
+    if (!s) { setCodeBusy(false); return; }
+    const d = await codeAuth("get_code", {}, s.access_token);
+    if (d?.ok && d.code) setMyCode(d.code);
+    setCodeBusy(false);
+  }
 
   async function salvarEmail() {
     if (busy || !/.+@.+\..+/.test(email)) return;
@@ -59,7 +84,30 @@ export default function Account() {
           <div className="pro-body">
             {guest && <p className="hint">Entre na sua conta para ver seus dados.</p>}
             {guest && <Link to="/login" className="pro-btn green" style={{ textAlign: "center" }}>ENTRAR</Link>}
-            {user && <div className="pro-row"><span>Membro desde</span><b>{desde}</b></div>}
+            {user && (
+            <>
+              <label className="pro-lbl">APELIDO</label>
+              <div className="nick-box">
+                <input value={nick} onChange={(e) => setNick(e.target.value)} placeholder="Definir apelido" aria-label="Apelido" maxLength={40} />
+                <small>A IA vai te chamar pelo nome</small>
+                <button type="button" className="pro-btn" onClick={salvarNick} disabled={nickBusy}>{nickBusy ? "salvando…" : "salvar apelido"}</button>
+                {nickMsg && <small className="nick-msg">{nickMsg}</small>}
+              </div>
+              <label className="pro-lbl green">CÓDIGO DE ACESSO</label>
+              <div className="code-box">
+                {myCode ? (
+                  <>
+                    <b className="code-digits">{myCode.replace(/(\d{4})(?=\d)/g, "$1 ")}</b>
+                    <small>Use este código para fazer login</small>
+                    <button type="button" className="pro-btn green-outline" onClick={() => { navigator.clipboard?.writeText(myCode); }}>⧉ Copiar código</button>
+                  </>
+                ) : (
+                  <button type="button" className="pro-btn green-outline" onClick={carregarCodigo} disabled={codeBusy}>{codeBusy ? "…" : "mostrar meu código"}</button>
+                )}
+              </div>
+            </>
+          )}
+          {user && <div className="pro-row"><span>Membro desde</span><b>{desde}</b></div>}
             {user && <div className="pro-row"><span>Identidade</span><b>{user.id.slice(0, 8)}</b></div>}
             {user && <label className="code-label">EMAIL DE RECUPERAÇÃO</label>}
             {user && <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" aria-label="Email de recuperação" />}

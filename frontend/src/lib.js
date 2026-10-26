@@ -76,10 +76,14 @@ export async function streamChat({ conversationId, content, model }, handlers) {
 }
 
 /** Auth por código de 12 dígitos (modelo do site real). */
-export async function codeAuth(action, payload = {}) {
+export async function codeAuth(action, payload = {}, token = null) {
   const res = await fetch(`${SUPA_URL}/functions/v1/auth-code`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_ANON },
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPA_ANON,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ action, ...payload }),
   });
   const data = await res.json().catch(() => ({ ok: false, error: "Resposta inválida." }));
@@ -88,7 +92,6 @@ export async function codeAuth(action, payload = {}) {
   }
   return data;
 }
-
 
 let MODEL_LIST = [];
 export function setModelList(list) { MODEL_LIST = Array.isArray(list) ? list : []; }

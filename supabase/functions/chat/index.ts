@@ -36,10 +36,13 @@ Deno.serve(async (req) => {
 
   // ---- autenticação (opcional: modo anônimo) ----
   let userId: string | null = null;
+  let nickname: string | null = null;
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ") && authHeader.length > 30) {
     const { data } = await svc.auth.getUser(authHeader.slice(7));
     userId = data?.user?.id ?? null;
+    const nick = data?.user?.user_metadata?.nickname;
+    if (typeof nick === "string" && nick.trim()) nickname = nick.trim().slice(0, 40);
   }
 
   // ---- corpo ----
@@ -155,6 +158,7 @@ Deno.serve(async (req) => {
   const systemParts = [
     "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português.",
   ];
+  if (nickname) systemParts.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
   if (memories.length) {
     systemParts.push(
       `Memórias relevantes de conversas anteriores deste usuário (use se forem úteis):\n- ${memories.join("\n- ")}`,

@@ -19,6 +19,15 @@ async function hmacHex(msg: string): Promise<string> {
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function aesDecrypt(encB64: string): Promise<string> {
+  const raw = Uint8Array.from(atob(encB64), (c) => c.charCodeAt(0));
+  const iv = raw.slice(0, 12);
+  const ct = raw.slice(12);
+  const key = await crypto.subtle.importKey("raw", enc.encode(PEPPER).slice(0, 32), "AES-GCM", false, ["decrypt"]);
+  const out = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+  return new TextDecoder().decode(out);
+}
+
 async function aesEncrypt(plain: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", enc.encode(PEPPER).slice(0, 32), "AES-GCM", false, ["encrypt"]);
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -99,6 +108,18 @@ Deno.serve(async (req) => {
       return json(200, { ok: true, code, session: mint.session });
     }
     return json(500, { ok: false, error: "code_collision" });
+  }
+
+  if (action === "get_code") {
+    const bearer = req.headers.get("authorization") ?? "";
+    const token = bearer.replace(/^Bearer\s+/i, "");
+    if (!token) return json(401, { ok: false, error: "sem sessao" });
+    const anon = createClient(SUPA_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: u, error: uerr } = await anon.auth.getUser(token);
+    if (uerr || !u?.user) return json(401, { ok: false, error: "sessao invalida" });
+    const { data: row } = await admin.from("auth_codes").select("code_enc").eq("user_id", u.user.id).maybeSingle();
+    if (!row?.code_enc) return json(404, { ok: false, error: "sem codigo" });
+    return json(200, { ok: true, code: await aesDecrypt(row.code_enc) });
   }
 
   if (action === "set_recovery_email") {

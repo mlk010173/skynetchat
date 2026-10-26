@@ -32,6 +32,16 @@ export default function Home() {
   const [unread, setUnread] = useState(0);
   const [bellOpen, setBellOpen] = useState(false);
   const [listening, setListening] = useState(false);
+  const [modelOpen, setModelOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
+  const [limitHit, setLimitHit] = useState(false);
+  const [tools, setTools] = useState([]);
+  const [imgPrompt, setImgPrompt] = useState(null);
+  const [imgBusy, setImgBusy] = useState(false);
+  const [editIdx, setEditIdx] = useState(-1);
+  const [editText, setEditText] = useState("");
+  const [micSecs, setMicSecs] = useState(0);
+  const micTimer = useRef(null);
   const micRef = useRef(null);
   const convIdRef = useRef(null);
   const stageRef = useRef(null);
@@ -61,6 +71,37 @@ export default function Home() {
     return () => { if (canal) supabase.removeChannel(canal); };
   }, [logged]);
 
+  async function gerarImagem() {
+    if (!imgPrompt || imgPrompt.trim().length < 3 || imgBusy) return;
+    setImgBusy(true);
+    setMessages((prev) => [...prev, { role: "user", text: "Criar imagem: " + imgPrompt.trim() }, { role: "assistant", text: "", image: null, imgBusy: true }]);
+    setPlusOpen(false);
+    try {
+      const r = await fetch(`${AGENT_URL}/tools/imagem`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: imgPrompt.trim() }) });
+      const d = await r.json();
+      setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (d?.ok && d.data_url) copy[copy.length - 1] = { ...last, image: d.data_url, text: "Imagem gerada com flux-3:", secs: 0 };
+        else copy[copy.length - 1] = { ...last, text: "> " + (d?.erro || "falha ao gerar imagem"), imgBusy: false };
+        return copy;
+      });
+    } catch (e) {
+      setMessages((prev) => { const copy = [...prev]; copy[copy.length - 1] = { ...copy[copy.length - 1], text: "> agente indisponível (dormindo no plano free — tente de novo em 1 min)" }; return copy; });
+    }
+    setImgPrompt(null);
+    setImgBusy(false);
+  }
+
+  function comecarEdicao(i) { setEditIdx(i); setEditText(messages[i].text); }
+
+  function guardarEdicao() {
+    const t = editText.trim();
+    setEditIdx(-1);
+    if (!t) return;
+    setDraft(t);
+  }
+
   async function abrirSino() {
     if (bellOpen) { setBellOpen(false); return; }
     setBellOpen(true);
@@ -72,6 +113,10 @@ export default function Home() {
       }
     }
   }
+
+  useEffect(() => {
+    fetch(`${AGENT_URL}/tools`).then((r) => r.json()).then((d) => { if (d?.ok) setTools(d.ferramentas || []); }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     api("models").then((d) => {
@@ -114,6 +159,7 @@ export default function Home() {
           return copy;
         });
         say(message);
+        if (/limite/i.test(message)) setLimitHit(true);
       },
     });
     setBusy(false);
@@ -122,7 +168,7 @@ export default function Home() {
   const toggleMic = () => {
     const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
     if (!SR) { say("Reconhecimento de voz não é suportado neste navegador."); return; }
-    if (listening) { micRef.current?.stop(); return; }
+    if (listening) { micRef.current?.stop(); stopMic(); return; }
     const r = new SR();
     micRef.current = r;
     r.lang = "pt-BR";
@@ -221,20 +267,35 @@ export default function Home() {
         <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Abrir menu">
           <IconMenu />
         </button>
-        <label className="model" title={model} style={{ gap: 6 }}>
+        <button type="button" className="model" aria-label="Escolher modelo" onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}>
           <span>SKYNETchat</span>
-          <select
-            value={model}
-            onChange={(event) => setModel(event.target.value)}
-            aria-label="Escolher modelo"
-            style={{ background: "transparent", border: 0, color: "inherit", font: "inherit", fontWeight: 700, outline: "none", maxWidth: "46vw" }}
-          >
-            {(models.length ? models : [model]).filter(Boolean).map((m) => (
-              <option key={m} value={m} style={{ color: "#111" }}>{labelFor(m)}</option>
-            ))}
-          </select>
+          <b>{labelFor(model)}</b>
           <IconChevron className="chev" width={16} height={16} />
-        </label>
+        </button>
+        {modelOpen && (
+          <div className="model-panel">
+            <b className="mp-sec">MODELOS</b>
+            {models.slice(0, 8).map((m) => (
+              <button key={m} className={"mp-item" + (m === model ? " on" : "")} onClick={() => { setModel(m); setModelOpen(false); }}>
+                <IconChevron width={13} height={13} />
+                <span>{labelFor(m)}</span>
+                {m === model && <small>ativo</small>}
+              </button>
+            ))}
+            {tools.length > 0 && (
+              <>
+                <b className="mp-sec" style={{ marginTop: 10 }}>FERRAMENTAS DO AGENTE (LIVE)</b>
+                {tools.map((t) => (
+                  <div key={t.nome} className="mp-item static" title={t.desc}>
+                    <IconGlobe width={13} height={13} />
+                    <span>{t.nome}</span>
+                    <small>online</small>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
         <div className="top-actions">
           <button type="button" className="icon-btn" aria-label="Tema" onClick={() => {
             const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
@@ -268,19 +329,24 @@ export default function Home() {
         ) : (
           <section className="thread">
             {messages.map((message, index) => (
-              <article key={index} className={`bubble ${message.role}`}>
-                {message.text}
-                {message.role === "user" && !busy && (
-                  <span className="bubble-actions">
-                    <button onClick={() => { navigator.clipboard?.writeText(message.text); say("Mensagem copiada."); }}>Copiar</button>
-                    <button onClick={() => setDraft(message.text)}>Editar</button>
-                  </span>
-                )}
-                {message.role === "assistant" && !busy && (
-                  <span className="bubble-actions">
-                    {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
-                    <button onClick={() => { navigator.clipboard?.writeText(message.text); say("Resposta copiada."); }}>Copiar</button>
-                  </span>
+              <article key={index} className={`bubble ${message.role}${message.image ? " with-img" : ""}`}>
+                {editIdx === index ? (
+                  <>
+                    <textarea className="edit-area" value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} aria-label="Editando mensagem" />
+                    <span className="edit-row">
+                      <button type="button" className="cancelar" onClick={() => setEditIdx(-1)}>Cancelar</button>
+                      <button type="button" className="guardar" onClick={guardarEdicao}>Guardar</button>
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {message.image ? <img src={message.image} alt="imagem gerada" className="gen-img" /> : message.text}
+                    <span className="bubble-actions">
+                      {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
+                      {message.role === "user" && !busy && <button type="button" onClick={() => comecarEdicao(index)}>Editar</button>}
+                      {!busy && <button type="button" onClick={() => { navigator.clipboard?.writeText(message.text); say(message.role === "user" ? "Mensagem copiada." : "Resposta copiada."); }}>Copiar</button>}
+                    </span>
+                  </>
                 )}
               </article>
             ))}
@@ -309,8 +375,41 @@ export default function Home() {
         <Link to="/account?tab=assinatura" className="pro-link">Assinar SKYNETchat PRO →</Link>
       )}
 
+      {limitHit && (
+        <div className="limit-modal" role="dialog">
+          <div className="limit-card">
+            <h3>Seu limite diário acabou</h3>
+            <p>Continue exatamente de onde parou. Sem cortes. Sem limites. Do jeito que você quer.</p>
+            <Link to="/account?tab=assinatura" className="limit-cta" onClick={() => setLimitHit(false)}>Continuar sem limites →</Link>
+            <button type="button" className="limit-alt" onClick={() => setLimitHit(false)}>Já tenho acesso</button>
+          </div>
+        </div>
+      )}
+
       <form className="dock" onSubmit={enviar}>
-        <button type="button" className="dock-plus" aria-label="Anexar" onClick={() => fileRef.current?.click()}><IconPlus /></button>
+        <div className="plus-wrap">
+          <button type="button" className="dock-plus" aria-label="Mais" onClick={() => { setPlusOpen((v) => !v); setModelOpen(false); }}><IconPlus /></button>
+          {plusOpen && (
+            <div className="plus-menu">
+              <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); say("Envio de arquivos em construção — logo você anexa fotos e docs."); }}>📎 Adicionar fotos e arquivos</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setImgPrompt(""); }}>🖼 Criar imagem</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setInput("Pense passo a passo: "); }}>💡 Pensar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setInput("Investigue com atenção: "); }}>🔍 Investigar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setInput("Gere o código: "); }}>⌨ Gerar código</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setInput("Traduza para português: "); }}>文 Traduzir texto</button>
+            </div>
+          )}
+          {imgPrompt !== null && (
+            <div className="img-flow">
+              <b>CRIAR IMAGEM</b>
+              <input value={imgPrompt} onChange={(e) => setImgPrompt(e.target.value)} placeholder="descreva a imagem…" aria-label="Prompt de imagem" />
+              <div className="img-actions">
+                <button type="button" className="ghost" onClick={() => setImgPrompt(null)}>cancelar</button>
+                <button type="button" onClick={gerarImagem} disabled={imgBusy || imgPrompt.trim().length < 3}>{imgBusy ? "gerando…" : "gerar"}</button>
+              </div>
+            </div>
+          )}
+        </div>
         <input ref={fileRef} type="file" hidden onChange={onFile} accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
         <input
           value={draft}
@@ -318,7 +417,14 @@ export default function Home() {
           placeholder={PLACEHOLDERS[ph]}
           aria-label="Mensagem"
         />
-        <button type="button" className={`icon-btn muted ${listening ? "mic-on" : ""}`} aria-label="Gravar áudio" onClick={toggleMic}><IconMic /></button>
+        {listening ? (
+          <span className="rec-ui" aria-label="Gravando áudio">
+            <b className="rec-dot" /><span className="rec-time">{String(Math.floor(micSecs / 60)).padStart(2, "0")}:{String(micSecs % 60).padStart(2, "0")}</span>
+            <button type="button" className="rec-x" onClick={() => { micRef.current?.stop(); stopMic(); }} aria-label="Cancelar gravação">✕</button>
+          </span>
+        ) : (
+          <button type="button" className="icon-btn muted" aria-label="Gravar áudio" onClick={toggleMic}><IconMic /></button>
+        )}
         <button type="submit" className="dock-send" aria-label="Voz ou enviar"><IconWave width={22} height={22} /></button>
       </form>
 
