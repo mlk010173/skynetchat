@@ -1,5 +1,6 @@
 # Blueprint do Render: backend do agente SKYNET (ferramentas, MCP e terminal guardado).
-# O frontend continua na Vercel e os dados/IA no Supabase.
+# Frontend na Vercel (skynetchat-xi.vercel.app); dados/IA no Supabase.
+# As variaveis sensiveis sao configuradas depois no painel do Render (Environment).
 services:
   - type: web
     name: skynet-agent
@@ -13,13 +14,3 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: OPENAI_BASE_URL
-        sync: false
-      - key: AGENT_TOKEN
-        sync: false
