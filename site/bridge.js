@@ -75,23 +75,26 @@
     return resposta(d, r.status);
   }
   async function chatComReserva(corpo, cabecalhos, querJson) {
+    // Tenta o modelo pedido e, se ele falhar (erro do provedor ou resposta vazia),
+    // passa para o proximo da reserva. A resposta e bufferizada para poder conferir.
     var ordem = [corpo.model || MODELO_PADRAO].concat(CATALOGO.filter(function (m) { return m !== corpo.model; }));
-    var ultimoTexto = "";
+    var ultimo = "";
+    var tentados = [];
     for (var i = 0; i < ordem.length; i++) {
       var tentativa = Object.assign({}, corpo, { model: ordem[i] });
       var res = await fetch(SUPA + "/functions/v1/chat", { method: "POST", headers: cabecalhos, body: JSON.stringify(tentativa) });
       var tipo = res.headers.get("content-type") || "";
-      if (res.ok && tipo.indexOf("event-stream") >= 0) {
-        if (!querJson) return res;
-        var txt = await res.text();
-        var limpo = juntarSSE(txt);
-        if (limpo) return resposta({ ok: true, reply: limpo, message: limpo, title: limpo.slice(0, 60), intent: "chat", model: ordem[i] });
-        ultimoTexto = limpo;
-      } else {
-        ultimoTexto = await res.text();
+      var txt = tipo.indexOf("event-stream") >= 0 ? await res.text() : await res.text();
+      var falhou = !res.ok || !txt || txt.indexOf('"ok":false') >= 0 || txt.indexOf('"error"') >= 0;
+      var limpo = juntarSSE(txt);
+      tentados.push(ordem[i] + (falhou ? ":falhou" : ":ok"));
+      if (!falhou && limpo) {
+        if (querJson) return resposta({ ok: true, reply: limpo, message: limpo, title: limpo.slice(0, 60), intent: "chat", model: ordem[i], reserva: i > 0 });
+        return new Response(txt, { status: 200, headers: { "content-type": "text/event-stream; charset=utf-8" } });
       }
+      ultimo = limpo || txt;
     }
-    return resposta({ ok: false, ligado_ao_backend: true, error: "nenhum modelo respondeu", detalhe: String(ultimoTexto).slice(0, 160) }, 502);
+    return resposta({ ok: false, ligado_ao_backend: true, error: "nenhum modelo respondeu agora", tentados: tentados, detalhe: String(ultimo).slice(0, 160) }, 502);
   }
 
   async function rota(path, init) {
