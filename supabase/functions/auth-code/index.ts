@@ -10,7 +10,6 @@ const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PEPPER = Deno.env.get("AUTH_CODE_PEPPER")!;
 
 const admin = createClient(SUPA_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
-const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") ?? "";
 const LIMITE_HORA = 12;
 
 const enc = new TextEncoder();
@@ -55,18 +54,6 @@ async function ipDoPedido(req: Request): Promise<string> {
   return bruto.split(",")[0].trim();
 }
 
-// Cloudflare Turnstile: fica pronto e passa a valer sozinho assim que
-// a variavel TURNSTILE_SECRET for definida nos secrets do projeto.
-async function turnstileOk(req: Request, token: string): Promise<boolean> {
-  if (!TURNSTILE_SECRET) return true;
-  if (!token) return false;
-  const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    body: new URLSearchParams({ secret: TURNSTILE_SECRET, response: token, remoteip: await ipDoPedido(req) }),
-  });
-  const d = await r.json().catch(() => null);
-  return Boolean(d && d.success);
-}
 
 async function dentroDoLimite(ip: string): Promise<boolean> {
   const desde = new Date(Date.now() - 3600_000).toISOString();
