@@ -1,3 +1,20 @@
+/* Cloudflare removido: stub do Turnstile. Nunca renderiza nada e libera o token na hora,
+   para o login/cadastro funcionarem sem nenhum servico da Cloudflare. */
+(function(){
+  var tokenFalso = "skynet-sem-cloudflare";
+  window.turnstile = window.turnstile || {
+    render: function (el, opts) { try { opts && typeof opts.callback === "function" && opts.callback(tokenFalso); } catch (e) {} return "stub"; },
+    remove: function () {}, reset: function () {}, execute: function () {}, getResponse: function () { return tokenFalso; }
+  };
+  window.__skynetTurnstileOk && window.__skynetTurnstileOk(tokenFalso);
+  // limpa qualquer caixa de widget que o bundle tente desenhar
+  var limpar = function () {
+    var c = document.querySelectorAll(".cf-turnstile, .turnstile-container, [class*=turnstile]");
+    for (var i = 0; i < c.length; i++) { c[i].innerHTML = ""; c[i].style.display = "none"; }
+  };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", limpar); else limpar();
+  setTimeout(limpar, 1500); setTimeout(limpar, 4000);
+})();
 /* bridge.js — liga a interface (espelho estatico) ao NOSSO backend.
    Sem mudar a aparencia: redireciona /api/* para Supabase (IA, contas, memoria,
    dados) e para o agente no Render. Toda rota responde algo coerente:

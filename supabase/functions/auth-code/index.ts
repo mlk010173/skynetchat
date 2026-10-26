@@ -77,7 +77,7 @@ async function dentroDoLimite(ip: string): Promise<boolean> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" } });
-  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: Boolean(TURNSTILE_SECRET), limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover", "newcode"] });
+  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: false, limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover", "newcode"] });
   let body: any = {};
   try { body = await req.json(); } catch { return json(400, { ok: false, error: "bad_request" }); }
   const action = String(body.action || "");
@@ -85,7 +85,6 @@ Deno.serve(async (req) => {
   if (action === "signup" || action === "newcode") {
     const ip = await ipDoPedido(req);
     if (!(await dentroDoLimite(ip))) return json(429, { ok: false, error: "muitas tentativas por hora" });
-    if (!(await turnstileOk(req, String(body.turnstile_token || "")))) return json(403, { ok: false, error: "verificacao de robo falhou" });
   }
 
   if (action === "signup") {
