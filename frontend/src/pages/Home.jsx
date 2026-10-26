@@ -393,10 +393,10 @@ export default function Home() {
             <div className="plus-menu">
               <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); say("Envio de arquivos em construção — logo você anexa fotos e docs."); }}>📎 Adicionar fotos e arquivos</button>
               <button type="button" onClick={() => { setPlusOpen(false); setImgPrompt(""); }}>🖼 Criar imagem</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setInput("Pense passo a passo: "); }}>💡 Pensar</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setInput("Investigue com atenção: "); }}>🔍 Investigar</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setInput("Gere o código: "); }}>⌨ Gerar código</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setInput("Traduza para português: "); }}>文 Traduzir texto</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Pense passo a passo: "); }}>💡 Pensar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Investigue com atenção: "); }}>🔍 Investigar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Gere o código: "); }}>⌨ Gerar código</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Traduza para português: "); }}>文 Traduzir texto</button>
             </div>
           )}
           {imgPrompt !== null && (
