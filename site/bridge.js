@@ -7,7 +7,8 @@
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3doaHRlbmZvemR3enB2eGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTY2OTQsImV4cCI6MjEwODUzMjY5NH0.FRwfO66wi1ADFmSboCCwH1NWuz-212dDrIcuuiZ-0HA";
   var AGENT = "https://skynet-agent.onrender.com";
   var MODELO_PADRAO = "nvidia/nemotron-3.5-super-vl-120b-a12b";
-  var LIGADAS = ["/api/session", "/api/models", "/api/conversations/config", "/api/chat", "/api/chat-V2-fast", "/api/chat-V2-thinking", "/api/chat-V3", "/api/chat-V3-interacao", "/api/chat-V3-thinking", "/api/chat-V4", "/api/chat-search", "/api/title", "/api/classify-intent", "/api/updates", "/api/support", "/api/feedback"];
+  var CATALOGO = ["nvidia/nemotron-3.5-super-vl-120b-a12b", "minimaxai/minimax-m3.1-flash", "deepseek-ai/deepseek-v4.1-flash", "meta/muse-glimmer-30b", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "nvidia/nemotron-3.5-lightning-30b-a3b", "stepfun-ai/step-5-preview"];
+  var LIGADAS = ["/api/session", "/api/models", "/api/conversations/config", "/api/conversations", "/api/chat", "/api/chat-V2-fast", "/api/chat-V2-thinking", "/api/chat-V3", "/api/chat-V3-interacao", "/api/chat-V3-thinking", "/api/chat-V4", "/api/chat-search", "/api/title", "/api/classify-intent", "/api/updates", "/api/support", "/api/feedback", "/api/access-code", "/api/recovery/request", "/api/recovery/email"];
 
   function resposta(obj, status) {
     return new Response(JSON.stringify(obj), { status: status || 200, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -54,6 +55,45 @@
     return saida;
   }
 
+  function guardarSessao(sess, user) {
+    try {
+      var atual = {};
+      try { atual = JSON.parse(localStorage.getItem("skynet-session") || "{}"); } catch (e) {}
+      var nova = Object.assign({}, atual, sess || {});
+      if (user) nova.user = user;
+      localStorage.setItem("skynet-session", JSON.stringify(nova));
+      return nova;
+    } catch (e) { return sess; }
+  }
+  async function pedirAuthCode(corpo) {
+    var acao = corpo.action;
+    if (!acao) acao = corpo.code ? "login" : "signup";
+    var envio = Object.assign({}, corpo, { action: acao });
+    var r = await fetch(SUPA + "/functions/v1/auth-code", { method: "POST", headers: { "content-type": "application/json", apikey: ANON }, body: JSON.stringify(envio) });
+    var d = await r.json().catch(function () { return { ok: false, error: "resposta invalida" }; });
+    if (d && d.session) guardarSessao(d.session, d.user || null);
+    return resposta(d, r.status);
+  }
+  async function chatComReserva(corpo, cabecalhos, querJson) {
+    var ordem = [corpo.model || MODELO_PADRAO].concat(CATALOGO.filter(function (m) { return m !== corpo.model; }));
+    var ultimoTexto = "";
+    for (var i = 0; i < ordem.length; i++) {
+      var tentativa = Object.assign({}, corpo, { model: ordem[i] });
+      var res = await fetch(SUPA + "/functions/v1/chat", { method: "POST", headers: cabecalhos, body: JSON.stringify(tentativa) });
+      var tipo = res.headers.get("content-type") || "";
+      if (res.ok && tipo.indexOf("event-stream") >= 0) {
+        if (!querJson) return res;
+        var txt = await res.text();
+        var limpo = juntarSSE(txt);
+        if (limpo) return resposta({ ok: true, reply: limpo, message: limpo, title: limpo.slice(0, 60), intent: "chat", model: ordem[i] });
+        ultimoTexto = limpo;
+      } else {
+        ultimoTexto = await res.text();
+      }
+    }
+    return resposta({ ok: false, ligado_ao_backend: true, error: "nenhum modelo respondeu", detalhe: String(ultimoTexto).slice(0, 160) }, 502);
+  }
+
   async function rota(path, init) {
     var s = sessao();
     var corpo = textoDoCorpo(init && init.body);
@@ -66,12 +106,19 @@
       var r = await fetch(SUPA + "/functions/v1/models", { headers: cabecalhos });
       return new Response(await r.text(), { status: r.status, headers: { "content-type": "application/json" } });
     }
+    if (path === "/api/access-code") return pedirAuthCode(corpo);
+    if (path === "/api/recovery/request" || path === "/api/recovery/email") {
+      var rec = await pedirAuthCode(Object.assign({}, corpo, { action: "recover" }));
+      return rec;
+    }
+    if (path === "/api/conversations" || path === "/api/conversations/config") {
+      if (!s) return resposta({ ok: false, error: "sem sessao" }, 401);
+      var rc = await fetch(SUPA + "/functions/v1/conversations", { headers: cabecalhos });
+      return new Response(await rc.text(), { status: rc.status, headers: { "content-type": "application/json" } });
+    }
     if (path.indexOf("/api/chat") === 0 || path === "/api/title" || path === "/api/classify-intent") {
       var querJson = corpo.stream === false || path === "/api/title" || path === "/api/classify-intent";
-      var res = await fetch(SUPA + "/functions/v1/chat", { method: "POST", headers: cabecalhos, body: JSON.stringify(adaptarChat(corpo)) });
-      if (!querJson) return res;
-      var texto = juntarSSE(await res.text());
-      return resposta({ ok: true, reply: texto, message: texto, title: texto.slice(0, 60), intent: "chat", model: corpo.model || MODELO_PADRAO });
+      return chatComReserva(adaptarChat(corpo), cabecalhos, querJson);
     }
     if (path === "/api/updates") return fetch("updates.json");
     if (path === "/api/support" || path === "/api/feedback") {
