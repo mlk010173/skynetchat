@@ -173,6 +173,26 @@ async function pesquisarWeb(consulta) {
   return { ok: true, consulta: q, quando: new Date().toISOString(), fontes: ["google-news", "bing", "wikipedia"], resultados: unicos };
 }
 
+const SUPA_FN = "https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1";
+
+async function gerarImagem(prompt, aspect) {
+  const p = String(prompt ?? "").trim().slice(0, 1200);
+  if (!p) return { ok: false, erro: "prompt vazio" };
+  try {
+    const r = await fetch(`${SUPA_FN}/imagem`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt: p, aspect_ratio: aspect || "1:1" }),
+      signal: AbortSignal.timeout(90000),
+    });
+    const d = await r.json();
+    if (!d?.ok) return { ok: false, erro: String(d?.error ?? d?.detalhe ?? "falha na geracao").slice(0, 200) };
+    return { ok: true, modelo: d.modelo, formato: d.formato, seed: d.seed, data_url: d.data_url, tamanho_base64: String(d.imagem_base64 ?? "").length };
+  } catch (e) {
+    return { ok: false, erro: sanitizar(e?.message ?? "falha ao gerar imagem") };
+  }
+}
+
 async function abrirPagina(alvo) {
   const v = urlPermitida(alvo);
   if (!v.ok) return { ok: false, erro: v.erro };
@@ -209,6 +229,7 @@ async function executar(linha) {
 const FERRAMENTAS = [
   { nome: "web_pesquisar", desc: "Pesquisa na web agora (Google News + Bing + Wikipedia) e devolve titulo, link e trecho", entrada: "consulta", endpoint: "POST /tools/web_pesquisar" },
   { nome: "abrir", desc: "Abre uma pagina https e devolve o texto principal", entrada: "url", endpoint: "POST /tools/abrir" },
+  { nome: "imagem", desc: "Gera imagem (flux-3) e devolve a imagem em data URL", entrada: "prompt", endpoint: "POST /tools/imagem" },
   { nome: "terminal", desc: "Executa um binario da whitelist (ls, cat, grep, node, python3, git, df...)", entrada: "cmd", endpoint: "POST /tools/terminal", protegida: true },
   { nome: "memoria_salvar", desc: "Grava um fato na memoria do agente (requer Supabase configurado no Render)", entrada: "texto", endpoint: "POST /tools/memoria_salvar" },
   { nome: "memoria_buscar", desc: "Busca na memoria do agente (requer Supabase configurado no Render)", entrada: "consulta", endpoint: "POST /tools/memoria_buscar" },
@@ -235,6 +256,7 @@ export async function executarFerramenta(nome, args = {}) {
   switch (nome) {
     case "web_pesquisar": return pesquisarWeb(args.consulta ?? args.q);
     case "abrir": return abrirPagina(args.url);
+    case "imagem": return gerarImagem(args.prompt ?? args.p, args.aspect_ratio);
     case "memoria_salvar": return memoriaIndisponivel();
     case "memoria_buscar": return memoriaIndisponivel();
     case "terminal": return executar(args.cmd);
@@ -275,6 +297,12 @@ export const handler = async (req, res) => {
     const dados = await lerCorpo(req);
     if (!dados) return json(res, 400, { ok: false, erro: "JSON invalido" });
     return json(res, 200, await pesquisarWeb(dados.consulta ?? dados.q));
+  }
+
+  if (url.pathname === "/tools/imagem" && req.method === "POST") {
+    const dados = await lerCorpo(req);
+    if (!dados) return json(res, 400, { ok: false, erro: "JSON invalido" });
+    return json(res, 200, await gerarImagem(dados.prompt ?? dados.p, dados.aspect_ratio));
   }
 
   if (url.pathname === "/tools/abrir" && req.method === "POST") {

@@ -45,7 +45,7 @@ test("rota /tools devolve o catalogo real", async () => {
   const d = JSON.parse(res.body);
   assert.equal(res.code, 200);
   assert.equal(d.ok, true);
-  assert.equal(d.ferramentas.length, 5);
+  assert.equal(d.ferramentas.length, 6);
   assert.ok(d.ferramentas.some((f) => f.nome === "web_pesquisar"));
 });
 
@@ -67,4 +67,13 @@ test("extrairRSS le o XML de noticias", () => {
   assert.equal(r[0].fonte, "noticias");
   assert.match(r[0].trecho, /Resumo/);
   assert.match(r[0].quando, /2026/);
+});
+
+test("ferramenta de imagem existe no catalogo", async () => {
+  const res = { code: 0, body: "", writeHead(c){ this.code = c; }, end(b){ this.body = b; } };
+  await A.handler({ method: "GET", url: "/tools" }, res);
+  const d = JSON.parse(res.body);
+  const img = d.ferramentas.find((f) => f.nome === "imagem");
+  assert.ok(img, "ferramenta imagem ausente");
+  assert.equal(img.endpoint, "POST /tools/imagem");
 });

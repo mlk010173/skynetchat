@@ -8,7 +8,7 @@
   var AGENT = "https://skynet-agent.onrender.com";
   var MODELO_PADRAO = "nvidia/nemotron-3.5-super-vl-120b-a12b";
   var CATALOGO = ["nvidia/nemotron-3.5-super-vl-120b-a12b", "minimaxai/minimax-m3.1-flash", "deepseek-ai/deepseek-v4.1-flash", "meta/muse-glimmer-30b", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "nvidia/nemotron-3.5-lightning-30b-a3b", "stepfun-ai/step-5-preview"];
-  var LIGADAS = ["/api/session", "/api/models", "/api/conversations/config", "/api/conversations", "/api/chat", "/api/chat-V2-fast", "/api/chat-V2-thinking", "/api/chat-V3", "/api/chat-V3-interacao", "/api/chat-V3-thinking", "/api/chat-V4", "/api/chat-search", "/api/title", "/api/classify-intent", "/api/updates", "/api/support", "/api/feedback", "/api/access-code", "/api/recovery/request", "/api/recovery/email"];
+  var LIGADAS = ["/api/session", "/api/models", "/api/conversations/config", "/api/conversations", "/api/chat", "/api/chat-V2-fast", "/api/chat-V2-thinking", "/api/chat-V3", "/api/chat-V3-interacao", "/api/chat-V3-thinking", "/api/chat-V4", "/api/chat-search", "/api/title", "/api/classify-intent", "/api/updates", "/api/support", "/api/feedback", "/api/access-code", "/api/recovery/request", "/api/recovery/email", "/api/image-gen"];
 
   function resposta(obj, status) {
     return new Response(JSON.stringify(obj), { status: status || 200, headers: { "content-type": "application/json; charset=utf-8" } });
@@ -108,6 +108,14 @@
     if (path === "/api/models" || path === "/api/conversations/config") {
       var r = await fetch(SUPA + "/functions/v1/models", { headers: cabecalhos });
       return new Response(await r.text(), { status: r.status, headers: { "content-type": "application/json" } });
+    }
+    if (path === "/api/image-gen") {
+      var ri = await fetch(SUPA + "/functions/v1/imagem", {
+        method: "POST",
+        headers: { "content-type": "application/json", apikey: ANON },
+        body: JSON.stringify({ prompt: corpo.prompt || corpo.q || corpo.text || "", aspect_ratio: corpo.aspect_ratio || "1:1", modelo: corpo.modelo }),
+      });
+      return new Response(await ri.text(), { status: ri.status, headers: { "content-type": "application/json" } });
     }
     if (path === "/api/access-code") return pedirAuthCode(corpo);
     if (path === "/api/recovery/request" || path === "/api/recovery/email") {
