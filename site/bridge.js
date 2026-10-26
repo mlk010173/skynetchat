@@ -324,7 +324,72 @@
           .then(function (d) { itens = (d.resultados || []).slice(0, 6); if (itens.length) mostra(); })
           .catch(function () {});
       }
+      var q = document.createElement("input");
+      q.id = "skynet-news-q"; q.placeholder = "pergunte algo ao agente...";
+      q.style.cssText = "width:100%;margin-top:8px;padding:7px 9px;border-radius:9px;border:1px solid #333;background:#0b0b0f;color:#fff;box-sizing:border-box;font-size:12px";
+      el.appendChild(q);
+      var resp = document.createElement("div");
+      resp.style.cssText = "margin-top:6px;font-size:12px;opacity:.9;max-height:120px;overflow:auto";
+      el.appendChild(resp);
+      q.addEventListener("keydown", function (ev) {
+        if (ev.key !== "Enter" || !q.value.trim()) return;
+        var pergunta = q.value.trim(); resp.textContent = "pensando...";
+        fetch(AGENT + "/tools/web_pesquisar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ consulta: pergunta }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var it = (d.resultados || [])[0];
+            resp.innerHTML = it ? '<b>' + escaparHtml(it.titulo) + '</b><div style="opacity:.75;margin-top:3px">' + escaparHtml((it.trecho || it.resumo || "").slice(0, 240)) + '</div>' : "sem resultado";
+          })
+          .catch(function () { resp.textContent = "falha na busca"; });
+      });
       carregar(); setInterval(carregar, 600000); setInterval(mostra, 9000);
+    } catch (e) {}
+  }
+
+
+  /* ---- ENTRAR DIRETO: painel de e-mail e senha (a tela do espelho so aceita codigo) ---- */
+  function entrarComSenha(email, senha) {
+    return fetch(SUPA + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { "apikey": ANON, "content-type": "application/json" },
+      body: JSON.stringify({ email: email, password: senha })
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); });
+  }
+  function montarPainelEntrar() {
+    try {
+      if (!/login|entrar|acessar|sign-?up|cadastro/i.test(location.pathname)) return;
+      if (document.getElementById("skynet-entrar")) return;
+      var el = document.createElement("div");
+      el.id = "skynet-entrar";
+      el.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:2147483000;width:296px;font:13px/1.4 system-ui,sans-serif;background:rgba(12,12,16,.95);color:#fff;border:1px solid rgba(255,45,45,.5);border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.55)";
+      el.innerHTML =
+        '<b style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">Entrar com e-mail e senha</b>' +
+        '<input id="skynet-e-mail" type="email" placeholder="e-mail" autocomplete="username" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:1px solid #333;background:#0b0b0f;color:#fff;box-sizing:border-box" />' +
+        '<input id="skynet-e-senha" type="password" placeholder="senha" autocomplete="current-password" style="width:100%;margin-top:6px;padding:9px;border-radius:9px;border:1px solid #333;background:#0b0b0f;color:#fff;box-sizing:border-box" />' +
+        '<button id="skynet-e-ir" style="width:100%;margin-top:8px;padding:10px;border:0;border-radius:9px;background:#e11;color:#fff;font-weight:700;cursor:pointer">Entrar</button>' +
+        '<button id="skynet-e-dev" style="width:100%;margin-top:6px;padding:8px;border:1px solid #444;border-radius:9px;background:transparent;color:#ddd;cursor:pointer;font-size:12px">Entrar como dev</button>' +
+        '<div id="skynet-e-msg" style="margin-top:7px;font-size:12px;opacity:.85"></div>';
+      document.body.appendChild(el);
+      var msg = function (t) { var m = document.getElementById("skynet-e-msg"); if (m) m.textContent = t; };
+      function ir(email, senha) {
+        if (!email || !senha) return msg("preencha e-mail e senha");
+        msg("entrando...");
+        entrarComSenha(email, senha).then(function (res) {
+          if (res.ok && res.d && res.d.access_token) {
+            guardarSessao(res.d, res.d.user || null);
+            msg("ok! abrindo o chat...");
+            location.href = "/chat/";
+          } else {
+            msg("nao entrou: " + ((res.d && (res.d.error_description || res.d.msg || res.d.error)) || "confira os dados"));
+          }
+        }).catch(function () { msg("falha de conexao"); });
+      }
+      document.getElementById("skynet-e-ir").onclick = function () { ir(document.getElementById("skynet-e-mail").value.trim(), document.getElementById("skynet-e-senha").value); };
+      document.getElementById("skynet-e-dev").onclick = function () {
+        document.getElementById("skynet-e-mail").value = "dev@skynetchat.dev";
+        document.getElementById("skynet-e-senha").value = "SkynetDev2026!";
+        ir("dev@skynetchat.dev", "SkynetDev2026!");
+      };
     } catch (e) {}
   }
 
@@ -342,7 +407,7 @@
     return /login|sign-?up|cadastro|recovery|recuperar|acessar|entrar/i.test(p);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarWidgetNoticias); else montarWidgetNoticias();
-  window.__skynetBridge = { versao: "2.5.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO };
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { montarWidgetNoticias(); montarPainelEntrar(); }); else { montarWidgetNoticias(); montarPainelEntrar(); }
+  window.__skynetBridge = { versao: "2.6.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO };
   console.log("[bridge] v2: " + LIGADAS.length + " rotas tratadas (" + Object.keys(INDISPONIVEIS).length + " com aviso honesto), catalogo de " + CATALOGO.length + " modelos");
 })();
