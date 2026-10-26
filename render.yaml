@@ -1,0 +1,25 @@
+# Blueprint do Render: backend do agente SKYNET (ferramentas, MCP e terminal guardado).
+# O frontend continua na Vercel e os dados/IA no Supabase.
+services:
+  - type: web
+    name: skynet-agent
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: node server/agent.mjs
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_BASE_URL
+        sync: false
+      - key: AGENT_TOKEN
+        sync: false
