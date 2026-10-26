@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
+
+const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá além", "Sem filtros, sem limites."];
 import { api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
@@ -20,6 +23,7 @@ export default function Home() {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [ph, setPh] = useState(0);
   const [logged, setLogged] = useState(false);
   const [model, setModel] = useState("");
   const [models, setModels] = useState([]);
@@ -33,6 +37,7 @@ export default function Home() {
   const stageRef = useRef(null);
 
   const say = useCallback((m) => { setToast(m); setTimeout(() => setToast(""), 5000); }, []);
+  useEffect(() => { const t = setInterval(() => setPh((p) => (p + 1) % PLACEHOLDERS.length), 6000); return () => clearInterval(t); }, []);
 
   useEffect(() => { getSession().then((s) => setLogged(!!s)); }, []);
 
@@ -83,7 +88,7 @@ export default function Home() {
     const text = draft.trim();
     if (!text || busy) return;
     setDraft("");
-    setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "" }]);
+    setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "", started: Date.now() }]);
     setBusy(true);
     await streamChatAuto({ conversationId: convIdRef.current, content: text, model }, {
       onDelta: (delta) => setMessages((prev) => {
@@ -91,7 +96,15 @@ export default function Home() {
         copy[copy.length - 1] = { ...copy[copy.length - 1], text: copy[copy.length - 1].text + delta };
         return copy;
       }),
-      onDone: (info) => { if (info.conversationId) convIdRef.current = info.conversationId; },
+      onDone: (info) => {
+        if (info.conversationId) convIdRef.current = info.conversationId;
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant") copy[copy.length - 1] = { ...last, secs: Math.max(1, Math.round((Date.now() - (last.started ?? Date.now())) / 1000)) };
+          return copy;
+        });
+      },
       onError: (message) => {
         setMessages((prev) => {
           const copy = [...prev];
@@ -255,7 +268,21 @@ export default function Home() {
         ) : (
           <section className="thread">
             {messages.map((message, index) => (
-              <article key={index} className={`bubble ${message.role}`}>{message.text}</article>
+              <article key={index} className={`bubble ${message.role}`}>
+                {message.text}
+                {message.role === "user" && !busy && (
+                  <span className="bubble-actions">
+                    <button onClick={() => { navigator.clipboard?.writeText(message.text); say("Mensagem copiada."); }}>Copiar</button>
+                    <button onClick={() => setDraft(message.text)}>Editar</button>
+                  </span>
+                )}
+                {message.role === "assistant" && !busy && (
+                  <span className="bubble-actions">
+                    {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
+                    <button onClick={() => { navigator.clipboard?.writeText(message.text); say("Resposta copiada."); }}>Copiar</button>
+                  </span>
+                )}
+              </article>
             ))}
             {busy && messages[messages.length - 1]?.text === "" && (
               <article className="bubble assistant typing-bubble">●●●</article>
@@ -278,13 +305,17 @@ export default function Home() {
         </div>
       )}
 
+            {messages.length > 0 && (
+        <Link to="/account?tab=assinatura" className="pro-link">Assinar SKYNETchat PRO →</Link>
+      )}
+
       <form className="dock" onSubmit={enviar}>
         <button type="button" className="dock-plus" aria-label="Anexar" onClick={() => fileRef.current?.click()}><IconPlus /></button>
         <input ref={fileRef} type="file" hidden onChange={onFile} accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Pesquise sem censura..."
+          placeholder={PLACEHOLDERS[ph]}
           aria-label="Mensagem"
         />
         <button type="button" className={`icon-btn muted ${listening ? "mic-on" : ""}`} aria-label="Gravar áudio" onClick={toggleMic}><IconMic /></button>

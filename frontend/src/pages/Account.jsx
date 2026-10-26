@@ -1,76 +1,103 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import AuthShell from "../components/AuthShell.jsx";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { getSession, supabase, API } from "../lib.js";
 
-/** /account — perfil real da sessão (recuperado da versão anterior do projeto). */
+/** /account — modal de conta no estilo do site real: abas Conta/Segurança/Assinatura. */
 export default function Account() {
-  const navigate = useNavigate();
-  const [since, setSince] = useState("");
-  const [recovery, setRecovery] = useState("");
+  const [tab, setTab] = useState("conta");
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState("");
   const [saved, setSaved] = useState("");
   const [busy, setBusy] = useState(false);
+  const [proMsg, setProMsg] = useState("");
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
 
+  useEffect(() => { if (params.get("tab")) setTab(params.get("tab")); }, [params]);
   useEffect(() => {
-    getSession().then(async (session) => {
-      if (!session) { navigate("/login", { replace: true }); return; }
-      setSince(new Date(session.user.created_at).toLocaleDateString("pt-BR"));
-      const { data } = await supabase.from("user_settings").select("user_id").eq("user_id", session.user.id).maybeSingle();
-      if (!data) await supabase.from("user_settings").insert({ user_id: session.user.id });
+    getSession().then(async (s) => {
+      if (!s) { navigate("/login", { replace: true }); return; }
+      setUser(s.user);
     });
+    supabase.auth.onAuthStateChange((_e, s) => { if (!s?.user) navigate("/", { replace: true }); });
   }, [navigate]);
 
-  async function saveRecovery() {
-    if (busy || !/.+@.+\..+/.test(recovery)) return;
-    setBusy(true);
+  async function salvarEmail() {
+    if (busy || !/.+@.+\..+/.test(email)) return;
+    setBusy(true); setSaved("");
     const session = await getSession();
-    if (!session) return setBusy(false);
     const res = await fetch(`${API}/auth-code`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ action: "set_recovery_email", email: recovery }),
+      headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+      body: JSON.stringify({ action: "set_recovery_email", email }),
     });
-    const data = await res.json().catch(() => ({ ok: false }));
-    setSaved(data.ok ? "Email de recuperação salvo na conta." : "Falha ao salvar: " + (data.error || "tente novamente"));
+    const data = await res.json().catch(() => ({}));
     setBusy(false);
+    setSaved(data.ok ? "salvo na conta" : (data.error || "falha ao salvar"));
   }
 
-  async function logout() {
-    await supabase.auth.signOut();
-    navigate("/", { replace: true });
-  }
+  async function sair() { await supabase.auth.signOut(); navigate("/", { replace: true }); }
+
+  if (!user) return <div className="pro-modal-wrap"><p className="hint">carregando…</p></div>;
+  const desde = new Date(user.created_at).toLocaleDateString("pt-BR");
 
   return (
-    <AuthShell title="CONTA E PERFIL" links={<Link to="/">VOLTAR AO CHAT</Link>}>
-      <section className="profile-block">
-        <div className="profile-avatar" aria-hidden="true">S</div>
-        <div className="profile-info">
-          <div className="profile-email">conta de código</div>
-          <div className="profile-meta">membro desde {since || "…"}</div>
+    <div className="pro-modal-wrap">
+      <div className="pro-modal">
+        <button className="pro-close" onClick={() => navigate("/")} aria-label="Fechar">✕</button>
+
+        <div className="pro-head">
+          <div className="pro-badge">{user.email ? user.email[0].toUpperCase() : "S"}</div>
+          <h2>Conta FREE</h2>
+          <small>Plano gratuito</small>
         </div>
-      </section>
 
-      <p className="hint">
-        Seu código de acesso de 12 dígitos é a única chave da conta. Guarde-o em local seguro —
-        sem ele o acesso só é possível pelo email de recuperação.
-      </p>
+        <div className="pro-tabs" role="tablist">
+          <button className={"pro-tab" + (tab === "conta" ? " on" : "")} onClick={() => setTab("conta")}>👤 Conta</button>
+          <button className={"pro-tab" + (tab === "seguranca" ? " on" : "")} onClick={() => setTab("seguranca")}>🛡 Segurança</button>
+          <button className={"pro-tab" + (tab === "assinatura" ? " on" : "")} onClick={() => setTab("assinatura")}>✦ Assinatura</button>
+        </div>
 
-      <div className="form-block">
-        <div className="form-title">EMAIL DE RECUPERAÇÃO</div>
-        <input
-          type="email"
-          value={recovery}
-          onChange={(event) => setRecovery(event.target.value)}
-          placeholder="email@exemplo.com"
-          aria-label="Email de recuperação"
-        />
-        <button type="button" onClick={saveRecovery} disabled={busy || !/.+@.+\..+/.test(recovery)}>
-          {busy ? "SALVANDO…" : "SALVAR"}
-        </button>
-        {saved && <p className="hint">{saved}</p>}
+        {tab === "conta" && (
+          <div className="pro-body">
+            <div className="pro-row"><span>Membro desde</span><b>{desde}</b></div>
+            <div className="pro-row"><span>Identidade</span><b>{user.id.slice(0, 8)}</b></div>
+            <label className="code-label">EMAIL DE RECUPERAÇÃO</label>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" aria-label="Email de recuperação" />
+            <button className="pro-btn" onClick={salvarEmail} disabled={busy}>{busy ? "SALVANDO…" : "SALVAR"}</button>
+            {saved && <p className="hint">// {saved}</p>}
+            <p className="hint">Seu código de 12 dígitos é a única chave da conta. Guarde-o.</p>
+            <button className="pro-btn danger" onClick={sair}>SAIR DA CONTA</button>
+          </div>
+        )}
+
+        {tab === "seguranca" && (
+          <div className="pro-body">
+            <div className="pro-row"><span>Sessão</span><b>ativa (persistente)</b></div>
+            <div className="pro-row"><span>Autenticação</span><b>código de 12 dígitos</b></div>
+            <div className="pro-row"><span>Limite de tentativas</span><b>10 por hora</b></div>
+            <p className="hint">Sem senha: a conta é acessada apenas pelo seu código. Sessão expira conforme a política do Supabase.</p>
+            <button className="pro-btn danger" onClick={sair}>ENCERRAR SESSÃO</button>
+          </div>
+        )}
+
+        {tab === "assinatura" && (
+          <div className="pro-body">
+            <div className="pro-cta">
+              <b>Seja PRO</b>
+              <small>Desbloqueie todo o potencial</small>
+            </div>
+            <ul className="pro-list">
+              <li><span className="check">✓</span> Mensagens ilimitadas</li>
+              <li><span className="check">✓</span> Geração de imagens com IA</li>
+              <li><span className="check">✓</span> 4.5 MAX com pesquisa profunda</li>
+              <li><span className="check">✓</span> Memória da IA</li>
+            </ul>
+            <button className="pro-btn green" onClick={() => setProMsg("Pagamentos ainda não configurados neste projeto. Enquanto isso, tudo o que está na lista que já funciona (memória da IA, histórico) está ativo na sua conta.")}>ASSINAR PRO</button>
+            {proMsg && <p className="hint">{proMsg}</p>}
+          </div>
+        )}
       </div>
-
-      <button type="button" className="ghost-btn" onClick={logout}>SAIR DA CONTA</button>
-    </AuthShell>
+    </div>
   );
 }
