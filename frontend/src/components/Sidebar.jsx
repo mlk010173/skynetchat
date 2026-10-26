@@ -209,7 +209,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               <small>@skynetchat.ai</small>
             </span>
           </a>
-          <p className="terms">Termos de Serviço</p>
+          <Link to="/terms" className="terms" onClick={onClose}>Termos de Serviço</Link>
         </div>
       </aside>
     </>

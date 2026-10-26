@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
 export const SUPA_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const API = `${SUPA_URL}/functions/v1`;
 
 export const supabase = createClient(SUPA_URL, SUPA_ANON, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "skynet-session" },

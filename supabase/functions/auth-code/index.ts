@@ -101,6 +101,19 @@ Deno.serve(async (req) => {
     return json(500, { ok: false, error: "code_collision" });
   }
 
+  if (action === "set_recovery_email") {
+    const bearer = req.headers.get("authorization") ?? "";
+    const token = bearer.replace(/^Bearer\s+/i, "");
+    if (!token) return json(401, { ok: false, error: "sem sessao" });
+    const { data: u, error: uerr } = await admin.auth.admin.getUser(token);
+    if (uerr || !u?.user) return json(401, { ok: false, error: "sessao invalida" });
+    const email = typeof body.email === "string" && /.+@.+\..+/.test(body.email) ? body.email.trim() : null;
+    if (!email) return json(400, { ok: false, error: "email invalido" });
+    const { error: upderr } = await admin.from("auth_codes").update({ recovery_email: email }).eq("user_id", u.user.id);
+    if (upderr) return json(500, { ok: false, error: "falha ao salvar" });
+    return json(200, { ok: true, email });
+  }
+
   if (action === "login") {
     const ip = await ipDoPedido(req);
     const desde = new Date(Date.now() - 3600_000).toISOString();
