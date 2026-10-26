@@ -7,6 +7,25 @@
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3doaHRlbmZvemR3enB2eGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTY2OTQsImV4cCI6MjEwODUzMjY5NH0.FRwfO66wi1ADFmSboCCwH1NWuz-212dDrIcuuiZ-0HA";
   var REST = SUPA + "/rest/v1";
   var AGENT = "https://skynet-agent.onrender.com";
+  // guarda: impede a tela "Atualizacao em andamento" do espelho (erro de chunk falso)
+  (function () {
+    function erroDeChunk(m) {
+      m = String(m || "");
+      return m.indexOf("/_app/immutable/") !== -1 || m.indexOf("dynamically imported module") !== -1 || m.indexOf("Importing a module script failed") !== -1;
+    }
+    function barrar(ev) {
+      var m = (ev && (ev.message || (ev.error && ev.error.message) || (ev.reason && (ev.reason.message || String(ev.reason))))) || "";
+      if (erroDeChunk(m)) { try { ev.stopImmediatePropagation(); } catch (e) {} try { ev.preventDefault(); } catch (e) {} }
+    }
+    window.addEventListener("error", barrar, true);
+    window.addEventListener("unhandledrejection", barrar, true);
+  })();
+  // limpa service worker e cache de builds antigos (causa de loop de recarga)
+  try {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
+    if (window.caches) caches.keys().then(function (ns) { ns.forEach(function (n) { caches.delete(n); }); }).catch(function () {});
+  } catch (e) {}
+
   var MODELO_PADRAO = "nvidia/nemotron-3-ultra-550b-a55b";
   var TURNSTILE_SITE_KEY = "0x4AAAAAAfMLV6C2QyPpsxZe";
   var turnstileToken = null;
@@ -251,34 +270,46 @@
     }
     return document.querySelector("form") || document.querySelector("main") || document.body;
   }
+  function acharAlvoTurnstile() {
+    var els = document.querySelectorAll("button, [role=button], a");
+    for (var i = 0; i < els.length; i++) {
+      var t = (els[i].textContent || "").replace(/\s+/g, " ").trim().toUpperCase();
+      if (/^(ENTRAR|CRIAR CONTA|GERAR C|CONTINUAR|ACESSAR|RECUPERAR|VALIDAR|CONFIRMAR)/.test(t) && els[i].offsetParent !== null) return els[i];
+    }
+    return document.querySelector("form") || document.querySelector("main") || null;
+  }
   function montarTurnstile() {
     if (!TURNSTILE_SITE_KEY || !paginaDeConta()) return false;
     if (document.querySelector(".cf-turnstile")) return true;
     var alvo = acharAlvoTurnstile();
-    if (!alvo) return false;
-    window.__skynetTurnstileOk = function (t) { turnstileToken = t; };
+    if (!alvo || !alvo.parentNode) return false;
     var caixa = document.createElement("div");
     caixa.className = "cf-turnstile";
-    caixa.style.margin = "12px 0";
+    caixa.style.margin = "14px 0";
     caixa.style.minHeight = "65px";
     caixa.setAttribute("data-sitekey", TURNSTILE_SITE_KEY);
     caixa.setAttribute("data-callback", "__skynetTurnstileOk");
     caixa.setAttribute("data-theme", "dark");
-    var pai = alvo.parentNode || document.body;
-    pai.insertBefore(caixa, alvo);
+    window.__skynetTurnstileOk = function (t) { turnstileToken = t; };
+    alvo.parentNode.insertBefore(caixa, alvo);
     if (!document.querySelector("script[data-turnstile]")) {
       var sc = document.createElement("script");
-      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
       sc.async = true; sc.defer = true; sc.setAttribute("data-turnstile", "1");
       document.head.appendChild(sc);
-    } else if (window.turnstile) { try { window.turnstile.render(caixa); } catch (e) {} }
+    }
+    var n = 0;
+    var timer = setInterval(function () {
+      n++;
+      if (window.turnstile && caixa.parentNode && !caixa.querySelector("iframe")) {
+        try { window.turnstile.render(caixa, { sitekey: TURNSTILE_SITE_KEY, callback: window.__skynetTurnstileOk, theme: "dark" }); } catch (e) {}
+      }
+      if ((window.turnstile && caixa.querySelector("iframe")) || n > 25) clearInterval(timer);
+    }, 400);
     return true;
   }
-  var tentativasTurnstile = 0;
-  var relogioTurnstile = setInterval(function () {
-    tentativasTurnstile++;
-    if (montarTurnstile() || tentativasTurnstile > 30) clearInterval(relogioTurnstile);
-  }, 500);
+  var tent = 0;
+  var tentTimer = setInterval(function () { tent++; if (montarTurnstile() || tent > 30) clearInterval(tentTimer); }, 500);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarTurnstile); else montarTurnstile();
 
   window.__skynetBridge = { versao: "2.1.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO, turnstile: Boolean(TURNSTILE_SITE_KEY) };
