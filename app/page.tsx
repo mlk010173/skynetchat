@@ -14,7 +14,7 @@ export default function ChatPage() {
   const [session, setSession] = useState<SessionLike | null>(null);
   const [ready, setReady] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(true);
-  const [drawerView, setDrawerView] = useState<"menu" | "history">("menu");
+  const [drawerView, setDrawerView] = useState<"menu" | "history" | "updates" | "prompts" | "support">("menu");
   const [theme, setTheme] = useState<"theme-black" | "theme-white">("theme-black");
   const [models, setModels] = useState<string[]>(MODELS_DEFAULT);
   const [model, setModel] = useState<string>(MODELS_DEFAULT[0]);
@@ -285,10 +285,10 @@ export default function ChatPage() {
 
               {soon("Indique e Ganhe", "Convide amigos e ganhe assinatura PRO", "", "🎁")}
               {soon("Monetize com SKYNETchat", "Publique e lucre com conteúdo", "NOVO", "💸")}
-              <a className="nav-item" href="https://github.com/mlk010173/skynetchat/commits/main" target="_blank" rel="noreferrer">
+              <button className="nav-item" onClick={() => setDrawerView("updates")}>
                 <span className="nav-ico">⌁</span>
                 <span className="nav-label">Atualizações<br /><span className="nav-sub">Veja as novidades e melhorias recentes</span></span>
-              </a>
+              </button>
               {soon("Imagens", "Gere e explore imagens com IA", "BETA", "🖼")}
               {soon("Conversas em grupo", "Colabore com múltiplos agentes", "NOVO", "👥")}
               {soon("Codex", "Código, scripts e automação", "EM BREVE", "⌨")}
@@ -330,10 +330,87 @@ export default function ChatPage() {
                   <span className="nav-label">Conta e perfil<br /><span className="nav-sub">Entre para acessar</span></span>
                 </a>
               )}
-              <a className="nav-item" href="mailto:suporte@skynet.app?subject=Suporte%20SKYNET">
+              <button className="nav-item" onClick={() => setDrawerView("prompts")}>
+                <span className="nav-ico">✎</span>
+                <span className="nav-label">Prompts<br /><span className="nav-sub">Prompts úteis para usar com a IA</span></span>
+              </button>
+              <button className="nav-item" onClick={() => setDrawerView("support")}>
                 <span className="nav-ico">✉</span>
                 <span className="nav-label">Suporte<br /><span className="nav-sub">Tire dúvidas e fale com o suporte</span></span>
-              </a>
+              </button>
+            </>
+          ) : drawerView === "updates" ? (
+            <>
+              <button className="nav-item" onClick={() => setDrawerView("menu")}>
+                <span className="nav-ico">←</span>
+                <span className="nav-label">Voltar ao menu</span>
+              </button>
+              <div className="view-title">ATUALIZAÇÕES</div>
+              <div className="feed-card">
+                <div className="feed-head">
+                  <span className="feed-date">25 DE OUTUBRO</span>
+                  <span className="feed-author">Admin <b className="feed-badge">ADMIN</b></span>
+                </div>
+                <div className="feed-tag">SKYNETchat</div>
+                <p>Apresentamos a nova interface do SKYNETchat.</p>
+                <p>Reconstruímos o visual do projeto: menu lateral completo, ações rápidas na
+                tela inicial, dicação por voz e envio com equalizador.</p>
+                <p>Tudo continua real: conta, histórico, notificações e sincronização entre
+                dispositivos no servidor. Sem simulação.</p>
+              </div>
+              <div className="feed-card">
+                <div className="feed-head">
+                  <span className="feed-date">24 DE OUTUBRO</span>
+                  <span className="feed-author">Admin <b className="feed-badge">ADMIN</b></span>
+                </div>
+                <div className="feed-tag">SKYNETchat</div>
+                <p>Memória de longo prazo e busca no histórico.</p>
+                <p>O chat agora lembra do contexto entre conversas (memória vetorial) e o
+                histórico tem busca em português, sincronizada em tempo real entre abas e
+                dispositivos.</p>
+              </div>
+            </>
+          ) : drawerView === "prompts" ? (
+            <>
+              <button className="nav-item" onClick={() => setDrawerView("menu")}>
+                <span className="nav-ico">←</span>
+                <span className="nav-label">Voltar ao menu</span>
+              </button>
+              <div className="view-title">PROMPTS</div>
+              <div className="feed-card">
+                <div className="feed-head">
+                  <span className="feed-date">PROMPT ÚTIL</span>
+                  <span className="feed-author">SKYNETchat</span>
+                </div>
+                <p>Quanto mais contexto você der, melhores serão as respostas.</p>
+                <button className="prompt-use" onClick={() => { setInput("Explique como se eu tivesse 10 anos: "); if (window.innerWidth < 860) setDrawerOpen(false); }}>
+                  Usar: "Explique como se eu tivesse 10 anos: …"
+                </button>
+                <button className="prompt-use" onClick={() => { setInput("Revisar e melhorar este texto: "); if (window.innerWidth < 860) setDrawerOpen(false); }}>
+                  Usar: "Revisar e melhorar este texto: …"
+                </button>
+                <button className="prompt-use" onClick={() => { setInput("Resuma em tópicos, em português claro: "); if (window.innerWidth < 860) setDrawerOpen(false); }}>
+                  Usar: "Resuma em tópicos: …"
+                </button>
+              </div>
+            </>
+          ) : drawerView === "support" ? (
+            <>
+              <button className="nav-item" onClick={() => setDrawerView("menu")}>
+                <span className="nav-ico">←</span>
+                <span className="nav-label">Voltar ao menu</span>
+              </button>
+              <div className="view-title">SUPORTE</div>
+              <div className="support-card">
+                <div className="support-head">Suporte SKYNETchat</div>
+                <div className="support-status">Online · resposta na hora</div>
+                <p className="support-msg">Oi! 👋 Sou o suporte do SKYNETchat. Como posso te ajudar? (conta, acesso…)</p>
+                <button className="prompt-use" onClick={() => { window.location.href = BASE + "/recover/"; }}>Recuperar minha conta</button>
+                <button className="prompt-use" onClick={() => showToast("Não temos planos pagos — o SKYNETchat é gratuito por enquanto. 😉")}>Como assinar o PRO?</button>
+                <button className="prompt-use" onClick={() => { window.location.href = BASE + "/reset/"; }}>Minha conta sai sozinha</button>
+                <button className="prompt-use" onClick={() => showToast("Não cobramos nada hoje — sem pagamentos neste projeto.")}>Formas de pagamento</button>
+                <a className="prompt-use" href="mailto:suporte@skynet.app?subject=Suporte%20SKYNETchat">Falar com atendente</a>
+              </div>
             </>
           ) : (
             <>
@@ -465,7 +542,7 @@ export default function ChatPage() {
               )}
               <div className="hero-grid">
                 <button className="hero-tile" onClick={() => send("Faça uma pesquisa atualizada sobre as principais notícias de tecnologia desta semana.")}>
-                  <span className="tile-ico">🌐</span>Pesquisar
+                  <span className="tile-ico">🌐</span>Pesquisar na web
                 </button>
                 <button className="hero-tile" onClick={() => showToast(`"Gerar Imagens" está em construção. Não é simulação: simplesmente ainda não existe. 😉`)}>
                   <span className="tile-ico">🖼</span>Gerar Imagens
@@ -499,7 +576,7 @@ export default function ChatPage() {
 
           <div className="composer-wrap">
             <div className="composer">
-              <button className="composer-plus" onClick={newChat} aria-label="Nova conversa" title="Nova conversa">+</button>
+              <button className="composer-plus" onClick={() => showToast(`"Anexar arquivo" está em construção. Não é simulação: simplesmente ainda não existe. 😉`)} aria-label="Anexar arquivo" title="Anexar arquivo">+</button>
               <textarea
                 placeholder="Pesquise sem censura..."
                 value={input}
