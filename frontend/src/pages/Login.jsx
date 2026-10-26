@@ -1,12 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthShell from "../components/AuthShell.jsx";
+import { formatCode } from "../code-format.js";
 import { codeAuth } from "../lib.js";
-
-export function formatCode(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 12);
-  return digits.replace(/(\d{4})(?=\d)/g, "$1-");
-}
 
 /** /login real: código de 12 dígitos (0000-0000-0000) validado no servidor. */
 export default function Login() {
