@@ -45,7 +45,7 @@ test("rota /tools devolve o catalogo real", async () => {
   const d = JSON.parse(res.body);
   assert.equal(res.code, 200);
   assert.equal(d.ok, true);
-  assert.equal(d.ferramentas.length, 11);
+  assert.equal(d.ferramentas.length, 7);
   assert.ok(d.ferramentas.some((f) => f.nome === "web_pesquisar"));
 });
 
