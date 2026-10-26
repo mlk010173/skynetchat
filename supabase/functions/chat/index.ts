@@ -86,6 +86,9 @@ Deno.serve(async (req) => {
     .split(",").map((m) => m.trim()).filter(Boolean);
   const model = body.model && models.includes(body.model) ? body.model : models[0];
 
+  // ---- fallback no servidor: tenta o modelo pedido e, se falhar/travar, os proximos do catalogo ----
+  const fila = [model, ...models.filter((m) => m !== model)].slice(0, 4);
+
   // ---- memória vetorial: embeddings da mensagem (melhor esforço) ----
   const embedModel = Deno.env.get("SKYNET_EMBEDDING_MODEL") ?? "text-embedding-3-small";
   let userEmbedding: number[] | null = null;
@@ -181,24 +184,37 @@ Deno.serve(async (req) => {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const res = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model,
-            messages: llmMessages,
-            max_tokens: 1024,
-            temperature: 0.7,
-            stream: true,
-          }),
-        });
+        let res: Response | null = null;
+        let usado = model;
+        let ultimoErro = "";
+        for (const cand of fila) {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 25000);
+          try {
+            const r = await fetch(`${baseUrl}/chat/completions`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: cand,
+                messages: llmMessages,
+                max_tokens: 1024,
+                temperature: 0.7,
+                stream: true,
+              }),
+              signal: ctrl.signal,
+            });
+            clearTimeout(timer);
+            if (r.ok && r.body) { res = r; usado = cand; break; }
+            ultimoErro = `HTTP ${r.status} em ${cand}`;
+          } catch (e) {
+            clearTimeout(timer);
+            const nome = (e as Error)?.name === "AbortError" ? "timeout" : "sem conexao";
+            ultimoErro = `${nome} em ${cand}`;
+          }
+        }
 
-        if (!res.ok || !res.body) {
-          const errText = await res.text().catch(() => "");
-          controller.enqueue(sse({
-            ok: false,
-            error: `Provedor de IA respondeu com erro (${res.status}). ${errText.slice(0, 200)}`,
-          }));
+        if (!res || !res.body) {
+          controller.enqueue(sse({ ok: false, error: `Nenhum modelo respondeu (${ultimoErro}).` }));
           controller.close();
           return;
         }
@@ -251,7 +267,7 @@ Deno.serve(async (req) => {
               ...(replyEmbedding ? { embedding: replyEmbedding } : {}),
             });
           }
-          controller.enqueue(sse({ done: true, conversationId: convId, model }));
+          controller.enqueue(sse({ done: true, conversationId: convId, model: usado, fallback: usado !== model }));
         } else {
           controller.enqueue(sse({ ok: false, error: "O provedor de IA não retornou conteúdo." }));
         }
