@@ -828,3 +828,66 @@ input, textarea, select { font-family: inherit; }
 .auth-check input { margin-top: 2px; accent-color: var(--red); }
 .auth-inline-link { color: var(--red); text-decoration: underline; }
 .auth-note { font-size: 12px; color: var(--dim); margin-top: 10px; }
+
+/* ===== clone skynetchat.net: header, hero-grid, composer, drawer-foot ===== */
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.brand-chip { font-weight: 800; letter-spacing: 0.5px; color: var(--red); font-size: 15px; }
+.brand-chip b { color: var(--text); font-weight: 600; }
+.header { justify-content: space-between; }
+.hdr-icon {
+  background: none; border: none; color: var(--dim); font-size: 17px; cursor: pointer;
+  padding: 4px 6px; border-radius: 8px; line-height: 1;
+}
+.hdr-icon:hover { color: var(--text); background: var(--panel-2); }
+
+/* hero 2x2 (print) */
+.hero h1 { font-size: clamp(26px, 5vw, 40px); }
+.hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 26px; width: min(460px, 90vw); }
+.hero-tile {
+  display: flex; align-items: center; gap: 10px; padding: 13px 16px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--text); font-size: 14px; cursor: pointer;
+}
+.hero-tile:hover { border-color: var(--red); background: var(--panel); }
+.tile-ico { font-size: 17px; width: 22px; text-align: center; font-style: normal; }
+
+/* composer do print: + / mic / enviar vermelho com equalizador */
+.composer-plus, .composer-mic {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--panel-2); color: var(--dim); border: 1px solid var(--border);
+  font-size: 19px; cursor: pointer; align-self: flex-end;
+}
+.composer-plus:hover, .composer-mic:hover { color: var(--text); border-color: var(--red); }
+.composer-mic.on { color: #fff; background: var(--red); border-color: var(--red); animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.6; } }
+.send-btn {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--red); border: none; cursor: pointer; align-self: flex-end;
+  display: flex; align-items: center; justify-content: center;
+}
+.send-btn:disabled { opacity: 0.4; cursor: default; }
+.send-eq { display: flex; gap: 2.5px; align-items: center; height: 15px; }
+.send-eq i { display: block; width: 2.5px; background: #fff; border-radius: 2px; animation: eq 1s infinite ease-in-out; }
+.send-eq i:nth-child(2) { animation-delay: 0.2s; }
+.send-eq i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes eq { 0%,100% { height: 6px; } 50% { height: 15px; } }
+
+/* drawer: marca completa + rodapé do print */
+.brand-full { font-weight: 800; font-size: 19px; color: var(--text); display: flex; align-items: center; gap: 7px; }
+.brand-full .brand-red { color: var(--red); font-weight: 600; }
+.brand-s { color: var(--red); font-size: 21px; font-weight: 900; }
+.foot-login {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  color: var(--text); text-decoration: none; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--panel-2); font-size: 14px;
+}
+.foot-login:hover { border-color: var(--red); }
+.insta-block {
+  display: flex; align-items: center; gap: 10px; padding: 13px 14px;
+  background: #3a2b42; border: none; border-radius: 14px; color: var(--text);
+  font-size: 13px; cursor: pointer; text-align: left; width: 100%;
+}
+.insta-block b { color: #e0aaff; }
+.insta-ico { color: #e0aaff; font-size: 16px; }
+.foot-terms { color: var(--dim); text-decoration: none; font-size: 11px; }
+.foot-terms:hover { color: var(--red); }

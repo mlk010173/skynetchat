@@ -228,26 +228,50 @@ export default function ChatPage() {
   const logged = !!session;
   const inChat = msgs.length > 0 || activeConv !== null;
 
-  const soon = (label: string, sub: string) => (
+  const soon = (label: string, sub: string, badge = "EM BREVE", ico = "✦") => (
     <button
       className="nav-item"
-      title="Em breve"
+      title={badge === "EM BREVE" ? "Em breve" : label}
       onClick={() => showToast(`"${label}" está em construção. Não é simulação: simplesmente ainda não existe. 😉`)}
     >
-      <span className="nav-ico">✦</span>
+      <span className="nav-ico">{ico}</span>
       <span className="nav-label">
         {label}
         <br /><span className="nav-sub">{sub}</span>
       </span>
-      <span className="badge badge-soon">EM BREVE</span>
+      {badge && <span className={`badge ${badge === "EM BREVE" ? "badge-soon" : "badge-new"}`}>{badge}</span>}
     </button>
   );
+
+  const micRef = useRef<any>(null);
+  const [listening, setListening] = useState(false);
+  const [micOk, setMicOk] = useState(false);
+  useEffect(() => {
+    setMicOk(!!((window as any).webkitSpeechRecognition || (window as any).SpeechRecognition));
+  }, []);
+  function toggleMic() {
+    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SR) { showToast("Reconhecimento de voz não é suportado neste navegador."); return; }
+    if (listening) { micRef.current?.stop(); return; }
+    const r = new SR();
+    micRef.current = r;
+    r.lang = "pt-BR";
+    r.interimResults = false;
+    r.onresult = (e: any) => {
+      const t = Array.from(e.results).map((x: any) => x[0].transcript).join(" ").trim();
+      setInput((cur) => (cur ? cur + " " : "") + t);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    r.start();
+    setListening(true);
+  }
 
   return (
     <div className="shell">
       <aside className={`drawer ${drawerOpen ? "" : "collapsed"}`} aria-label="Menu">
         <div className="drawer-head">
-          <a className="brand" href={`${BASE}/`}>SKY<span className="brand-red">NET</span></a>
+          <a className="brand brand-full" href={`${BASE}/`}><span className="brand-s">Ⓢ</span>SKYNET<span className="brand-red">chat</span></a>
           <button className="icon-btn" onClick={() => setDrawerOpen(false)} aria-label="Fechar menu">✕</button>
         </div>
 
@@ -259,14 +283,16 @@ export default function ChatPage() {
                 <span className="nav-label">Novo chat<br /><span className="nav-sub">Inicie uma conversa do zero</span></span>
               </button>
 
-              <div className="nav-sep" />
-
-              {soon("Indique e Ganhe", "Convide amigos e ganhe benefícios")}
-              {soon("Monetize com SKYNET", "Novo")}
-              {soon("Imagens", "Gere e explore imagens com IA")}
-              {soon("Conversas em grupo", "Colabore com múltiplos agentes")}
-              {soon("Codex", "Código, scripts e automação")}
-              {soon("Projetos", "Organize tarefas e entregas")}
+              {soon("Indique e Ganhe", "Convide amigos e ganhe assinatura PRO", "", "🎁")}
+              {soon("Monetize com SKYNETchat", "Publique e lucre com conteúdo", "NOVO", "💸")}
+              <a className="nav-item" href="https://github.com/mlk010173/skynetchat/commits/main" target="_blank" rel="noreferrer">
+                <span className="nav-ico">⌁</span>
+                <span className="nav-label">Atualizações<br /><span className="nav-sub">Veja as novidades e melhorias recentes</span></span>
+              </a>
+              {soon("Imagens", "Gere e explore imagens com IA", "BETA", "🖼")}
+              {soon("Conversas em grupo", "Colabore com múltiplos agentes", "NOVO", "👥")}
+              {soon("Codex", "Código, scripts e automação", "EM BREVE", "⌨")}
+              {soon("Projetos", "Organize tarefas e entregas", "NOVO", "▤")}
 
               <div className="nav-sep" />
 
@@ -344,6 +370,15 @@ export default function ChatPage() {
         </nav>
 
         <div className="drawer-foot">
+          {logged ? (
+            <a className="foot-login" href={`${BASE}/account/`}>
+              <span className="nav-ico">◉</span> {session?.user?.email}
+            </a>
+          ) : (
+            <a className="foot-login" href={`${BASE}/login/`}>
+              <span className="nav-ico">◉</span> Fazer login
+            </a>
+          )}
           <div className="theme-row">
             <span>Tema de fundo</span>
             <button
@@ -353,8 +388,13 @@ export default function ChatPage() {
               {theme === "theme-black" ? "BLACK" : "WHITE"}
             </button>
           </div>
-          <a href={`${BASE}/terms/`}>Termos de Serviço</a>
-          <span>SKYNET v1.0 — código próprio</span>
+          <button
+            className="insta-block"
+            onClick={() => showToast("Nosso Instagram @skynet.chat está chegando — em breve vocês nos seguem por lá. 😉")}
+          >
+            <span className="insta-ico">◎</span> Nos siga no Instagram <b>@skynet.chat</b>
+          </button>
+          <a className="foot-terms" href={`${BASE}/terms/`}>Termos de Serviço</a>
         </div>
       </aside>
 
@@ -364,14 +404,20 @@ export default function ChatPage() {
             {!drawerOpen && (
               <button className="drawer-open-btn" onClick={() => setDrawerOpen(true)} aria-label="Abrir menu">☰</button>
             )}
+          </div>
+
+          <div className="header-brand">
+            <span className="brand-chip">SKYNET<b>chat</b></span>
             <span className="model-chip">
-              <span className="dot" style={aiConfigured === false ? { background: "var(--red)", boxShadow: "0 0 6px var(--red)" } : undefined} />
               <select value={model} onChange={(e) => setModel(e.target.value)} aria-label="Modelo de IA">
                 {models.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
+              <span className="chip-caret">▾</span>
             </span>
           </div>
           <div className="header-right">
+            <button className="hdr-icon" onClick={() => setTheme(theme === "theme-black" ? "theme-white" : "theme-black")} aria-label="Alternar tema" title="Alternar tema">{theme === "theme-black" ? "☾" : "☀"}</button>
+            {inChat && <button className="hdr-icon" onClick={newChat} aria-label="Novo chat" title="Novo chat">✎</button>}
             {logged && (
               <div className="notif-wrap">
                 <button className="btn-bell" onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) markAllRead(); }} aria-label="Notificações">
@@ -409,23 +455,27 @@ export default function ChatPage() {
         <div className="content">
           {!inChat ? (
             <div className="hero">
-              <div className="hero-kicker">SKYNET // ONLINE</div>
-              <h1>Apresentamos o SKY<span>NET</span></h1>
-              <p className="hero-sub">
-                Sua inteligência artificial com servidor, conta e histórico de verdade.
-                Sem espelho, sem simulação — tudo aqui é real.
-              </p>
+              <h1>Apresentamos o SKYNET<span>chat</span></h1>
+              <p className="hero-sub">Sua inteligência artificial avançada</p>
               {aiConfigured === false && (
                 <p className="hero-sub" style={{ color: "var(--red)" }}>
                   ⚠ O provedor de IA ainda não tem chave configurada. Contas, histórico e
                   telas já funcionam; o chat responderá assim que a chave for definida.
                 </p>
               )}
-              <div className="chips">
-                <button className="chip" onClick={() => send("Faça uma busca atualizada sobre as principais notícias de tecnologia desta semana.")}>Buscar na web</button>
-                <button className="chip" onClick={() => send("Escreva uma função em JavaScript que valida CPF e me explique o código.")}>Programar</button>
-                <button className="chip" onClick={() => send("Escreva um texto curto e criativo sobre terminais vermelhos.")}>Escrever</button>
-                <button className="chip" onClick={() => send("Me dê 3 ideias de projetos para eu aprender IA.")}>Ideias de projeto</button>
+              <div className="hero-grid">
+                <button className="hero-tile" onClick={() => send("Faça uma pesquisa atualizada sobre as principais notícias de tecnologia desta semana.")}>
+                  <span className="tile-ico">🌐</span>Pesquisar
+                </button>
+                <button className="hero-tile" onClick={() => showToast(`"Gerar Imagens" está em construção. Não é simulação: simplesmente ainda não existe. 😉`)}>
+                  <span className="tile-ico">🖼</span>Gerar Imagens
+                </button>
+                <button className="hero-tile" onClick={() => send("Crie argumentos persuasivos, com retórica bem construída, a favor de aprender programação em vez de só assistir tutoriais.")}>
+                  <span className="tile-ico">🧠</span>Persuasão
+                </button>
+                <button className="hero-tile" onClick={() => send("Escreva uma função em JavaScript que valida CPF e me explique o código linha a linha.")}>
+                  <span className="tile-ico">&lt;/&gt;</span>Programar
+                </button>
               </div>
             </div>
           ) : (
@@ -449,8 +499,9 @@ export default function ChatPage() {
 
           <div className="composer-wrap">
             <div className="composer">
+              <button className="composer-plus" onClick={newChat} aria-label="Nova conversa" title="Nova conversa">+</button>
               <textarea
-                placeholder="Pergunte o que quiser…"
+                placeholder="Pesquise sem censura..."
                 value={input}
                 rows={1}
                 maxLength={4000}
@@ -464,7 +515,12 @@ export default function ChatPage() {
                 }}
                 aria-label="Mensagem"
               />
-              <button className="send-btn" onClick={() => send()} disabled={busy || !input.trim()} aria-label="Enviar">➤</button>
+              {micOk && (
+                <button className={`composer-mic ${listening ? "on" : ""}`} onClick={toggleMic} aria-label="Ditar por voz" title="Ditar por voz">{listening ? "◉" : "🎙"}</button>
+              )}
+              <button className="send-btn" onClick={() => send()} disabled={busy || !input.trim()} aria-label="Enviar">
+                <span className="send-eq"><i /><i /><i /></span>
+              </button>
             </div>
             <div className="composer-hint">
               <span>ENTER envia · SHIFT+ENTER quebra linha</span>
