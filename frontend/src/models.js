@@ -1,9 +1,13 @@
 /** Catalogo e logica de modelos — puro e testavel. */
 
 const INFO = {
-  "nvidia/nemotron-3.5-super-vl-120b-a12b": { short: "Nemotron 3.5 Super", tier: "topo" },
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { short: "Nemotron Nano", tier: "medio" },
-  "nvidia/nemotron-3.5-lightning-30b-a3b": { short: "Nemotron Lightning", tier: "leve" },
+  "nvidia/nemotron-3.5-super-vl-120b-a12b": { short: "Nemotron 3.5 Super", tier: "topo", familia: "NVIDIA" },
+  "deepseek-ai/deepseek-v4.1-flash": { short: "DeepSeek v4.1 Flash", tier: "topo", familia: "DeepSeek" },
+  "minimaxai/minimax-m3.1-flash": { short: "MiniMax m3.1 Flash", tier: "topo", familia: "MiniMax" },
+  "stepfun-ai/step-5-preview": { short: "Step-5 Preview", tier: "topo", familia: "StepFun" },
+  "meta/muse-glimmer-30b": { short: "Muse Glimmer 30B", tier: "medio", familia: "Meta" },
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": { short: "Nemotron Nano Omni", tier: "medio", familia: "NVIDIA" },
+  "nvidia/nemotron-3.5-lightning-30b-a3b": { short: "Nemotron Lightning", tier: "leve", familia: "NVIDIA" },
 };
 
 export function parseModels(value) {
@@ -28,6 +32,13 @@ export function labelFor(id) {
 export function tierFor(id) {
   return INFO[id]?.tier ?? "medio";
 }
+
+export function familiaFor(id) {
+  return INFO[id]?.familia ?? "outro";
+}
+
+/** Modelos de reserva, na ordem em que o backend deve tentar. */
+export const CATALOGO = Object.keys(INFO);
 
 /** Modelo escolhido primeiro; os outros entram como reserva. */
 export function orderModels(current, all) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { labelFor, nextModel, orderModels, parseModels, tierFor } from "./models.js";
+import { CATALOGO, familiaFor, labelFor, nextModel, orderModels, parseModels, tierFor } from "./models.js";
 
 describe("parseModels", () => {
   it("separa, limpa e remove repetidos", () => {
@@ -34,5 +34,17 @@ describe("rotulos", () => {
   });
   it("gera rotulo legivel para desconhecido", () => {
     expect(labelFor("acme/super-model-9b")).toBe("super model 9b");
+  });
+});
+
+describe("catalogo configurado", () => {
+  it("tem as 7 familias ligadas no backend", () => {
+    const fam = ["NVIDIA", "DeepSeek", "MiniMax", "StepFun", "Meta"];
+    const vistas = CATALOGO.map((m) => familiaFor(m));
+    for (const f of fam) expect(vistas).toContain(f);
+    expect(CATALOGO).toHaveLength(7);
+  });
+  it("cada modelo do catalogo tem rotulo proprio", () => {
+    for (const m of CATALOGO) expect(labelFor(m)).not.toMatch(/nvidia|deepseek-ai|minimaxai|stepfun-ai|meta/);
   });
 });
