@@ -1,0 +1,22 @@
+{
+  "name": "skynet-expansion-pack",
+  "version": "1.0.0",
+  "prepared_for": "mlk010173/skynetchat",
+  "prepared_on": "2026-10-26",
+  "repository_write_access": false,
+  "production_changes_applied": false,
+  "files": {
+    "security_scripts": 2,
+    "persistent_rate_limit_migrations": 1,
+    "connector_catalog_entries": 568,
+    "connector_ui_components": 2,
+    "test_files": 1
+  },
+  "security_notes": [
+    "MCP requires AGENT_TOKEN after patch",
+    "public newcode account recovery disabled until proof-of-email exists",
+    "manual redirect and DNS checks added to URL opening",
+    "image quota uses private image_requests table and must be migrated before function deploy",
+    "connector catalog rows are metadata only; they are not active connectors"
+  ]
+}

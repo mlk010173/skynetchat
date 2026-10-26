@@ -73,12 +73,16 @@ async function dentroDoLimite(ip: string): Promise<boolean> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" } });
-  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: false, limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover", "newcode"] });
+  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: false, limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover"] });
   let body: any = {};
   try { body = await req.json(); } catch { return json(400, { ok: false, error: "bad_request" }); }
   const action = String(body.action || "");
 
-  if (action === "signup" || action === "newcode") {
+  // Recuperação por código fica desativada até haver comprovação real do e-mail.
+  // Nunca devolva um código novo nem uma sessão apenas com o e-mail de recuperação.
+  if (action === "newcode") return json(410, { ok: false, error: "recovery_not_configured", message: "A recuperação segura ainda não está configurada. O código existente não foi alterado." });
+
+  if (action === "signup" || action === "recover") {
     const ip = await ipDoPedido(req);
     if (!(await dentroDoLimite(ip))) return json(429, { ok: false, error: "muitas tentativas por hora" });
   }
@@ -152,28 +156,12 @@ Deno.serve(async (req) => {
     return json(200, { ok: true, session: mint.session });
   }
 
-  if (action === "newcode") {
-    const email = String(body.email || "").trim().toLowerCase();
-    if (!/.+@.+\..+/.test(email)) return json(400, { ok: false, error: "email invalido" });
-    const { data: row } = await admin.from("auth_codes").select("id, email").eq("recovery_email", email).order("created_at", { ascending: false }).limit(1).maybeSingle();
-    if (!row) return json(404, { ok: false, error: "conta nao encontrada" });
-    const novo = genCode();
-    const lookup = await hmacHex(novo);
-    const { error: uerr } = await admin.from("auth_codes").update({
-      code_hash: bcrypt.hashSync(novo, 10), code_lookup: lookup, code_enc: await aesEncrypt(novo),
-    }).eq("id", row.id);
-    if (uerr) return json(500, { ok: false, error: "code_update" });
-    const mint = await mintSession(row.email);
-    if (mint.error) return json(500, { ok: false, error: mint.error });
-    return json(200, { ok: true, code: novo, session: mint.session });
-  }
-
   if (action === "recover") {
     const email = String(body.email || "").trim().toLowerCase();
     if (!/.+@.+\..+/.test(email)) return json(400, { ok: false, error: "email invalido" });
-    const { count } = await admin.from("auth_codes").select("id", { count: "exact", head: true }).eq("recovery_email", email);
-    // envio por email depende de SMTP/API propria: estado honesto ate configurar
-    return json(200, { ok: true, pending: "smtp", matched: (count ?? 0) > 0 });
+    // Resposta uniforme: não revelar se existe uma conta com esse e-mail.
+    // O envio precisa ser implementado e verificado antes de habilitar a recuperação.
+    return json(200, { ok: true, pending: "smtp" });
   }
 
   return json(400, { ok: false, error: "acao desconhecida" });

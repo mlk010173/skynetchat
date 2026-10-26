@@ -20,6 +20,7 @@ export async function api(path, opts = {}) {
   const res = await fetch(`${SUPA_URL}/functions/v1/${path}`, {
     method: opts.method ?? "GET",
     headers: {
+      apikey: SUPA_ANON,
       ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
     },
@@ -37,6 +38,7 @@ export async function streamChat({ conversationId, content, model }, handlers) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        apikey: SUPA_ANON,
         ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
       },
       body: JSON.stringify({ conversationId, content, model }),
@@ -156,7 +158,7 @@ export async function askOnce({ conversationId, content, model }) {
   const session = await getSession();
   const res = await fetch(`${SUPA_URL}/functions/v1/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+    headers: { "Content-Type": "application/json", apikey: SUPA_ANON, ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
     body: JSON.stringify({ conversationId, content, model }),
   });
   const ctype = res.headers.get("content-type") ?? "";

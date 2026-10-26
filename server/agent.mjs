@@ -5,6 +5,9 @@
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+import { timingSafeEqual } from "node:crypto";
 
 const run = promisify(execFile);
 const PORT = process.env.PORT ?? 10000;
@@ -12,6 +15,14 @@ const TOKEN = process.env.AGENT_TOKEN ?? "";
 const SUPA_URL = process.env.SUPABASE_URL ?? "";
 const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
 const memoriaOk = () => Boolean(SUPA_URL && SUPA_KEY);
+
+function agenteAutorizado(req) {
+  const token = String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+  if (!TOKEN || !token) return false;
+  const a = Buffer.from(token);
+  const b = Buffer.from(TOKEN);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 async function memoriaSalvar(email, texto) {
   if (!memoriaOk()) return memoriaIndisponivel();
   if (!texto || typeof texto !== "string") return { ok: false, erro: "texto obrigatorio" };
@@ -64,14 +75,65 @@ export function validarComando(linha) {
 }
 
 // ---------- ferramentas de rede ----------
-const HOSTS_PROIBIDOS = /^(localhost$|127\.|0\.0\.0\.0$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|\[::1\]$|::1$)/i;
+function ipv4NaoPublico(ip) {
+  const p = ip.split(".").map(Number);
+  if (p.length !== 4 || p.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
+  const [a, b, c] = p;
+  return a === 0 || a === 10 || a === 127 || a >= 224 ||
+    (a === 100 && b >= 64 && b <= 127) ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0 && c === 0) ||
+    (a === 192 && b === 0 && c === 2) ||
+    (a === 192 && b === 88 && c === 99) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113);
+}
+
+function ipNaoPublico(ip) {
+  const tipo = isIP(ip);
+  if (tipo === 4) return ipv4NaoPublico(ip);
+  if (tipo !== 6) return false;
+  const h = ip.toLowerCase();
+  // Bloqueia endereços IPv6 especiais, mapeados em IPv4, locais e documentação.
+  if (h.startsWith("::ffff:") || h === "::" || h === "::1" || h.startsWith("fc") || h.startsWith("fd") ||
+      /^fe[89ab]/.test(h) || h.startsWith("ff") || h.startsWith("2001:db8:")) return true;
+  // Só permite unicast global 2000::/3.
+  return !/^[23][0-9a-f]{0,3}:/i.test(h);
+}
+
+function hostnameLocal(host) {
+  const h = String(host ?? "").replace(/^\[|\]$/g, "").replace(/\.$/, "").toLowerCase();
+  return h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") ||
+    h.endsWith(".internal") || h.endsWith(".test") || h === "metadata.google.internal";
+}
 
 export function urlPermitida(valor) {
   let u;
   try { u = new URL(String(valor ?? "").trim()); } catch { return { ok: false, erro: "url invalida" }; }
   if (u.protocol !== "https:") return { ok: false, erro: "somente https" };
-  if (HOSTS_PROIBIDOS.test(u.hostname)) return { ok: false, erro: "host nao permitido" };
+  if (u.username || u.password) return { ok: false, erro: "credenciais na URL nao permitidas" };
+  const host = u.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  if (hostnameLocal(host) || (isIP(host) && ipNaoPublico(host))) return { ok: false, erro: "host nao publico" };
   return { ok: true, url: u.toString() };
+}
+
+async function urlRedePermitida(valor) {
+  const validada = urlPermitida(valor);
+  if (!validada.ok) return validada;
+  const host = new URL(validada.url).hostname.replace(/^\[|\]$/g, "");
+  if (isIP(host)) return ipNaoPublico(host) ? { ok: false, erro: "IP nao publico bloqueado" } : validada;
+  try {
+    const enderecos = await lookup(host, { all: true, verbatim: true });
+    if (!enderecos.length || enderecos.some((e) => ipNaoPublico(e.address))) {
+      return { ok: false, erro: "host resolve para endereco nao publico" };
+    }
+    return validada;
+  } catch {
+    return { ok: false, erro: "nao foi possivel validar o host" };
+  }
 }
 
 export function htmlParaTexto(html) {
@@ -217,21 +279,42 @@ async function gerarImagem(prompt, aspect) {
 }
 
 async function abrirPagina(alvo) {
-  const v = urlPermitida(alvo);
-  if (!v.ok) return { ok: false, erro: v.erro };
-  try {
-    const res = await fetch(v.url, { headers: { "user-agent": UA }, signal: AbortSignal.timeout(15000), redirect: "follow" });
-    const final = urlPermitida(res.url || v.url);           // redirecionamento nao pode escapar da regra
-    if (!final.ok) return { ok: false, erro: "redirecionamento bloqueado" };
-    const tipo = res.headers.get("content-type") ?? "";
-    if (!/text\/html|text\/plain|application\/json/i.test(tipo)) return { ok: false, erro: "conteudo nao textual: " + tipo };
-    const bruto = await res.text();
-    const texto = /json/i.test(tipo) ? bruto.slice(0, MAX_TEXTO) : htmlParaTexto(bruto).slice(0, MAX_TEXTO);
-    const titulo = (bruto.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").trim().slice(0, 140);
-    return { ok: true, url: final.url, status: res.status, titulo, texto };
-  } catch (e) {
-    return { ok: false, erro: sanitizar(e?.message ?? "falha ao abrir") };
+  const primeira = urlPermitida(alvo);
+  if (!primeira.ok) return { ok: false, erro: primeira.erro };
+  let destino = primeira.url;
+  // Cada salto de redirecionamento é validado ANTES de fazer a próxima requisição.
+  for (let salto = 0; salto <= 5; salto++) {
+    const segura = await urlRedePermitida(destino);
+    if (!segura.ok) return { ok: false, erro: segura.erro };
+    try {
+      const res = await fetch(segura.url, {
+        headers: { "user-agent": UA },
+        signal: AbortSignal.timeout(15000),
+        redirect: "manual",
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location");
+        if (!location) return { ok: false, erro: "redirecionamento sem destino" };
+        if (salto === 5) return { ok: false, erro: "redirecionamentos demais" };
+        let proximo;
+        try { proximo = new URL(location, segura.url).toString(); }
+        catch { return { ok: false, erro: "redirecionamento invalido" }; }
+        const validacao = urlPermitida(proximo);
+        if (!validacao.ok) return { ok: false, erro: "redirecionamento bloqueado" };
+        destino = validacao.url;
+        continue;
+      }
+      const tipo = res.headers.get("content-type") ?? "";
+      if (!/text\/html|text\/plain|application\/json/i.test(tipo)) return { ok: false, erro: "conteudo nao textual: " + tipo };
+      const bruto = await res.text();
+      const texto = /json/i.test(tipo) ? bruto.slice(0, MAX_TEXTO) : htmlParaTexto(bruto).slice(0, MAX_TEXTO);
+      const titulo = (bruto.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "").trim().slice(0, 140);
+      return { ok: true, url: segura.url, status: res.status, titulo, texto };
+    } catch (e) {
+      return { ok: false, erro: sanitizar(e?.message ?? "falha ao abrir") };
+    }
   }
+  return { ok: false, erro: "redirecionamentos demais" };
 }
 
 function memoriaIndisponivel() {
@@ -390,9 +473,10 @@ export const handler = async (req, res) => {
   if (req.method === "OPTIONS") return json(res, 204, {});
 
   if (url.pathname === "/health") return json(res, 200, { ok: true, servico: "skynet-agent", versao: VERSION, ferramentas: FERRAMENTAS.length });
-  if (url.pathname === "/tools") return json(res, 200, { ok: true, ferramentas: FERRAMENTAS });
+  if (url.pathname === "/tools") return json(res, 200, { ok: true, ferramentas: FERRAMENTAS.filter((f) => !f.protegida && !["memoria_salvar", "memoria_buscar", "perguntar"].includes(f.nome)) });
 
   if (url.pathname === "/mcp" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { jsonrpc: "2.0", error: { code: -32001, message: "nao autorizado" } });
     const msg = await lerCorpo(req);
     if (!msg) return json(res, 400, { jsonrpc: "2.0", error: { code: -32700, message: "JSON invalido" } });
     if (msg.method === "tools/list") return json(res, 200, { jsonrpc: "2.0", id: msg.id, result: { tools: FERRAMENTAS.map((f) => ({ name: f.nome, description: f.desc, inputSchema: { type: "object", properties: { [f.entrada]: { type: "string" } }, required: [f.entrada] } })) } });
@@ -407,8 +491,7 @@ export const handler = async (req, res) => {
   }
 
   if (url.pathname === "/tools/terminal" && req.method === "POST") {
-    const auth = req.headers.authorization ?? "";
-    if (!TOKEN || auth !== "Bearer " + TOKEN) return json(res, 401, { ok: false, erro: "nao autorizado" });
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const dados = await lerCorpo(req);
     if (!dados) return json(res, 400, { ok: false, erro: "JSON invalido" });
     return json(res, 200, await executar(dados.cmd));
@@ -443,13 +526,16 @@ export const handler = async (req, res) => {
   }
   if (url.pathname === "/tools/hora") return json(res, 200, agora());
   if (url.pathname === "/tools/perguntar" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req); return json(res, 200, await perguntar(b?.pergunta ?? b?.q ?? b?.prompt, b?.email));
   }
   if (url.pathname === "/tools/memoria_salvar" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req);
     return json(res, 200, await memoriaSalvar(b.email, b.texto));
   }
   if (url.pathname === "/tools/memoria_buscar" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req);
     return json(res, 200, await memoriaBuscar(b.email, b.consulta));
   }
