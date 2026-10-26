@@ -23,11 +23,12 @@ await p.waitForTimeout(2500);
 const modal = await p.textContent("body");
 modal.includes("Conta FREE") && modal.includes("ASSINAR PRO") ? ok("modal PRO com abas e CTA verde") : bad("modal não abriu: " + modal.slice(0, 100));
 modal.includes("Seja PRO") ? ok("CTA 'Seja PRO' presente") : bad("sem CTA");
-// abas
+// abas (convidado: estado honesto)
 await p.click('.pro-tab:has-text("Conta")');
-(await p.textContent("body")).includes("Membro desde") ? ok("aba Conta com dados reais") : bad("aba Conta vazia");
+(await p.textContent("body")).includes("Entre na sua conta") ? ok("aba Conta honesta para convidado") : bad("aba Conta vazia");
 // placeholder rotativo
-await p.click(".pro-close");
+await p.goto("https://mlk010173.github.io/skynetchat/#/", { waitUntil: "networkidle" });
+await p.waitForTimeout(2000);
 await p.waitForTimeout(6500);
 const ph = await p.getAttribute('input[aria-label="Mensagem"]', "placeholder");
 ["Pergunte sem medo.", "Vá além", "Sem filtros, sem limites.", "Pesquise sem censura..."].includes(ph) ? ok("placeholder rotativo: '" + ph + "'") : bad("placeholder estático: " + ph);

@@ -59,14 +59,14 @@ export default function Account() {
           <div className="pro-body">
             {guest && <p className="hint">Entre na sua conta para ver seus dados.</p>}
             {guest && <Link to="/login" className="pro-btn green" style={{ textAlign: "center" }}>ENTRAR</Link>}
-            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Membro desde</span><b>{desde}</b></div>
-            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Identidade</span><b>{user.id.slice(0, 8)}</b></div>
-            <label className="code-label" style={guest ? { display: "none" } : undefined}>EMAIL DE RECUPERAÇÃO</label>
-            <input style={guest ? { display: "none" } : undefined} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" aria-label="Email de recuperação" />
-            <button style={guest ? { display: "none" } : undefined} className="pro-btn" onClick={salvarEmail} disabled={busy}>{busy ? "SALVANDO…" : "SALVAR"}</button>
+            {user && <div className="pro-row"><span>Membro desde</span><b>{desde}</b></div>}
+            {user && <div className="pro-row"><span>Identidade</span><b>{user.id.slice(0, 8)}</b></div>}
+            {user && <label className="code-label">EMAIL DE RECUPERAÇÃO</label>}
+            {user && <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" aria-label="Email de recuperação" />}
+            {user && <button className="pro-btn" onClick={salvarEmail} disabled={busy}>{busy ? "SALVANDO…" : "SALVAR"}</button>}
             {saved && <p className="hint">// {saved}</p>}
             <p className="hint">Seu código de 12 dígitos é a única chave da conta. Guarde-o.</p>
-            <button style={guest ? { display: "none" } : undefined} className="pro-btn danger" onClick={sair}>SAIR DA CONTA</button>
+            {user && <button className="pro-btn danger" onClick={sair}>SAIR DA CONTA</button>}
           </div>
         )}
 
@@ -74,11 +74,11 @@ export default function Account() {
           <div className="pro-body">
             {guest && <p className="hint">Sessão e segurança ficam visíveis após entrar. Autenticação por código de 12 dígitos, sem senha.</p>}
             {guest && <Link to="/login" className="pro-btn green" style={{ textAlign: "center" }}>ENTRAR</Link>}
-            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Sessão</span><b>ativa (persistente)</b></div>
-            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Autenticação</span><b>código de 12 dígitos</b></div>
-            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Limite de tentativas</span><b>10 por hora</b></div>
+            {user && <div className="pro-row"><span>Sessão</span><b>ativa (persistente)</b></div>}
+            {user && <div className="pro-row"><span>Autenticação</span><b>código de 12 dígitos</b></div>}
+            {user && <div className="pro-row"><span>Limite de tentativas</span><b>10 por hora</b></div>}
             <p className="hint">Sem senha: a conta é acessada apenas pelo seu código. Sessão expira conforme a política do Supabase.</p>
-            <button style={guest ? { display: "none" } : undefined} className="pro-btn danger" onClick={sair}>ENCERRAR SESSÃO</button>
+            {user && <button className="pro-btn danger" onClick={sair}>ENCERRAR SESSÃO</button>}
           </div>
         )}
 
