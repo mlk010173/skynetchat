@@ -180,10 +180,13 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
 
         <div className="drawer-foot">
           {logged ? (
+            <>
+            <p className="account-line">Conta ativa · acesso por código</p>
             <button type="button" className="drawer-item plain" onClick={() => { onClose(); onLogout(); }}>
               <IconUser className="di-icon" />
               <span className="di-title">Sair da conta</span>
             </button>
+            </>
           ) : (
             <Link to="/login" className="drawer-item plain" onClick={onClose}>
               <IconUser className="di-icon" />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
+import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import { api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
@@ -24,6 +24,9 @@ export default function Home() {
   const [model, setModel] = useState("");
   const [models, setModels] = useState([]);
   const [toast, setToast] = useState("");
+  const [notifs, setNotifs] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const [bellOpen, setBellOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const micRef = useRef(null);
   const convIdRef = useRef(null);
@@ -37,6 +40,33 @@ export default function Home() {
     const { data } = supabase.auth.onAuthStateChange((_e, s) => setLogged(!!s?.user));
     return () => data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!logged) { setNotifs([]); setUnread(0); return; }
+    let canal = null;
+    (async () => {
+      const s = await supabase.auth.getSession();
+      if (!s.data?.session) return;
+      const uid = s.data.session.user.id;
+      const { data: rows } = await supabase.from("notifications").select("id, title, body, read, created_at").order("created_at", { ascending: false }).limit(20);
+      if (rows) { setNotifs(rows); setUnread(rows.filter((n) => !n.read).length); }
+      canal = supabase.channel("notif-" + uid).on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + uid },
+        (payload) => { setNotifs((prev) => [payload.new, ...prev].slice(0, 20)); setUnread((n) => n + 1); }).subscribe();
+    })();
+    return () => { if (canal) supabase.removeChannel(canal); };
+  }, [logged]);
+
+  async function abrirSino() {
+    if (bellOpen) { setBellOpen(false); return; }
+    setBellOpen(true);
+    if (unread > 0) {
+      const ids = notifs.filter((n) => !n.read).map((n) => n.id);
+      if (ids.length) {
+        const { error } = await supabase.from("notifications").update({ read: true }).in("id", ids);
+        if (!error) { setNotifs((prev) => prev.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n))); setUnread(0); }
+      }
+    }
+  }
 
   useEffect(() => {
     api("models").then((d) => {
@@ -199,6 +229,12 @@ export default function Home() {
             localStorage.setItem("skynet-theme-bg", next);
           }}><IconTheme /></button>
           <button type="button" className="icon-btn" aria-label="Novo chat" onClick={() => pick("Novo chat")}><IconEdit /></button>
+          {logged && (
+            <button type="button" className="icon-btn" aria-label="Notificações" onClick={abrirSino}>
+              <IconBell width={20} height={20} />
+              {unread > 0 && <b className="bell-badge">{unread}</b>}
+            </button>
+          )}
         </div>
       </header>
 

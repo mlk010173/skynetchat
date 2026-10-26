@@ -102,6 +102,11 @@ Deno.serve(async (req) => {
   }
 
   if (action === "login") {
+    const ip = await ipDoPedido(req);
+    const desde = new Date(Date.now() - 3600_000).toISOString();
+    const { count } = await admin.from("auth_attempts").select("ip", { count: "exact", head: true }).eq("ip", ip).gte("at", desde);
+    if ((count ?? 0) >= 10) return json(429, { ok: false, error: "muitas tentativas. tente novamente em alguns minutos" });
+    await admin.from("auth_attempts").insert({ ip });
     const code = String(body.code || "").replace(/\D/g, "");
     if (code.length !== 12) return json(400, { ok: false, error: "codigo invalido" });
     const lookup = await hmacHex(code);
