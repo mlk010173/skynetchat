@@ -1,26 +1,8 @@
 {
-  "name": "skyhub",
-  "version": "1.0.0",
+  "name": "skynet",
   "private": true,
+  "description": "SKYNETchat \u2014 frontend oficial em frontend/ (Vite), backend Supabase (Edge Functions) + server/ (agente). Auth unica: codigo de 12 digitos.",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "test": "node --test",
-    "postbuild": "node -e \"require('fs').writeFileSync('out/.nojekyll','')\"",
-    "e2e": "node tests/e2e-login.mjs"
-  },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
-    "next": "^15.5.4",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "playwright": "^1.64.1",
-    "typescript": "^5.6.0"
+    "anon": "node tests/anon.mjs"
   }
 }
