@@ -9,7 +9,30 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const PORT = process.env.PORT ?? 10000;
 const TOKEN = process.env.AGENT_TOKEN ?? "";
-const VERSION = "1.1.0";
+const SUPA_URL = process.env.SUPABASE_URL ?? "";
+const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
+const memoriaOk = () => Boolean(SUPA_URL && SUPA_KEY);
+async function memoriaSalvar(email, texto) {
+  if (!memoriaOk()) return memoriaIndisponivel();
+  if (!texto || typeof texto !== "string") return { ok: false, erro: "texto obrigatorio" };
+  const r = await fetch(SUPA_URL + "/rest/v1/agent_memory", {
+    method: "POST",
+    headers: { "content-type": "application/json", apikey: SUPA_KEY, authorization: "Bearer " + SUPA_KEY, prefer: "return=minimal" },
+    body: JSON.stringify({ email: email || "anonimo", texto: texto.slice(0, 4000) }),
+  });
+  if (!r.ok) return { ok: false, erro: "falha ao gravar (" + r.status + ")" };
+  return { ok: true, gravado: true };
+}
+async function memoriaBuscar(email, consulta) {
+  if (!memoriaOk()) return memoriaIndisponivel();
+  const limpo = String(consulta || "").replace(/[%_]/g, "").slice(0, 120);
+  let url = SUPA_URL + "/rest/v1/agent_memory?select=texto,criado_em&order=criado_em.desc&limit=5&texto=ilike." + encodeURIComponent("*" + limpo + "*");
+  if (email) url += "&email=eq." + encodeURIComponent(email);
+  const r = await fetch(url, { headers: { apikey: SUPA_KEY, authorization: "Bearer " + SUPA_KEY } });
+  if (!r.ok) return { ok: false, erro: "falha na busca (" + r.status + ")" };
+  return { ok: true, resultados: await r.json() };
+}
+const VERSION = "1.2.0";
 const MAX_TEXTO = 9000;
 const UA = "Mozilla/5.0 (compatible; skynet-agent/" + VERSION + ")";
 
@@ -231,8 +254,8 @@ const FERRAMENTAS = [
   { nome: "abrir", desc: "Abre uma pagina https e devolve o texto principal", entrada: "url", endpoint: "POST /tools/abrir" },
   { nome: "imagem", desc: "Gera imagem (flux-3) e devolve a imagem em data URL", entrada: "prompt", endpoint: "POST /tools/imagem" },
   { nome: "terminal", desc: "Executa um binario da whitelist (ls, cat, grep, node, python3, git, df...)", entrada: "cmd", endpoint: "POST /tools/terminal", protegida: true },
-  { nome: "memoria_salvar", desc: "Grava um fato na memoria do agente (requer Supabase configurado no Render)", entrada: "texto", endpoint: "POST /tools/memoria_salvar" },
-  { nome: "memoria_buscar", desc: "Busca na memoria do agente (requer Supabase configurado no Render)", entrada: "consulta", endpoint: "POST /tools/memoria_buscar" },
+  { nome: "memoria_salvar", desc: "Grava um fato na memoria de longo prazo do agente (Supabase)", entrada: "texto", endpoint: "POST /tools/memoria_salvar" },
+  { nome: "memoria_buscar", desc: "Busca fatos na memoria de longo prazo do agente (Supabase)", entrada: "consulta", endpoint: "POST /tools/memoria_buscar" },
 ];
 
 const json = (res, code, body) => {
@@ -257,8 +280,8 @@ export async function executarFerramenta(nome, args = {}) {
     case "web_pesquisar": return pesquisarWeb(args.consulta ?? args.q);
     case "abrir": return abrirPagina(args.url);
     case "imagem": return gerarImagem(args.prompt ?? args.p, args.aspect_ratio);
-    case "memoria_salvar": return memoriaIndisponivel();
-    case "memoria_buscar": return memoriaIndisponivel();
+    case "memoria_salvar": return memoriaSalvar(args.email, args.texto);
+    case "memoria_buscar": return memoriaBuscar(args.email, args.consulta);
     case "terminal": return executar(args.cmd);
     default: return { ok: false, erro: "ferramenta desconhecida: " + nome };
   }
@@ -311,8 +334,13 @@ export const handler = async (req, res) => {
     return json(res, 200, await abrirPagina(dados.url));
   }
 
-  if ((url.pathname === "/tools/memoria_salvar" || url.pathname === "/tools/memoria_buscar") && req.method === "POST") {
-    return json(res, 200, memoriaIndisponivel());
+  if (url.pathname === "/tools/memoria_salvar" && req.method === "POST") {
+    const b = await lerCorpo(req);
+    return json(res, 200, await memoriaSalvar(b.email, b.texto));
+  }
+  if (url.pathname === "/tools/memoria_buscar" && req.method === "POST") {
+    const b = await lerCorpo(req);
+    return json(res, 200, await memoriaBuscar(b.email, b.consulta));
   }
 
   return json(res, 404, { ok: false, erro: "rota nao encontrada" });
