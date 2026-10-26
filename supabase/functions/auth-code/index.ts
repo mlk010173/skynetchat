@@ -105,7 +105,8 @@ Deno.serve(async (req) => {
     const bearer = req.headers.get("authorization") ?? "";
     const token = bearer.replace(/^Bearer\s+/i, "");
     if (!token) return json(401, { ok: false, error: "sem sessao" });
-    const { data: u, error: uerr } = await admin.auth.admin.getUser(token);
+    const anon = createClient(SUPA_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "", { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data: u, error: uerr } = await anon.auth.getUser(token);
     if (uerr || !u?.user) return json(401, { ok: false, error: "sessao invalida" });
     const email = typeof body.email === "string" && /.+@.+\..+/.test(body.email) ? body.email.trim() : null;
     if (!email) return json(400, { ok: false, error: "email invalido" });
