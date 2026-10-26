@@ -1,0 +1,13 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+const errs = [];
+p.on("pageerror", (e) => errs.push("PAGE: " + e.message.slice(0, 200)));
+p.on("console", (m) => m.type() === "error" && errs.push("CONSOLE: " + m.text().slice(0, 200)));
+await p.goto("https://mlk010173.github.io/skynetchat/#/", { waitUntil: "networkidle" });
+await p.waitForTimeout(3500);
+console.log("tem button Escolher:", await p.locator('button[aria-label="Escolher modelo"]').count());
+console.log("tem select Escolher:", await p.locator('select[aria-label="Escolher modelo"]').count());
+console.log("body tem hero:", (await p.textContent("body")).includes("Apresentamos"));
+console.log("erros:", errs.slice(0, 5));
+await b.close();

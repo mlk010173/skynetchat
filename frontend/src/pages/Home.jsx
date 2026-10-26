@@ -4,7 +4,7 @@ import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconIm
 import Sidebar from "../components/Sidebar.jsx";
 
 const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá além", "Sem filtros, sem limites."];
-import { api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
+import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
 import { labelFor } from "../models.js";
