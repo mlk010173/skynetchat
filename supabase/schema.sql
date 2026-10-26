@@ -68,9 +68,9 @@ create index if not exists idx_messages_search on messages using gin (search_tex
 
 -- 3) memória de longo prazo do agente: embeddings vetoriais (pgvector)
 create extension if not exists vector;
-alter table messages add column if not exists embedding vector(1536);
-create index if not exists idx_messages_embedding on messages
-  using ivfflat (embedding vector_cosine_ops) with (lists = 100);
+alter table messages add column if not exists embedding vector(2048);
+-- sem indice ivfflat: o pgvector limita ivfflat a 2000 dimensoes e o modelo
+-- de embeddings da NVIDIA gera 2048. Para o volume deste app, a busca exata serve.
 
 -- 4) busca de conversas por título OU conteúdo das mensagens
 create or replace function search_conversations(uid uuid, q text)
@@ -100,15 +100,15 @@ select cron.schedule('cleanup-anon-requests', '5 * * * *',
 
 -- 7) RPC de memória: mensagens mais parecidas de outras conversas do usuário
 create or replace function match_memories(
-  p_user uuid, p_conv uuid, p_embedding vector(1536), p_threshold float, p_count int
+  p_user uuid, p_conv uuid, p_embedding vector(2048), p_threshold float, p_count int
 ) returns table (role text, content text, similarity float) language sql stable as $$
   select m.role, m.content, 1 - (m.embedding <=> p_embedding) as similarity
   from messages m
   join conversations c on c.id = m.conversation_id
   where c.user_id = p_user
-    and m.conversation_id <> coalesce(p_conv, m.conversation_id)
+    and (p_conv is null or m.conversation_id <> p_conv)
     and m.embedding is not null
-    and 1 - (m.embedding <=> p_embedding) > p_threshold
+    and 1 - (m.embedding <=> p_embedding) > least(p_threshold, 0.15)
   order by m.embedding <=> p_embedding
   limit p_count;
 $$;

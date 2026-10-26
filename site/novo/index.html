@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<script id="skynet-document-lifecycle" nonce="bkHu70Kj+2zycjYP3nWUog==">
+			// Reload can begin while the chat's JavaScript chunk is still loading.
+			window.__skynetDocumentLeaving = false;
+			const markDocumentLeaving = () => { window.__skynetDocumentLeaving = true; };
+			window.addEventListener('beforeunload', markDocumentLeaving);
+			window.addEventListener('pagehide', markDocumentLeaving);
+			window.addEventListener('pageshow', event => {
+				if (event.persisted) window.__skynetDocumentLeaving = false;
+			});
+		</script>
+		<link rel="icon" type="image/png" href="/favicon-32-v2.png" sizes="32x32" />
+		<link rel="icon" type="image/png" href="/favicon-96-v2.png" sizes="96x96" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" sizes="180x180" />
+		<link rel="manifest" href="/manifest-v2.json" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="SKYNETchat" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wdth,wght@95,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+		<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+/>
+		<meta name="color-scheme" content="dark" />
+		<meta name="theme-color" content="#070000" />
+		<script>
+			// Informa o tema ao Safari antes da primeira pintura da interface do navegador.
+			(function() {
+				var theme = localStorage.getItem('skynet-theme-bg');
+				var isWhite = theme === 'white';
+				var background = isWhite ? '#ffffff' : theme === 'black' ? '#000000' : '#070000';
+				var scheme = isWhite ? 'light' : 'dark';
+				document.documentElement.style.background = background;
+				document.documentElement.style.colorScheme = scheme;
+				document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background);
+				document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
+				document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+					?.setAttribute('content', isWhite ? 'default' : 'black-translucent');
+			})();
+		</script>
+		<style>
+		  html, body { height: 100%; }
+		  html { background:#0a0a0a; }
+		  body {
+		    margin: 0;
+		    background: #0a0a0a;
+		    background-image: linear-gradient(
+  180deg,
+  #A11111 0%,
+  #751414 10%,
+  #3C0909 31%,
+  #330808 39%,
+  #2E0707 46%,
+  #290606 60%,
+  #260505 67%,
+  #230505 73%,
+  #210404 83%,
+  #1F0404 83%,
+  #1B0303 92%
+);
+
+		    background-attachment: fixed;
+		    color: #fff;
+		    -webkit-font-smoothing: antialiased;
+		    -moz-osx-font-smoothing: grayscale;
+		    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+		  }
+		</style>
+		<!-- Meta Pixel Code -->
+		<script>
+		!function(f,b,e,v,n,t,s)
+		{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+		n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+		if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+		n.queue=[];t=b.createElement(e);t.async=!0;
+		t.src=v;s=b.getElementsByTagName(e)[0];
+		s.parentNode.insertBefore(t,s)}(window, document,'script',
+		'https://connect.facebook.net/en_US/fbevents.js');
+		fbq('init', '1615978922937762');
+		fbq('track', 'PageView');
+		</script>
+		<noscript><img height="1" width="1" style="display:none"
+		src="https://www.facebook.com/tr?id=1615978922937762&ev=PageView&noscript=1"/></noscript>
+		<!-- End Meta Pixel Code -->
+		
+		<link href="./_app/immutable/assets/0.NDTWPgt7.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/Turnstile.Dnhv9yFl.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/ProjectDetailPanel.CnvsYsZz.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/3.CCEN65Uu.css" rel="stylesheet"><!--[--><link rel="icon" type="image/png" href="/favicon-96-v2.png" sizes="96x96"/> <meta name="description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta name="robots" content="index,follow"/> <meta property="og:title" content="SKYNETchat — Chat de IA em português"/> <meta property="og:description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta property="og:type" content="website"/> <link rel="canonical" href="./"/><!--]--><title>SKYNETchat — Chat de IA em português</title>
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<script>
+			// Aplica tema imediatamente para evitar flash de cor errada
+			(function() {
+				var theme = localStorage.getItem('skynet-theme-bg');
+				var themeColor = document.querySelector('meta[name="theme-color"]');
+				if (theme === 'white') {
+					document.body.classList.add('theme-white');
+					document.body.style.background = '#ffffff';
+					document.body.style.colorScheme = 'light';
+					document.documentElement.style.background = '#ffffff';
+					if (themeColor) themeColor.setAttribute('content', '#ffffff');
+				} else if (theme === 'black') {
+					document.body.classList.add('theme-black');
+					document.body.style.background = '#000000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#000000';
+					if (themeColor) themeColor.setAttribute('content', '#000000');
+				} else if (theme === 'red' || theme === 'dark' || theme === 'classic') {
+					// Legacy themes → treat as red
+					document.body.classList.add('theme-red');
+					document.body.style.background = '#070000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#070000';
+					if (themeColor) themeColor.setAttribute('content', '#070000');
+					localStorage.setItem('skynet-theme-bg', 'red');
+				} else {
+					document.body.classList.add('theme-black');
+					document.body.style.background = '#000000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#000000';
+					if (themeColor) themeColor.setAttribute('content', '#000000');
+				}
+			})();
+		</script>
+		<div style="display: contents"><!--[--><!--[--><!----><!----><div class="fixed left-0 top-0 bottom-0 z-40 w-[48px] hidden sm:flex flex-col items-center py-2.5 strip-enter svelte-7iubyg" style="background: hsl(0 0% 5%); border-right: 1px solid hsl(0 0% 12%);"><button class="w-9 h-9 flex items-center justify-center mb-2 logo-btn svelte-7iubyg"><img src="/skynet-logo-vermelha.png" alt="SKYNET" class="w-7 h-7 object-contain logo-spin svelte-7iubyg" draggable="false" style="mix-blend-mode: screen"/></button> <div class="w-7 h-[1px] mb-1.5 svelte-7iubyg" style="background: hsl(0 0% 12%)"></div> <div class="flex-1 overflow-y-auto w-full svelte-7iubyg"><div class="flex flex-col items-center gap-[2px] px-[6px] svelte-7iubyg"><!--[--><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/><!----></svg> <!--[!--><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/><!----></svg> <!--[!--><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M12 2 9.5 4.5 6 4l-.5 3.5L3 10l2.5 2.5L6 16l3.5-.5L12 18l2.5-2.5L18 16l.5-3.5L21 10l-2.5-2.5L18 4l-3.5.5Z"/><path d="M14.5 7.5h-3a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-3"/><path d="M12 6v9"/><path d="M8 20h8"/><!----></svg> <!--[--><span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full svelte-7iubyg" style="background: hsl(0 75% 50%)"></span><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><!----></svg> <!--[!--><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><!----></svg> <!--[--><span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full svelte-7iubyg" style="background: hsl(0 75% 50%)"></span><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><!----></svg> <!--[--><span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full svelte-7iubyg" style="background: hsl(0 75% 50%)"></span><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><!----></svg> <!--[--><span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full svelte-7iubyg" style="background: hsl(0 75% 50%)"></span><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M2 10h20"/><!----></svg> <!--[--><span class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full svelte-7iubyg" style="background: hsl(0 75% 50%)"></span><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/><!----></svg> <!--[!--><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><!----></svg> <!--[!--><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/><!----></svg> <!--[!--><!--]--></button><button class="relative w-[36px] h-[36px] rounded-lg flex items-center justify-center transition-all duration-150 strip-icon-btn svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/><!----></svg> <!--[!--><!--]--></button><!--]--></div></div> <div class="w-7 h-[1px] mt-1.5 mb-1.5 svelte-7iubyg" style="background: hsl(0 0% 12%)"></div> <button class="w-[36px] h-[36px] rounded-lg flex items-center justify-center strip-icon-btn svelte-7iubyg" title="Fazer login"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><!----></svg></button> <div class="absolute right-[-6px] top-0 bottom-0 w-[12px] cursor-col-resize group/edge svelte-7iubyg" role="button" tabindex="0" aria-label="Abrir painel lateral" title="Abrir painel lateral"><div class="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-[1px] opacity-0 group-hover/edge:opacity-100 transition-opacity duration-150 svelte-7iubyg" style="background: hsl(0 0% 12%)"></div></div></div> <!--[!--><!--]--> <div class="fixed inset-0 z-[90] pointer-events-none svelte-7iubyg"><div class="fixed inset-0 no-h-pan overlay svelte-7iubyg" style=" touch-action: none; opacity: 0; pointer-events: none; background: linear-gradient(90deg,
+        rgba(86, 86, 86, 0) 0%,
+        rgba(58, 58, 58, 0) 38%,
+        rgba(30, 30, 30, 0) 72%,
+        rgba(14, 14, 14, 0) 100%); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1), background 120ms ease-out; " role="button" aria-label="Fechar menu" tabindex="0"></div> <aside tabindex="-1" class="fixed inset-y-0 left-0 z-[95] w-[min(88vw,320px)] transform-gpu will-change-transform drawer-panel menu-no-select svelte-7iubyg" style=" width: calc(var(--drawerW, 320px) + 2px); transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(-100%); pointer-events: none; "><div class="h-full flex flex-col relative overflow-hidden svelte-7iubyg" style="background: #000000; border-right: 1px solid hsl(0 0% 15%);"><div class="flex items-center justify-between pl-3 pr-2 pt-2.5 pb-2 flex-shrink-0 relative z-10 svelte-7iubyg"><div class="flex items-center gap-2 svelte-7iubyg"><img src="/skynet-logo-vermelha.png" alt="SKYNET" class="w-8 h-8 object-contain logo-spin svelte-7iubyg" draggable="false" style="mix-blend-mode: screen"/> <span class="text-[16px] font-bold tracking-wide leading-tight svelte-7iubyg" style="color: hsl(0 75% 50%)">SKYNETchat</span></div> <button class="w-8 h-8 flex items-center justify-center rounded-lg close-btn svelte-7iubyg" style="color: hsl(0 0% 50%)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M18 6 6 18"/><path d="m6 6 12 12"/><!----></svg></button></div> <div class="drawer-nav min-h-0 flex-1 overflow-y-auto px-2 pb-4 relative z-10 svelte-7iubyg" style="-webkit-overflow-scrolling: touch; overflow-x: hidden;"><div class="space-y-[2px] pt-2 svelte-7iubyg"><!--[--><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.12s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Novo chat</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Inicie uma conversa do zero</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.15s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Indique e Ganhe</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Convide amigos e ganhe assinatura PRO</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.18s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M12 2 9.5 4.5 6 4l-.5 3.5L3 10l2.5 2.5L6 16l3.5-.5L12 18l2.5-2.5L18 16l.5-3.5L21 10l-2.5-2.5L18 4l-3.5.5Z"/><path d="M14.5 7.5h-3a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-3"/><path d="M12 6v9"/><path d="M8 20h8"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Monetize com SKYNETchat</span> <!--[--><span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 tracking-wide svelte-7iubyg" style="background: hsl(0 75% 50% / 0.18); color: hsl(0 75% 50%)">Novo</span><!--]--></div> <!--[!--><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.21s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Atualizações</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Veja as novidades e melhorias recentes</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.24s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Imagens</span> <!--[--><span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 tracking-wide svelte-7iubyg" style="background: hsl(0 75% 50% / 0.18); color: hsl(0 75% 50%)">Beta</span><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Gere e explore imagens com IA</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.27s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Conversas em grupo</span> <!--[--><span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 tracking-wide svelte-7iubyg" style="background: hsl(0 75% 50% / 0.18); color: hsl(0 75% 50%)">Novo</span><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Colabore com múltiplos agentes</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.3s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Codex</span> <!--[--><span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 tracking-wide svelte-7iubyg" style="background: hsl(0 75% 50% / 0.18); color: hsl(0 75% 50%)">Em breve</span><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Código, scripts e automação</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.32999999999999996s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M2 10h20"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Projetos</span> <!--[--><span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 tracking-wide svelte-7iubyg" style="background: hsl(0 75% 50% / 0.18); color: hsl(0 75% 50%)">Novo</span><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Organize tarefas e entregas</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.36s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Histórico de conversas</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Revise chats anteriores</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.39s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Conheça o SKYNETchat</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Descubra como funciona o projeto</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.42s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M15 12h-5"/><path d="M15 8h-5"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Prompts</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Prompts úteis para usar com a IA</span><!--]--></div> <!--[!--><!--]--></button><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl text-left relative overflow-hidden menu-item svelte-7iubyg" style="background: transparent; animation-delay: 0.44999999999999996s;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 transition-transform duration-150 svelte-7iubyg" style="transform: scale(1);"><!----><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/><!----></svg> <div class="min-w-0 flex-1 svelte-7iubyg"><div class="flex items-center gap-1.5 svelte-7iubyg"><span class="text-[13px] font-medium leading-tight truncate transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 90%)">Suporte</span> <!--[!--><!--]--></div> <!--[--><span class="text-[10.5px] leading-tight block mt-0.5 transition-colors duration-150 svelte-7iubyg" style="color: hsl(0 0% 50%)">Tire dúvidas e fale com o suporte</span><!--]--></div> <!--[!--><!--]--></button><!--]--></div> <!--[!--><!--]--></div> <div class="flex-shrink-0 px-2 pb-3 pt-1.5 space-y-1.5 footer-enter relative z-10 svelte-7iubyg" style="border-top: 1px solid hsl(0 0% 15%)"><button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl transition-colors footer-btn svelte-7iubyg" style="color: hsl(0 0% 90%)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="hsl(0 75% 50%)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><!----></svg> <span class="text-[13px] font-medium svelte-7iubyg">Fazer login</span></button> <button class="flex items-center gap-3 w-full px-2.5 py-2 rounded-xl transition-colors footer-btn svelte-7iubyg" style="background: hsl(0 0% 10%); color: hsl(0 0% 90%)"><span class="theme-icon-rotate svelte-7iubyg" style="display: flex; transform: rotate(180deg);"><!--[!--><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="hsl(230 60% 70%)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-7iubyg"><!----><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><!----></svg><!--]--></span> <span class="flex-1 text-left text-[13px] svelte-7iubyg">Tema de fundo</span> <span class="text-[10px] px-2 py-0.5 rounded-md font-semibold tracking-wide uppercase svelte-7iubyg" style="background: hsl(0 0% 18%); color: hsl(0 0% 50%)">Black</span></button> <a href="https://instagram.com/skynetchat.ai" target="_blank" rel="noopener noreferrer" class="w-full px-2.5 py-2 rounded-xl transition-all block footer-btn svelte-7iubyg" style="background: hsl(280 30% 12%); border: 1px solid hsl(280 30% 20%);"><div class="flex items-center gap-2 svelte-7iubyg"><div class="w-5 h-5 rounded-md bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center svelte-7iubyg"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="white" class="svelte-7iubyg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" class="svelte-7iubyg"></path></svg></div> <div class="text-left svelte-7iubyg"><div class="text-[12px] font-medium svelte-7iubyg" style="color: hsl(0 0% 90%)">Nos siga no Instagram</div> <div class="text-[10px] svelte-7iubyg" style="color: hsl(0 0% 50%)">@skynetchat.ai</div></div></div></a> <!--[!--><!--]--> <button class="w-full text-left px-3 py-1 text-[10px] tracking-wide hover:opacity-70 transition-opacity svelte-7iubyg" style="color: hsl(0 0% 50%); opacity: 0.8;">Termos de Serviço</button></div></div></aside></div> <!--[!--><!--]--> <!--[!--><!--]--> <!--[!--><!--]--><!----> <div class="appframe no-h-pan sm:pl-[52px] svelte-76r9u1" style="transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1); transform: translateX(0); --ios-composer-recovery: 0px;"><!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--> <header style="top: 0; transform: translate3d(0, 0px, 0);" class="fixed left-0 right-0 z-50 h-11 flex items-center justify-between px-3 sm:px-4 header-theme-black  svelte-76r9u1"><div class="header-left-slot flex items-center gap-1 min-w-0 svelte-76r9u1"><button class="flex items-center justify-center w-8 h-8 flex-shrink-0 svelte-76r9u1" aria-label="Abrir menu"><div class="flex flex-col gap-[5px] svelte-76r9u1"><span class="block w-[18px] h-[2px] rounded-full svelte-76r9u1" style="background: hsl(0 0% 75%)"></span> <span class="block w-[14px] h-[2px] rounded-full svelte-76r9u1" style="background: hsl(0 0% 75%)"></span></div></button> <!--[!--><!--]--></div> <button class="version-selector absolute left-1/2 -translate-x-1/2 flex items-center gap-1 whitespace-nowrap focus:outline-none svelte-76r9u1"><span class="version-brand text-[15px] sm:text-base font-medium tracking-wide whitespace-nowrap svelte-76r9u1" style="color: rgb(217, 217, 217)">SKYNETchat</span> <span class="version-label text-[15px] sm:text-base font-medium ml-0.5 whitespace-nowrap shrink-0 svelte-76r9u1" style="color: rgb(242, 13, 13)">4.5</span> <svg class="version-chevron shrink-0 svelte-76r9u1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: rgb(128, 128, 128)"><path d="m6 9 6 6 6-6" class="svelte-76r9u1"></path></svg></button> <!--[!--><!--]--> <div class="header-right-slot flex items-center gap-1 svelte-76r9u1"><button class="flex items-center justify-center w-8 h-8 svelte-76r9u1" title="Modo Dark"><!--[!--><!--[--><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(0 0% 75%)" class="svelte-76r9u1"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" class="svelte-76r9u1"></path></svg><!--]--><!--]--></button> <div class="relative svelte-76r9u1"><button type="button" class="flex items-center justify-center w-8 h-8 svelte-76r9u1" aria-label="Nova conversa" title="Novo chat"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: hsl(0 0% 75%)" class="svelte-76r9u1"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" class="svelte-76r9u1"></path><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" class="svelte-76r9u1"></path></svg></button> <!--[!--><!--]--></div></div></header> <!--[!--><!--]--> <!--[!--><!--]--> <main class="min-h-[100svh] relative svelte-76r9u1"><div class="fixed inset-0 overflow-hidden pointer-events-none svelte-76r9u1"><div id="particles-js" class="absolute w-full h-full theme-black svelte-76r9u1"></div> <!--[!--><!--]--></div> <!--[!--><!--[!--><!--[!--><!--[!--><!--[!--><!--[!--><!--[!--><div class="fixed inset-0 w-full h-full app-content no-h-pan px-2 sm:px-3 md:px-0 max-w-2xl md:max-w-none mx-auto svelte-76r9u1" style="padding-top: var(--headerH, 44px);"><div class="conversation-loading-region svelte-76r9u1"><!--[!--><!--]--><!----></div> <!--[!--><ul class="chat-list space-y-3 overflow-y-auto overflow-x-hidden text-sm no-h-pan min-w-0 max-w-full svelte-76r9u1" style=" -webkit-overflow-scrolling: touch; --chat-list-pad-top: 20px; --code-sticky-gap: 8px; --code-sticky-top: calc(var(--code-sticky-gap) - var(--chat-list-pad-top)); height: calc(100svh - var(--headerH, 44px) - var(--form-space, 140px)); padding-top: var(--chat-list-pad-top); padding-bottom: var(--form-space, 140px); overflow-anchor: auto; touch-action: pan-y; contain: content; transform: translate3d(0, 0px, 0); backface-visibility: hidden;"><!--[!--><!--]--> <!--[--><!--]--> <!--[!--><!--]--> <!--[!--><!--[!--><!--[!--><!--]--><!--]--><!--]--> <!--[!--><!--]--></ul>  <div class="chat-scrollbar svelte-76r9u1" style="opacity: 0;"><div class="chat-scrollbar-thumb svelte-76r9u1" style="top: 0%; height: 0%; pointer-events: none;"></div></div><!--]--> <!--[!--><!--]--> <!--[--><div class="composer-end-fade svelte-76r9u1" style="--composer-page-bg: #000000;" aria-hidden="true"></div><!--]--> <form class="fixed left-1/2 -translate-x-1/2 w-full px-2 sm:px-0 pt-1 sm:pt-2 z-50 pb-3 sm:pb-6 svelte-76r9u1" style="bottom: calc(0px - var(--ios-composer-recovery, 0px));"><!--[!--><!--[!--><!--]--><!--]--> <!--[!--><!--]--> <!--[!--><!--]--> <!--[!--><!--]--> <div class="composer-stack svelte-1i8utwn"><div class="composer-shell w-full max-w-[94%] sm:max-w-[672px] mx-auto svelte-1i8utwn" style="background: hsl(0 0% 8%); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid hsl(0 0% 100% / 0.1); box-shadow: 0 2px 20px hsl(0 0% 0% / 0.5); transition: border-radius 0.14s ease-out, box-shadow 0.14s ease-out, border-color 0.14s ease-out; border-radius: 9999px;"><input type="file" accept="image/*,.pdf,.docx,.txt,.xlsx,.xls,.csv,.py,.js,.ts,.jsx,.tsx,.html,.css,.json,.xml,.yaml,.yml,.md,.java,.c,.cpp,.h,.hpp,.cs,.go,.rs,.rb,.php,.swift,.kt,.kts,.gradle,.properties,.lua,.sh,.command,.bash,.zsh,.fish,.bat,.cmd,.ps1,.sql,.r,.m,.vue,.svelte,.toml,.ini,.cfg,.conf,.env,.log,.bin,.dat,.exe,.dll,.sys,.drv,.ocx,.scr,.com,.elf,.so,.dylib,.o,.obj,.a,.lib,.wasm,.class,.jar,.dex,.apk,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/plain,text/csv,text/javascript,application/javascript,application/json,text/html,text/css,text/xml,text/markdown,application/x-python-code,text/x-python,application/octet-stream,application/x-dosexec,application/x-executable,application/x-msdos-program,application/x-elf,application/x-sharedlib,application/wasm,application/java-archive,application/java-vm,application/vnd.android.package-archive" multiple class="hidden svelte-1i8utwn"/> <!--[!--><!--]--> <div class="composer-controls svelte-1i8utwn"><div class="composer-compact-measure svelte-1i8utwn" aria-hidden="true"></div> <div class="composer-attach relative svelte-1i8utwn"><button type="button" class="flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 hover:scale-110 active:scale-90 transition-transform svelte-1i8utwn" style="background: rgba(255, 255, 255, 0.08)" aria-label="Anexar arquivo"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-1i8utwn"><path d="M5 12h14" class="svelte-1i8utwn"></path><path d="M12 5v14" class="svelte-1i8utwn"></path></svg></button> <!--[!--><!--]--></div> <div class="composer-mode-wrap svelte-1i8utwn"><button type="button" class="composer-mode svelte-1i8utwn" style="color: hsl(0 0% 64%); --composer-mode-hover-bg: hsl(0 0% 100% / 0.05); --composer-mode-hover-border: hsl(0 0% 100% / 0.07); --composer-mode-icon: hsl(0 0% 65%);" aria-haspopup="menu" aria-expanded="false"><span class="composer-mode-icon svelte-1i8utwn" aria-hidden="true"><!--[!--><!--[--><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="svelte-1i8utwn"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z" class="svelte-1i8utwn"></path></svg><!--]--><!--]--></span> <span class="composer-mode-label svelte-1i8utwn">Rápido</span> <svg class="composer-mode-chevron svelte-1i8utwn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5" class="svelte-1i8utwn"></path></svg></button> <!--[!--><!--]--></div> <!--[!--><div class="composer-textarea relative flex-1 min-w-0 svelte-1i8utwn"><!--[--><div class="composer-placeholder absolute inset-0 flex items-center px-1 pointer-events-none overflow-hidden whitespace-nowrap text-ellipsis text-[13px] sm:text-sm leading-[32px] svelte-1i8utwn" style="color: hsl(0 0% 90%); opacity: 0.4; -webkit-text-size-adjust: 100%; text-size-adjust: 100%;"><span class="composer-placeholder-cursor svelte-1i8utwn" aria-hidden="true"></span></div><!--]--> <textarea placeholder="" class="w-full bg-transparent px-1 focus:outline-none resize-none text-[16px] sm:text-sm overflow-y-auto show-scrollbar svelte-1i8utwn" style="min-height: 32px; height: 32px; padding: 0; margin: 0; line-height: 32px; color: hsl(0 0% 90%); vertical-align: middle; -webkit-text-size-adjust: 100%; text-size-adjust: 100%;" rows="1" autocomplete="off" autocapitalize="sentences" spellcheck="false" enterkeyhint="enter"></textarea></div><!--]--> <!--[--><button type="button" aria-label="Gravar áudio" class="composer-mic group relative flex items-center justify-center w-9 h-9 rounded-full flex-shrink-0 transition-all duration-150 svelte-1i8utwn" style="background: transparent;"><div class="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-150 svelte-1i8utwn" style="background: rgba(223, 32, 32, 0.1);"></div> <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mic-icon svelte-1i8utwn" style="color: hsl(0 0% 90%)"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" class="svelte-1i8utwn"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2" class="svelte-1i8utwn"></path><line x1="12" x2="12" y1="19" y2="22" class="svelte-1i8utwn"></line></svg></button><!--]--> <!--[!--><!--[!--><!--[!--><!--[!--><button type="button" aria-label="Voz" class="composer-action flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 transition-all hover:scale-105 active:scale-95 svelte-1i8utwn" style="background: rgb(230, 26, 26);"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svelte-1i8utwn"><path d="M2 10v3" class="svelte-1i8utwn"></path><path d="M6 6v11" class="svelte-1i8utwn"></path><path d="M10 3v18" class="svelte-1i8utwn"></path><path d="M14 8v7" class="svelte-1i8utwn"></path><path d="M18 5v13" class="svelte-1i8utwn"></path><path d="M22 10v3" class="svelte-1i8utwn"></path></svg></button><!--]--><!--]--><!--]--><!--]--></div></div> <!--[!--><!--]--></div><!----></form></div><!--]--><!--]--><!--]--><!--]--><!--]--><!--]--><!--]--></main></div> <!--[!--><!--]--> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--> <!--[!--><!--]--> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----> <!--[!--><!--]--><!----><!----><!----><!----><!--]--> <!--[!--><!--]--><!--]-->
+			
+			<script>
+				{
+					__sveltekit_1qa0434 = {
+						base: new URL(".", location).pathname.slice(0, -1)
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("./_app/immutable/entry/start.Bfslg5hg.js"),
+						import("./_app/immutable/entry/app.DYE2wR8Q.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 3],
+							data: [{type:"data",data:{analyticsEnabled:true},uses:{}},{type:"data",data:{user:null,preferredChatVersion:"V4_5",preferredTheme:"black",codeHighlightEnabled:true,preferredCodeTheme:"dark"},uses:{}}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+		<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js" defer></script>
+		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+		<script>
+			// Desregistra service workers existentes (não precisamos de offline)
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.getRegistrations().then(regs => {
+					regs.forEach(reg => reg.unregister());
+				});
+				// Limpa caches do service worker
+				if ('caches' in window) {
+					caches.keys().then(keys => {
+						keys.forEach(key => caches.delete(key));
+					});
+				}
+			}
+
+			// Auto-reload em caso de chunk 404 durante deploy (com proteção anti-loop)
+			const RELOAD_KEY = 'chunk-reload-count';
+			const MAX_RELOADS = 2;
+			const RELOAD_WINDOW = 30000; // 30 segundos
+
+			function canReload() {
+				const data = sessionStorage.getItem(RELOAD_KEY);
+				if (!data) return true;
+
+				const { count, firstAttempt } = JSON.parse(data);
+				const elapsed = Date.now() - firstAttempt;
+
+				// Reset contador após 30 segundos
+				if (elapsed > RELOAD_WINDOW) {
+					sessionStorage.removeItem(RELOAD_KEY);
+					return true;
+				}
+
+				// Permite até 2 reloads em 30 segundos
+				return count < MAX_RELOADS;
+			}
+
+			async function handleChunkError() {
+				if (canReload()) {
+					const data = sessionStorage.getItem(RELOAD_KEY);
+					const count = data ? JSON.parse(data).count + 1 : 1;
+					const firstAttempt = data ? JSON.parse(data).firstAttempt : Date.now();
+
+					sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ count, firstAttempt }));
+
+					// LIMPAR TODO O CACHE antes de recarregar
+					try {
+						// 1. Desregistrar service workers
+						if ('serviceWorker' in navigator) {
+							const registrations = await navigator.serviceWorker.getRegistrations();
+							await Promise.all(registrations.map(reg => reg.unregister()));
+						}
+
+						// 2. Limpar todos os caches
+						if ('caches' in window) {
+							const cacheNames = await caches.keys();
+							await Promise.all(cacheNames.map(name => caches.delete(name)));
+						}
+					} catch (e) {
+						console.error('❌ Erro ao limpar cache:', e);
+					}
+
+					// 3. Hard reload com delay maior para PM2 estabilizar
+					// Primeira tentativa: 2s de delay
+					// Segunda tentativa: 5s de delay (PM2 reload pode demorar)
+					const delay = count === 1 ? 2000 : 5000;
+
+					setTimeout(() => {
+						// CRITICAL: Forçar bypass TOTAL do cache HTTP disk
+						// Adicionar timestamp único força navegador a ignorar cache disk
+						const url = new URL(window.location.href);
+						// Remove query params antigos de reload
+						url.searchParams.delete('_r');
+						// Adiciona novo timestamp único
+						url.searchParams.set('_r', Date.now() + '_' + Math.random().toString(36).slice(2));
+
+						// location.replace não mantém histórico e força hard reload
+						window.location.replace(url.href);
+					}, delay);
+				} else {
+					console.error('❌ Muitos erros de chunk. Recarregue manualmente a página.');
+					// Mostra mensagem ao usuário
+					document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:10px;">🔄 Atualização em andamento</h1><p style="opacity:0.7;">Por favor, recarregue a página manualmente (Ctrl+Shift+R ou Cmd+Shift+R)</p><button onclick="location.reload(true)" style="margin-top:20px;padding:12px 24px;background:#C41E3A;border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:16px;">Recarregar agora</button></div></div>';
+				}
+			}
+
+			window.addEventListener('error', (event) => {
+				if (event.message &&
+					(event.message.includes('Failed to fetch dynamically imported module') ||
+					 event.message.includes('/_app/immutable/'))) {
+					handleChunkError();
+				}
+			}, true);
+
+			window.addEventListener('unhandledrejection', (event) => {
+				if (event.reason?.message &&
+					(event.reason.message.includes('Failed to fetch dynamically imported module') ||
+					 event.reason.message.includes('/_app/immutable/'))) {
+					handleChunkError();
+				}
+			});
+		</script>
+		<!-- Cloudflare Web Analytics -->
+		<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "e98500a2053c4a69acc7587cd93be2ee"}'></script>
+		<!-- End Cloudflare Web Analytics -->
+	</body>
+	</html>

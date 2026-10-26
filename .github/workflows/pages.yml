@@ -18,20 +18,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Instalar, testar e buildar
+      - name: Testes do app (o codigo segue no repo)
         working-directory: frontend
-        env:
-          VITE_BASE: /skynetchat/
         run: |
           npm install
           npm test
-          npm run build
-      - name: Fallback de rotas do SPA
-        run: cp frontend/dist/index.html frontend/dist/404.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend/dist
+          path: site
   deploy:
     needs: build
     runs-on: ubuntu-latest
