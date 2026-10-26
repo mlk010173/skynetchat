@@ -13,7 +13,7 @@ const items = [
   { label: "Atualizações", desc: "Veja as novidades e melhorias recentes", icon: IconBell },
   { label: "Imagens", tag: "BETA", desc: "Gere e explore imagens com IA", icon: IconImage },
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
-  { label: "Codex", tag: "EM BREVE", desc: "Código, scripts e automação", icon: IconCode },
+  { label: "Codex", tag: "NOVO", desc: "Código, scripts e automação", icon: IconCode },
   { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
   { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
   { label: "Conheça o SKYNETchat", desc: "Descubra como funciona o projeto", icon: IconBook },
@@ -41,7 +41,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   useEffect(() => { if (view === "history") loadConvs(); }, [view, loadConvs]);
 
   const soon = (label) => {
-    say(`"${label}" está em construção. Não é simulação: simplesmente ainda não existe. 😉`);
+    say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações e Codex.`);
     onClose();
   };
 
@@ -74,6 +74,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                   else if (label === "Prompts") { setView("prompts"); }
                   else if (label === "Suporte") { setView("support"); }
                   else if (label === "Conheça o SKYNETchat") { setView("about"); }
+                  else if (label === "Codex") { draftFill("Você é um engenheiro de software sênior. Escreva o código para: "); }
                   else if (label !== "Fazer login") soon(label);
                 }}
               >

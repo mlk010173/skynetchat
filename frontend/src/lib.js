@@ -87,3 +87,31 @@ export async function codeAuth(action, payload = {}) {
   }
   return data;
 }
+
+
+let MODEL_LIST = [];
+export function setModelList(list) { MODEL_LIST = Array.isArray(list) ? list : []; }
+
+/** Chama streamChat e, se o modelo falhar sem produzir texto, tenta o proximo da reserva. */
+export async function streamChatAuto({ conversationId, content, model }, handlers) {
+  const { fallbackChain } = await import("./models.js");
+  if (!MODEL_LIST.length) {
+    try { const d = await api("models"); if (d?.ok && Array.isArray(d.models) && d.models.length) MODEL_LIST = d.models; } catch { /* segue com o escolhido */ }
+  }
+  const chain = fallbackChain(model, MODEL_LIST.length ? MODEL_LIST : [model]);
+  let ultimoErro = "Nao foi possivel responder agora.";
+  for (const tentativa of chain) {
+    let recebeuTexto = false;
+    const r = await new Promise((resolve) => {
+      streamChat({ conversationId, content, model: tentativa }, {
+        onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
+        onDone: (info) => resolve({ ok: true, info: info ?? {} }),
+        onError: (msg, configured) => resolve({ ok: false, erro: msg, configured }),
+      });
+    });
+    if (r.ok) { handlers.onDone({ ...(r.info ?? {}), model: tentativa, switched: tentativa !== model }); return; }
+    ultimoErro = r.erro ?? ultimoErro;
+    if (recebeuTexto || r.configured === false) break;   // ja respondeu algo, ou IA nem configurada
+  }
+  handlers.onError(ultimoErro);
+}

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
-import { api, getSession, streamChat, supabase } from "../lib.js";
+import { api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
+import { labelFor } from "../models.js";
 
 const actions = [
   { label: "Pesquisar", icon: IconGlobe, color: "#3b82f6" },
@@ -18,7 +19,8 @@ export default function Home() {
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [logged, setLogged] = useState(false);
-  const [model, setModel] = useState("4.5");
+  const [model, setModel] = useState("");
+  const [models, setModels] = useState([]);
   const [toast, setToast] = useState("");
   const [listening, setListening] = useState(false);
   const micRef = useRef(null);
@@ -36,7 +38,7 @@ export default function Home() {
 
   useEffect(() => {
     api("models").then((d) => {
-      if (d.ok && Array.isArray(d.models) && d.models.length) setModel(String(d.models[0]));
+      if (d.ok && Array.isArray(d.models) && d.models.length) { setModels(d.models); setModelList(d.models); setModel(String(d.models[0])); }
     }).catch(() => {});
   }, []);
 
@@ -51,7 +53,7 @@ export default function Home() {
     setDraft("");
     setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "" }]);
     setBusy(true);
-    await streamChat({ conversationId: convIdRef.current, content: text, model }, {
+    await streamChatAuto({ conversationId: convIdRef.current, content: text, model }, {
       onDelta: (delta) => setMessages((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = { ...copy[copy.length - 1], text: copy[copy.length - 1].text + delta };
@@ -119,11 +121,20 @@ export default function Home() {
         <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Abrir menu">
           <IconMenu />
         </button>
-        <button type="button" className="model" aria-label={`Modelo ${model}`} title={model}>
+        <label className="model" title={model} style={{ gap: 6 }}>
           <span>SKYNETchat</span>
-          <b>{model}</b>
+          <select
+            value={model}
+            onChange={(event) => setModel(event.target.value)}
+            aria-label="Escolher modelo"
+            style={{ background: "transparent", border: 0, color: "inherit", font: "inherit", fontWeight: 700, outline: "none", maxWidth: "46vw" }}
+          >
+            {(models.length ? models : [model]).filter(Boolean).map((m) => (
+              <option key={m} value={m} style={{ color: "#111" }}>{labelFor(m)}</option>
+            ))}
+          </select>
           <IconChevron className="chev" width={16} height={16} />
-        </button>
+        </label>
         <div className="top-actions">
           <button type="button" className="icon-btn" aria-label="Tema" onClick={() => {
             const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
