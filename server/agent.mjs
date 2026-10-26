@@ -253,7 +253,9 @@ async function executar(linha) {
 // ---------- ferramentas de dia a dia ----------
 export function calcular(expr) {
   const s = String(expr ?? "").replace(/\s+/g, "");
-  if (!s || s.length > 200 || /[^0-9+\-*/().,%^]/.test(s)) return { ok: false, erro: "use numeros e os operadores + - * / ( ) % ^" };
+  const permitido = "0123456789+-*/().,%^";
+  if (!s) return { ok: false, erro: "expressao vazia" };
+  for (const ch of s) if (!permitido.includes(ch)) return { ok: false, erro: "use numeros e os operadores + - * / ( ) % ^" };
   let i = 0;
   const peek = () => s[i];
   function numero() {
