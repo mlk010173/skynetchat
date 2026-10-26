@@ -14,13 +14,10 @@ export default function Account() {
   const navigate = useNavigate();
 
   useEffect(() => { if (params.get("tab")) setTab(params.get("tab")); }, [params]);
+  const [guest, setGuest] = useState(false);
   useEffect(() => {
-    getSession().then(async (s) => {
-      if (!s) { navigate("/login", { replace: true }); return; }
-      setUser(s.user);
-    });
-    supabase.auth.onAuthStateChange((_e, s) => { if (!s?.user) navigate("/", { replace: true }); });
-  }, [navigate]);
+    getSession().then((s) => { if (s?.user) setUser(s.user); else setGuest(true); });
+  }, []);
 
   async function salvarEmail() {
     if (busy || !/.+@.+\..+/.test(email)) return;
@@ -38,8 +35,8 @@ export default function Account() {
 
   async function sair() { await supabase.auth.signOut(); navigate("/", { replace: true }); }
 
-  if (!user) return <div className="pro-modal-wrap"><p className="hint">carregando…</p></div>;
-  const desde = new Date(user.created_at).toLocaleDateString("pt-BR");
+  if (!user && !guest) return <div className="pro-modal-wrap"><p className="hint">carregando…</p></div>;
+  const desde = user ? new Date(user.created_at).toLocaleDateString("pt-BR") : "";
 
   return (
     <div className="pro-modal-wrap">
@@ -47,7 +44,7 @@ export default function Account() {
         <button className="pro-close" onClick={() => navigate("/")} aria-label="Fechar">✕</button>
 
         <div className="pro-head">
-          <div className="pro-badge">{user.email ? user.email[0].toUpperCase() : "S"}</div>
+          <div className="pro-badge">{user ? (user.email ? user.email[0].toUpperCase() : "S") : "?"}</div>
           <h2>Conta FREE</h2>
           <small>Plano gratuito</small>
         </div>
@@ -60,24 +57,28 @@ export default function Account() {
 
         {tab === "conta" && (
           <div className="pro-body">
-            <div className="pro-row"><span>Membro desde</span><b>{desde}</b></div>
-            <div className="pro-row"><span>Identidade</span><b>{user.id.slice(0, 8)}</b></div>
-            <label className="code-label">EMAIL DE RECUPERAÇÃO</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" aria-label="Email de recuperação" />
-            <button className="pro-btn" onClick={salvarEmail} disabled={busy}>{busy ? "SALVANDO…" : "SALVAR"}</button>
+            {guest && <p className="hint">Entre na sua conta para ver seus dados.</p>}
+            {guest && <Link to="/login" className="pro-btn green" style={{ textAlign: "center" }}>ENTRAR</Link>}
+            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Membro desde</span><b>{desde}</b></div>
+            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Identidade</span><b>{user.id.slice(0, 8)}</b></div>
+            <label className="code-label" style={guest ? { display: "none" } : undefined}>EMAIL DE RECUPERAÇÃO</label>
+            <input style={guest ? { display: "none" } : undefined} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemplo.com" aria-label="Email de recuperação" />
+            <button style={guest ? { display: "none" } : undefined} className="pro-btn" onClick={salvarEmail} disabled={busy}>{busy ? "SALVANDO…" : "SALVAR"}</button>
             {saved && <p className="hint">// {saved}</p>}
             <p className="hint">Seu código de 12 dígitos é a única chave da conta. Guarde-o.</p>
-            <button className="pro-btn danger" onClick={sair}>SAIR DA CONTA</button>
+            <button style={guest ? { display: "none" } : undefined} className="pro-btn danger" onClick={sair}>SAIR DA CONTA</button>
           </div>
         )}
 
         {tab === "seguranca" && (
           <div className="pro-body">
-            <div className="pro-row"><span>Sessão</span><b>ativa (persistente)</b></div>
-            <div className="pro-row"><span>Autenticação</span><b>código de 12 dígitos</b></div>
-            <div className="pro-row"><span>Limite de tentativas</span><b>10 por hora</b></div>
+            {guest && <p className="hint">Sessão e segurança ficam visíveis após entrar. Autenticação por código de 12 dígitos, sem senha.</p>}
+            {guest && <Link to="/login" className="pro-btn green" style={{ textAlign: "center" }}>ENTRAR</Link>}
+            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Sessão</span><b>ativa (persistente)</b></div>
+            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Autenticação</span><b>código de 12 dígitos</b></div>
+            <div className="pro-row" style={guest ? { display: "none" } : undefined}><span>Limite de tentativas</span><b>10 por hora</b></div>
             <p className="hint">Sem senha: a conta é acessada apenas pelo seu código. Sessão expira conforme a política do Supabase.</p>
-            <button className="pro-btn danger" onClick={sair}>ENCERRAR SESSÃO</button>
+            <button style={guest ? { display: "none" } : undefined} className="pro-btn danger" onClick={sair}>ENCERRAR SESSÃO</button>
           </div>
         )}
 
