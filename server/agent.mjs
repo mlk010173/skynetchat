@@ -32,7 +32,7 @@ async function memoriaBuscar(email, consulta) {
   if (!r.ok) return { ok: false, erro: "falha na busca (" + r.status + ")" };
   return { ok: true, resultados: await r.json() };
 }
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const MAX_TEXTO = 9000;
 const UA = "Mozilla/5.0 (compatible; skynet-agent/" + VERSION + ")";
 
@@ -249,6 +249,94 @@ async function executar(linha) {
   }
 }
 
+
+// ---------- ferramentas de dia a dia ----------
+export function calcular(expr) {
+  const s = String(expr ?? "").replace(/\s+/g, "");
+  if (!s || s.length > 200 || /[^0-9+\-*/().,%^]/.test(s)) return { ok: false, erro: "use numeros e os operadores + - * / ( ) % ^" };
+  let i = 0;
+  const peek = () => s[i];
+  function numero() {
+    const j = i;
+    while (i < s.length && /[0-9.]/.test(s[i])) i++;
+    if (j === i) throw new Error("numero esperado");
+    return parseFloat(s.slice(j, i));
+  }
+  function fator() {
+    if (peek() === "(") { i++; const v = expr(); if (peek() !== ")") throw new Error("falta )"); i++; return v; }
+    if (peek() === "-") { i++; return -fator(); }
+    if (peek() === "+") { i++; return fator(); }
+    let base = numero();
+    if (peek() === "^") { i++; base = Math.pow(base, fator()); }
+    else if (peek() === "%") { i++; base = base % fator(); }
+    return base;
+  }
+  function termo() {
+    let v = fator();
+    while (peek() === "*" || peek() === "/") { const op = s[i++]; const r = fator(); v = op === "*" ? v * r : v / r; }
+    return v;
+  }
+  function expr() {
+    let v = termo();
+    while (peek() === "+" || peek() === "-") { const op = s[i++]; const r = termo(); v = op === "+" ? v + r : v - r; }
+    return v;
+  }
+  try {
+    const v = expr();
+    if (i !== s.length || !Number.isFinite(v)) return { ok: false, erro: "expressao invalida" };
+    return { ok: true, expressao: String(expr), resultado: v };
+  } catch (e) { return { ok: false, erro: String(e?.message ?? e) }; }
+}
+
+async function converterMoeda(de, para, valor) {
+  const base = String(de || "USD").toUpperCase(), alvo = String(para || "BRL").toUpperCase();
+  const qtd = Number(valor ?? 1) || 1;
+  if (!/^[A-Z]{3}$/.test(base) || !/^[A-Z]{3}$/.test(alvo)) return { ok: false, erro: "use codigos de 3 letras (USD, BRL, EUR)" };
+  try {
+    const r = await fetch("https://open.er-api.com/v6/latest/" + base, { signal: AbortSignal.timeout(8000) });
+    const d = await r.json();
+    const taxa = d?.rates?.[alvo];
+    if (!taxa) return { ok: false, erro: "moeda nao encontrada" };
+    return { ok: true, de: base, para: alvo, valor: qtd, taxa, resultado: +(qtd * taxa).toFixed(4), atualizado: d.time_last_update_utc };
+  } catch { return { ok: false, erro: "falha ao consultar a cotacao" }; }
+}
+
+async function clima(cidade) {
+  const c = String(cidade || "").trim();
+  if (!c) return { ok: false, erro: "informe a cidade" };
+  try {
+    const r = await fetch("https://wttr.in/" + encodeURIComponent(c) + "?format=j1", { signal: AbortSignal.timeout(9000), headers: { "user-agent": "curl/8.0" } });
+    const d = await r.json();
+    const cur = d?.current_condition?.[0];
+    if (!cur) return { ok: false, erro: "sem dados de clima" };
+    return { ok: true, cidade: c, temperatura_c: cur.temp_C, sensacao_c: cur.FeelsLikeC, umidade: cur.humidity, vento_kmh: cur.windspeedKmph, descricao: cur.weatherDesc?.[0]?.value };
+  } catch { return { ok: false, erro: "falha ao consultar o clima" }; }
+}
+
+export function agora() {
+  const d = new Date();
+  return { ok: true, iso_utc: d.toISOString(), sao_paulo: d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "full", timeStyle: "short" }), timestamp: d.getTime() };
+}
+
+// ---------- inteligencia: o agente pensa usando o backend de IA ----------
+async function perguntar(pergunta, email) {
+  const p = String(pergunta || "").trim();
+  if (!p) return { ok: false, erro: "informe a pergunta" };
+  if (!SUPA_URL) return { ok: false, erro: "backend de IA nao configurado" };
+  try {
+    const r = await fetch(SUPA_URL + "/functions/v1/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: SUPA_KEY },
+      body: JSON.stringify({ content: p, email }),
+      signal: AbortSignal.timeout(60000),
+    });
+    const txt = await r.text();
+    const deltas = [...txt.matchAll(/"delta":"((?:[^"\\]|\\.)*)"/g)].map((m) => { try { return JSON.parse('"' + m[1] + '"'); } catch { return ""; } });
+    const resposta = deltas.join("");
+    return resposta ? { ok: true, pergunta: p, resposta } : { ok: false, erro: "sem resposta da IA" };
+  } catch { return { ok: false, erro: "falha ao consultar a IA" }; }
+}
+
 const FERRAMENTAS = [
   { nome: "web_pesquisar", desc: "Pesquisa na web agora (Google News + Bing + Wikipedia) e devolve titulo, link e trecho", entrada: "consulta", endpoint: "POST /tools/web_pesquisar" },
   { nome: "abrir", desc: "Abre uma pagina https e devolve o texto principal", entrada: "url", endpoint: "POST /tools/abrir" },
@@ -256,6 +344,11 @@ const FERRAMENTAS = [
   { nome: "terminal", desc: "Executa um binario da whitelist (ls, cat, grep, node, python3, git, df...)", entrada: "cmd", endpoint: "POST /tools/terminal", protegida: true },
   { nome: "memoria_salvar", desc: "Grava um fato na memoria de longo prazo do agente (Supabase)", entrada: "texto", endpoint: "POST /tools/memoria_salvar" },
   { nome: "memoria_buscar", desc: "Busca fatos na memoria de longo prazo do agente (Supabase)", entrada: "consulta", endpoint: "POST /tools/memoria_buscar" },
+  { nome: "calcular", desc: "Faz contas com seguranca (+ - * / ( ) % ^)", entrada: "expressao", endpoint: "POST /tools/calcular" },
+  { nome: "moeda", desc: "Cotacao de moedas ao vivo (ex: de USD para BRL)", entrada: "de", endpoint: "POST /tools/moeda" },
+  { nome: "clima", desc: "Clima agora de uma cidade", entrada: "cidade", endpoint: "POST /tools/clima" },
+  { nome: "hora", desc: "Data e hora atuais (Sao Paulo e UTC)", entrada: "nada", endpoint: "GET /tools/hora" },
+  { nome: "perguntar", desc: "Pede ao cerebro de IA do SKYNET uma resposta em linguagem natural (raciocinio, resumo, traducao, texto)", entrada: "pergunta", endpoint: "POST /tools/perguntar" },
 ];
 
 const json = (res, code, body) => {
@@ -283,6 +376,11 @@ export async function executarFerramenta(nome, args = {}) {
     case "memoria_salvar": return memoriaSalvar(args.email, args.texto);
     case "memoria_buscar": return memoriaBuscar(args.email, args.consulta);
     case "terminal": return executar(args.cmd);
+    case "calcular": return calcular(args.expressao ?? args.expr ?? args.q);
+    case "moeda": return converterMoeda(args.de, args.para, args.valor);
+    case "clima": return clima(args.cidade ?? args.q);
+    case "hora": return agora();
+    case "perguntar": return perguntar(args.pergunta ?? args.q ?? args.prompt, args.email);
     default: return { ok: false, erro: "ferramenta desconhecida: " + nome };
   }
 }
@@ -334,6 +432,19 @@ export const handler = async (req, res) => {
     return json(res, 200, await abrirPagina(dados.url));
   }
 
+  if (url.pathname === "/tools/calcular" && req.method === "POST") {
+    const b = await lerCorpo(req); return json(res, 200, calcular(b?.expressao ?? b?.expr ?? b?.q));
+  }
+  if (url.pathname === "/tools/moeda" && req.method === "POST") {
+    const b = await lerCorpo(req); return json(res, 200, await converterMoeda(b?.de, b?.para, b?.valor));
+  }
+  if (url.pathname === "/tools/clima" && req.method === "POST") {
+    const b = await lerCorpo(req); return json(res, 200, await clima(b?.cidade ?? b?.q));
+  }
+  if (url.pathname === "/tools/hora") return json(res, 200, agora());
+  if (url.pathname === "/tools/perguntar" && req.method === "POST") {
+    const b = await lerCorpo(req); return json(res, 200, await perguntar(b?.pergunta ?? b?.q ?? b?.prompt, b?.email));
+  }
   if (url.pathname === "/tools/memoria_salvar" && req.method === "POST") {
     const b = await lerCorpo(req);
     return json(res, 200, await memoriaSalvar(b.email, b.texto));
