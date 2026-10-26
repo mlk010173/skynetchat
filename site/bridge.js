@@ -7,7 +7,7 @@
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3doaHRlbmZvemR3enB2eGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTY2OTQsImV4cCI6MjEwODUzMjY5NH0.FRwfO66wi1ADFmSboCCwH1NWuz-212dDrIcuuiZ-0HA";
   var AGENT = "https://skynet-agent.onrender.com";
   var MODELO_PADRAO = "nvidia/nemotron-3.5-super-vl-120b-a12b";
-  var CATALOGO = ["nvidia/nemotron-3.5-super-vl-120b-a12b", "minimaxai/minimax-m3.1-flash", "deepseek-ai/deepseek-v4.1-flash", "meta/muse-glimmer-30b", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "nvidia/nemotron-3.5-lightning-30b-a3b", "stepfun-ai/step-5-preview"];
+  var CATALOGO = ["nvidia/nemotron-3-ultra-550b-a55b", "nvidia/nemotron-3.5-super-vl-120b-a12b", "deepseek-ai/deepseek-v4.1-flash", "minimaxai/minimax-m3.1-flash", "stepfun-ai/step-5-preview", "meta/muse-glimmer-30b", "google/gemma-4-31b-it", "google/diffusiongemma-26b-a4b-it", "openai/gpt-oss-20b", "poolside/laguna-xs-2.1", "meta/llama-3.2-90b-vision-instruct", "meta/llama-3.2-11b-vision-instruct", "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning", "nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/nemotron-3.5-bolt-e4b", "meta/llama-guard-4-12b", "nvidia/ising-calibration-1.5-31b"];
   var LIGADAS = ["/api/session", "/api/models", "/api/conversations/config", "/api/conversations", "/api/chat", "/api/chat-V2-fast", "/api/chat-V2-thinking", "/api/chat-V3", "/api/chat-V3-interacao", "/api/chat-V3-thinking", "/api/chat-V4", "/api/chat-search", "/api/title", "/api/classify-intent", "/api/updates", "/api/support", "/api/feedback", "/api/access-code", "/api/recovery/request", "/api/recovery/email", "/api/image-gen"];
 
   function resposta(obj, status) {

@@ -29,7 +29,7 @@ describe("nextModel", () => {
 
 describe("rotulos", () => {
   it("conhece os modelos do catalogo", () => {
-    expect(labelFor("nvidia/nemotron-3.5-super-vl-120b-a12b")).toBe("Nemotron 3.5 Super");
+    expect(labelFor("nvidia/nemotron-3.5-super-vl-120b-a12b")).toBe("Nemotron 3.5 Super VL");
     expect(tierFor("nvidia/nemotron-3.5-lightning-30b-a3b")).toBe("leve");
   });
   it("gera rotulo legivel para desconhecido", () => {
@@ -42,7 +42,7 @@ describe("catalogo configurado", () => {
     const fam = ["NVIDIA", "DeepSeek", "MiniMax", "StepFun", "Meta"];
     const vistas = CATALOGO.map((m) => familiaFor(m));
     for (const f of fam) expect(vistas).toContain(f);
-    expect(CATALOGO).toHaveLength(7);
+    expect(CATALOGO).toHaveLength(17);
   });
   it("cada modelo do catalogo tem rotulo proprio", () => {
     for (const m of CATALOGO) expect(labelFor(m)).not.toMatch(/nvidia|deepseek-ai|minimaxai|stepfun-ai|meta/);

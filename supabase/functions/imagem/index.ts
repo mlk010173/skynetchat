@@ -8,11 +8,21 @@ const cors = {
 const json = (c: number, b: unknown) =>
   new Response(JSON.stringify(b), { status: c, headers: { ...cors, "content-type": "application/json" } });
 
-const MODELOS: Record<string, { id: string; mode: string }> = {
-  flux3: { id: "black-forest-labs/flux-3-image-klein", mode: "t2i" },
-  schnell: { id: "black-forest-labs/flux.1-schnell", mode: "base" },
-  dev: { id: "black-forest-labs/flux.1-dev", mode: "base" },
+// Cada modelo aceita um corpo diferente (descoberto por teste ao vivo).
+const MODELOS: Record<string, string> = {
+  flux3: "black-forest-labs/flux-3-image-klein",
+  flux2: "black-forest-labs/flux.2-klein-4b",
+  fluxdev: "black-forest-labs/flux.1-dev",
+  fluxschnell: "black-forest-labs/flux.1-schnell",
 };
+
+function corpoDoModelo(id: string, prompt: string, aspecto: string, passos: number) {
+  if (id === "black-forest-labs/flux-3-image-klein") {
+    return { prompt, mode: "t2i", aspect_ratio: aspecto, steps: passos };
+  }
+  if (id === "black-forest-labs/flux.2-klein-4b") return { prompt };
+  return { prompt, mode: "base" };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
@@ -22,13 +32,8 @@ Deno.serve(async (req) => {
   const prompt = String(body.prompt ?? body.p ?? "").trim().slice(0, 1200);
   if (!prompt) return json(400, { ok: false, error: "prompt obrigatorio" });
   const qual = MODELOS[String(body.modelo ?? body.model ?? "flux3")] ?? MODELOS.flux3;
-  const envio = {
-    prompt,
-    mode: qual.mode,
-    aspect_ratio: String(body.aspect_ratio ?? "1:1"),
-    steps: Math.min(Math.max(Number(body.steps) || 30, 10), 50),
-  };
-  const r = await fetch(`https://ai.api.nvidia.com/v1/genai/${qual.id}`, {
+  const envio = corpoDoModelo(qual, prompt, String(body.aspect_ratio ?? "1:1"), Math.min(Math.max(Number(body.steps) || 30, 10), 50));
+  const r = await fetch(`https://ai.api.nvidia.com/v1/genai/${qual}`, {
     method: "POST",
     headers: { authorization: `Bearer ${K}`, "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify(envio),
@@ -40,7 +45,8 @@ Deno.serve(async (req) => {
   }
   return json(200, {
     ok: true,
-    modelo: qual.id,
+    modelo: qual,
+    disponiveis: Object.keys(MODELOS),
     formato: "jpeg",
     imagem_base64: artefato.base64,
     seed: artefato.seed ?? null,
