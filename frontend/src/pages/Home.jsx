@@ -1,0 +1,178 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
+import Sidebar from "../components/Sidebar.jsx";
+import { api, getSession, streamChat, supabase } from "../lib.js";
+
+const actions = [
+  { label: "Pesquisar", icon: IconGlobe, color: "#3b82f6" },
+  { label: "Gerar Imagens", icon: IconImage, color: "#eab308" },
+  { label: "Persuasão", icon: IconBrain, color: "#dc2626" },
+  { label: "Programar", icon: IconCode, color: "#16a34a" },
+];
+
+/** Tela inicial: interface do skynetchat.net com backend real (Supabase). */
+export default function Home() {
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("Novo chat");
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [logged, setLogged] = useState(false);
+  const [model, setModel] = useState("4.5");
+  const [toast, setToast] = useState("");
+  const [listening, setListening] = useState(false);
+  const micRef = useRef(null);
+  const convIdRef = useRef(null);
+  const stageRef = useRef(null);
+
+  const say = useCallback((m) => { setToast(m); setTimeout(() => setToast(""), 5000); }, []);
+
+  useEffect(() => { getSession().then((s) => setLogged(!!s)); }, []);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => setLogged(!!s?.user));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    api("models").then((d) => {
+      if (d.ok && Array.isArray(d.models) && d.models.length) setModel(String(d.models[0]));
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    stageRef.current?.scrollTo({ top: stageRef.current.scrollHeight });
+  }, [messages, busy]);
+
+  const send = useCallback(async (event) => {
+    if (event) event.preventDefault();
+    const text = draft.trim();
+    if (!text || busy) return;
+    setDraft("");
+    setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "" }]);
+    setBusy(true);
+    await streamChat({ conversationId: convIdRef.current, content: text, model }, {
+      onDelta: (delta) => setMessages((prev) => {
+        const copy = [...prev];
+        copy[copy.length - 1] = { ...copy[copy.length - 1], text: copy[copy.length - 1].text + delta };
+        return copy;
+      }),
+      onDone: (info) => { if (info.conversationId) convIdRef.current = info.conversationId; },
+      onError: (message) => {
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last && last.role === "assistant" && last.text === "") copy.pop();
+          else copy[copy.length - 1] = { ...last, text: `> ${message}` };
+          return copy;
+        });
+        say(message);
+      },
+    });
+    setBusy(false);
+  }, [draft, busy, model, say]);
+
+  const toggleMic = () => {
+    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
+    if (!SR) { say("Reconhecimento de voz não é suportado neste navegador."); return; }
+    if (listening) { micRef.current?.stop(); return; }
+    const r = new SR();
+    micRef.current = r;
+    r.lang = "pt-BR";
+    r.interimResults = false;
+    r.onresult = (e) => {
+      const t = Array.from(e.results).map((x) => x[0].transcript).join(" ").trim();
+      setDraft((cur) => (cur ? cur + " " : "") + t);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    r.start();
+    setListening(true);
+  };
+
+  const soon = (label) => say(`"${label}" está em construção. Não é simulação: simplesmente ainda não existe. 😉`);
+
+  const pick = (label) => {
+    setActive(label);
+    if (label === "Novo chat") { convIdRef.current = null; setMessages([]); }
+    else if (["Indique e Ganhe", "Monetize com SKYNETchat", "Imagens", "Conversas em grupo", "Codex", "Projetos"].includes(label)) soon(label);
+  };
+
+  return (
+    <div className="app">
+      <Sidebar
+        open={open} onClose={() => setOpen(false)} active={active} onSelect={pick}
+        logged={logged} onLogout={async () => { await supabase.auth.signOut(); setLogged(false); setActive("Novo chat"); say("Sessão encerrada."); }}
+        say={say}
+        onOpenConv={async (id) => {
+          const data = await api(`conversations?id=${id}`);
+          if (data.ok && Array.isArray(data.messages)) {
+            convIdRef.current = id;
+            setMessages(data.messages.map((m) => ({ role: m.role, text: m.content })));
+            setOpen(false);
+          } else say("Não foi possível abrir a conversa.");
+        }}
+        draftFill={(text) => { setDraft(text); setOpen(false); }}
+      />
+
+      <header className="topbar">
+        <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Abrir menu">
+          <IconMenu />
+        </button>
+        <button type="button" className="model" aria-label={`Modelo ${model}`} title={model}>
+          <span>SKYNETchat</span>
+          <b>{model}</b>
+          <IconChevron className="chev" width={16} height={16} />
+        </button>
+        <div className="top-actions">
+          <button type="button" className="icon-btn" aria-label="Tema" onClick={() => {
+            const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
+            document.documentElement.dataset.theme = next;
+            localStorage.setItem("skynet-theme-bg", next);
+          }}><IconTheme /></button>
+          <button type="button" className="icon-btn" aria-label="Novo chat" onClick={() => pick("Novo chat")}><IconEdit /></button>
+        </div>
+      </header>
+
+      <main className="stage" ref={stageRef}>
+        {messages.length === 0 ? (
+          <section className="hero">
+            <h1>Apresentamos o <span className="red">SKYNETchat</span></h1>
+            <p>Sua inteligência artificial avançada sem censura</p>
+            <div className="chips">
+              {actions.map(({ label, icon: Icon, color }) => (
+                <button key={label} type="button" className="chip" onClick={() => setDraft(label)}>
+                  <Icon width={20} height={20} style={{ color }} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="thread">
+            {messages.map((message, index) => (
+              <article key={index} className={`bubble ${message.role}`}>{message.text}</article>
+            ))}
+            {busy && messages[messages.length - 1]?.text === "" && (
+              <article className="bubble assistant typing-bubble">●●●</article>
+            )}
+          </section>
+        )}
+      </main>
+
+      <form className="dock" onSubmit={send}>
+        <button type="button" className="dock-plus" aria-label="Anexar" onClick={() => soon("Anexar arquivo")}><IconPlus /></button>
+        <input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Pesquise sem censura..."
+          aria-label="Mensagem"
+        />
+        <button type="button" className={`icon-btn muted ${listening ? "mic-on" : ""}`} aria-label="Gravar áudio" onClick={toggleMic}><IconMic /></button>
+        <button type="submit" className="dock-send" aria-label="Voz ou enviar"><IconWave width={22} height={22} /></button>
+      </form>
+
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
