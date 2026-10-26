@@ -312,6 +312,6 @@
   var tentTimer = setInterval(function () { tent++; if (montarTurnstile() || tent > 30) clearInterval(tentTimer); }, 500);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarTurnstile); else montarTurnstile();
 
-  window.__skynetBridge = { versao: "2.1.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO, turnstile: Boolean(TURNSTILE_SITE_KEY) };
+  window.__skynetBridge = { versao: "2.2.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO, turnstile: Boolean(TURNSTILE_SITE_KEY) };
   console.log("[bridge] v2: " + LIGADAS.length + " rotas tratadas (" + Object.keys(INDISPONIVEIS).length + " com aviso honesto), catalogo de " + CATALOGO.length + " modelos");
 })();
