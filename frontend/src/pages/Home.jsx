@@ -264,6 +264,20 @@ export default function Home() {
         )}
       </main>
 
+            {bellOpen && (
+        <div className="notif-panel">
+          <b className="notif-title">NOTIFICAÇÕES</b>
+          {notifs.length === 0 && <p className="notif-empty">Nenhuma notificação.</p>}
+          {notifs.map((n) => (
+            <div key={n.id} className={"notif-item" + (n.read ? "" : " nova")}>
+              <b>{n.title}</b>
+              <p>{n.body}</p>
+              <small>{new Date(n.created_at).toLocaleString("pt-BR")}</small>
+            </div>
+          ))}
+        </div>
+      )}
+
       <form className="dock" onSubmit={enviar}>
         <button type="button" className="dock-plus" aria-label="Anexar" onClick={() => fileRef.current?.click()}><IconPlus /></button>
         <input ref={fileRef} type="file" hidden onChange={onFile} accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />

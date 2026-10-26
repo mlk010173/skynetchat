@@ -1,0 +1,24 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+const errs = [];
+p.on("pageerror", (e) => errs.push("PAGEERROR: " + e.message.slice(0, 200)));
+p.on("console", (m) => m.type() === "error" && errs.push("CONSOLE: " + m.text().slice(0, 200)));
+// cria conta nova para ter código válido
+await p.goto("https://mlk010173.github.io/skynetchat/#/sign-up", { waitUntil: "networkidle" });
+await p.waitForTimeout(2000);
+await p.click("button:has-text('GERAR')");
+await p.waitForTimeout(4000);
+const code = (await p.textContent("body").then(t => (t.match(/\d{4}-\d{4}-\d{4}/) || [""])[0]));
+console.log("código:", code);
+await p.goto("https://mlk010173.github.io/skynetchat/#/login", { waitUntil: "networkidle" });
+await p.waitForTimeout(1500);
+await p.fill('input[aria-label="Código de acesso"]', code);
+await p.click("button:has-text('ENTRAR')");
+await p.waitForTimeout(5000);
+console.log("URL:", p.url());
+console.log("input existe:", await p.locator('input[aria-label="Mensagem"]').count());
+console.log("root innerHTML len:", (await p.innerHTML("#root")).length);
+console.log("root:", (await p.textContent("#root")).slice(0, 150));
+console.log("erros:", errs.slice(0, 5));
+await b.close();

@@ -1,0 +1,17 @@
+import { chromium } from "playwright";
+const b = await chromium.launch();
+const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+const errs = [];
+p.on("pageerror", (e) => errs.push("PAGEERROR: " + e.message.slice(0, 250)));
+p.on("console", (m) => m.type() === "error" && errs.push("CONSOLE: " + m.text().slice(0, 250)));
+await p.goto("https://mlk010173.github.io/skynetchat/#/login", { waitUntil: "networkidle" });
+await p.waitForTimeout(2500);
+await p.fill('input[aria-label="Código de acesso"]', "9662-5097-8642");
+await p.click("button:has-text('ENTRAR')");
+await p.waitForTimeout(6000);
+console.log("URL:", p.url());
+console.log("input msg existe:", await p.locator('input[aria-label="Mensagem"]').count());
+console.log("sino existe:", await p.locator('button[aria-label="Notificações"]').count());
+console.log("body 120:", (await p.textContent("body")).slice(0, 120));
+console.log("erros:", errs.slice(0, 6));
+await b.close();
