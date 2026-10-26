@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import { api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
+import { agentGet, askOnce, runTool } from "../lib.js";
+import { ajudaComandos, parseCommand } from "../commands.js";
 import { labelFor } from "../models.js";
 
 const actions = [
@@ -100,6 +102,61 @@ export default function Home() {
     else if (["Indique e Ganhe", "Monetize com SKYNETchat", "Imagens", "Conversas em grupo", "Codex", "Projetos"].includes(label)) soon(label);
   };
 
+  const fileRef = useRef(null);
+  const onFile = useCallback(async (event) => {
+    const f = event.target.files?.[0];
+    event.target.value = "";
+    if (!f) return;
+    if (f.size > 200 * 1024) { say("Arquivo grande demais (limite 200 KB)."); return; }
+    try {
+      const texto = await f.text();
+      setDraft((d) => `${d}${d ? "\n\n" : ""}Arquivo "${f.name}":\n${texto.slice(0, 20000)}\n`);
+      say(`Arquivo "${f.name}" anexado ao rascunho.`);
+    } catch { say("Nao consegui ler esse arquivo (use texto)."); }
+  }, [say]);
+
+  const rodarComando = useCallback(async (comando) => {
+    setDraft("");
+    setMessages((m) => [...m, { role: "user", text: `/${comando.nome} ${comando.args}`.trim() }]);
+    const responder = async (contexto, aviso) => {
+      if (aviso) setMessages((m) => [...m, { role: "assistant", text: aviso }]);
+      const r = await askOnce({ conversationId: convIdRef.current, content: contexto, model });
+      if (!r.ok) { setMessages((m) => [...m, { role: "assistant", text: r.erro }]); return; }
+      if (r.conversationId) convIdRef.current = r.conversationId;
+      if (r.model && r.model !== model) setModel(r.model);
+      setMessages((m) => [...m, { role: "assistant", text: r.texto || "(sem texto)" }]);
+    };
+    if (comando.nome === "ferramentas") {
+      const d = await agentGet("/tools");
+      if (!d?.ok) { setMessages((m) => [...m, { role: "assistant", text: `Nao consegui falar com o agente: ${d?.erro ?? "sem resposta"}.` }]); return; }
+      setMessages((m) => [...m, { role: "assistant", text: "Ferramentas do agente (execucao real):\n" + d.ferramentas.map((f) => `- ${f.nome}: ${f.desc}`).join("\n") + "\n\nDigite /pesquisar <termo> ou /abrir <url> para usar." }]);
+      return;
+    }
+    if (comando.nome === "pesquisar") {
+      if (!comando.args) { say("Use: /pesquisar <termo>"); return; }
+      const r = await runTool("web_pesquisar", { consulta: comando.args });
+      if (!r?.ok) { setMessages((m) => [...m, { role: "assistant", text: `Ferramenta indisponivel: ${r?.erro ?? "sem resposta"}.` }]); return; }
+      const fontes = r.resultados.map((x, i) => `[${i + 1}] ${x.titulo}\n${x.url}`).join("\n");
+      const contexto = r.resultados.map((x, i) => `[${i + 1}] ${x.titulo}\n${x.url}\n${x.trecho ?? ""}`).join("\n\n");
+      await responder(`Dados obtidos agora (${new Date().toLocaleString("pt-BR")}) por busca na web. Responda em portugues, objetivo, citando as fontes pelo numero:\n\n${contexto}\n\nPergunta: ${comando.args}`, `Busquei agora e encontrei ${r.resultados.length} fontes:\n${fontes}`);
+      return;
+    }
+    if (comando.nome === "abrir") {
+      if (!comando.args) { say("Use: /abrir <url https>"); return; }
+      const r = await runTool("abrir", { url: comando.args });
+      if (!r?.ok) { setMessages((m) => [...m, { role: "assistant", text: `Nao consegui abrir: ${r?.erro ?? "sem resposta"}.` }]); return; }
+      await responder(`Conteudo real desta pagina (${r.url}), obtido agora:\n\n${r.texto}\n\nResuma e destaque os pontos principais.`, `Abri "${r.titulo || r.url}" (${r.url}).`);
+      return;
+    }
+    say(`Comando /${comando.nome} nao existe.\n${ajudaComandos()}`);
+  }, [model, say]);
+
+  const enviar = useCallback((event) => {
+    const comando = parseCommand(draft);
+    if (comando) { event.preventDefault(); rodarComando(comando); return; }
+    return send(event);
+  }, [draft, send, rodarComando]);
+
   return (
     <div className="app">
       <Sidebar
@@ -171,8 +228,9 @@ export default function Home() {
         )}
       </main>
 
-      <form className="dock" onSubmit={send}>
-        <button type="button" className="dock-plus" aria-label="Anexar" onClick={() => soon("Anexar arquivo")}><IconPlus /></button>
+      <form className="dock" onSubmit={enviar}>
+        <button type="button" className="dock-plus" aria-label="Anexar" onClick={() => fileRef.current?.click()}><IconPlus /></button>
+        <input ref={fileRef} type="file" hidden onChange={onFile} accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

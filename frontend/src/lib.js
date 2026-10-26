@@ -115,3 +115,65 @@ export async function streamChatAuto({ conversationId, content, model }, handler
   }
   handlers.onError(ultimoErro);
 }
+
+
+// ---------- ferramentas do agente (Render) ----------
+export const AGENT_URL = String(import.meta.env.VITE_AGENT_URL ?? "").replace(/\/+$/, "");
+
+/** GET no agente (ex.: /tools). */
+export async function agentGet(caminho) {
+  if (!AGENT_URL) return { ok: false, erro: "agente nao configurado (VITE_AGENT_URL)" };
+  try {
+    const res = await fetch(`${AGENT_URL}${caminho}`, { headers: { accept: "application/json" } });
+    return await res.json();
+  } catch { return { ok: false, erro: "sem conexao com o agente" }; }
+}
+
+/** Executa uma ferramenta do agente: runTool("web_pesquisar", { consulta }). */
+export async function runTool(nome, args = {}) {
+  if (!AGENT_URL) return { ok: false, erro: "agente nao configurado (VITE_AGENT_URL)" };
+  try {
+    const res = await fetch(`${AGENT_URL}/tools/${nome}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(args ?? {}),
+    });
+    return await res.json();
+  } catch { return { ok: false, erro: "sem conexao com o agente" }; }
+}
+
+/** Resposta completa (consome o SSE) para quando o texto ja esta pronto. */
+export async function askOnce({ conversationId, content, model }) {
+  const session = await getSession();
+  const res = await fetch(`${SUPA_URL}/functions/v1/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
+    body: JSON.stringify({ conversationId, content, model }),
+  });
+  const ctype = res.headers.get("content-type") ?? "";
+  if (!ctype.includes("text/event-stream")) {
+    const d = await res.json().catch(() => null);
+    return { ok: false, erro: d?.error ?? `Erro do servidor (HTTP ${res.status}).` };
+  }
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = ""; let texto = ""; let convId = conversationId ?? null; let usado = model;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const linhas = buf.split("\n");
+    buf = linhas.pop() ?? "";
+    for (const l of linhas) {
+      const p = l.startsWith("data:") ? l.slice(5).trim() : "";
+      if (!p || p === "[DONE]") continue;
+      try {
+        const j = JSON.parse(p);
+        if (typeof j.delta === "string") texto += j.delta;
+        if (j.conversationId) convId = j.conversationId;
+        if (j.model) usado = j.model;
+      } catch { /* ignora linha parcial */ }
+    }
+  }
+  return { ok: true, texto, conversationId: convId, model: usado };
+}
