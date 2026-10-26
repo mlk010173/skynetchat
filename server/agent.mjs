@@ -253,9 +253,7 @@ async function executar(linha) {
 // ---------- ferramentas de dia a dia ----------
 export function calcular(expr) {
   const s = String(expr ?? "").replace(/\s+/g, "");
-  const permitido = "0123456789+-*/().,%^";
-  if (!s) return { ok: false, erro: "expressao vazia" };
-  for (const ch of s) if (!permitido.includes(ch)) return { ok: false, erro: "use numeros e os operadores + - * / ( ) % ^" };
+  if (!s || s.length > 200) return { ok: false, erro: "expressao vazia" };
   let i = 0;
   const peek = () => s[i];
   function numero() {
@@ -268,10 +266,10 @@ export function calcular(expr) {
     if (peek() === "(") { i++; const v = expr(); if (peek() !== ")") throw new Error("falta )"); i++; return v; }
     if (peek() === "-") { i++; return -fator(); }
     if (peek() === "+") { i++; return fator(); }
-    let base = numero();
-    if (peek() === "^") { i++; base = Math.pow(base, fator()); }
-    else if (peek() === "%") { i++; base = base % fator(); }
-    return base;
+    let b = numero();
+    if (peek() === "^") { i++; b = Math.pow(b, fator()); }
+    else if (peek() === "%") { i++; b = b % fator(); }
+    return b;
   }
   function termo() {
     let v = fator();
@@ -287,7 +285,7 @@ export function calcular(expr) {
     const v = expr();
     if (i !== s.length || !Number.isFinite(v)) return { ok: false, erro: "expressao invalida" };
     return { ok: true, expressao: String(expr), resultado: v };
-  } catch (e) { return { ok: false, erro: String(e?.message ?? e) }; }
+  } catch { return { ok: false, erro: "expressao invalida" }; }
 }
 
 async function converterMoeda(de, para, valor) {
