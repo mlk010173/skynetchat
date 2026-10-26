@@ -16,6 +16,17 @@ const actions = [
   { label: "Programar", icon: IconCode, color: "#16a34a" },
 ];
 
+function formatHora(isoStr) {
+  if (!isoStr) return "";
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
 /** Tela inicial: interface do skynetchat.net com backend real (Supabase). */
 export default function Home() {
   const [open, setOpen] = useState(false);
@@ -136,9 +147,38 @@ export default function Home() {
     setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "", started: Date.now() }]);
     setBusy(true);
     await streamChatAuto({ conversationId: convIdRef.current, content: text, model }, {
+      onTool: (toolEv) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") return prev;
+
+        const existingFontes = last.fontes || [];
+        const incomingFontes = Array.isArray(toolEv.fontes) ? toolEv.fontes : [];
+        const merged = [...existingFontes, ...incomingFontes];
+        const uniqueFontes = [];
+        const seen = new Set();
+        for (const f of merged) {
+          if (f?.url && !seen.has(f.url)) {
+            seen.add(f.url);
+            uniqueFontes.push(f);
+          }
+        }
+
+        copy[copy.length - 1] = {
+          ...last,
+          toolStatus: toolEv.status,
+          toolName: toolEv.tool,
+          fontes: uniqueFontes,
+          toolQuando: toolEv.quando || last.toolQuando,
+          toolErro: toolEv.status === "falhou" ? (toolEv.erro || "pesquisa indisponível agora") : last.toolErro,
+        };
+        return copy;
+      }),
       onDelta: (delta) => setMessages((prev) => {
         const copy = [...prev];
-        copy[copy.length - 1] = { ...copy[copy.length - 1], text: copy[copy.length - 1].text + delta };
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") return prev;
+        copy[copy.length - 1] = { ...last, text: last.text + delta };
         return copy;
       }),
       onDone: (info) => {
@@ -146,7 +186,13 @@ export default function Home() {
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
-          if (last?.role === "assistant") copy[copy.length - 1] = { ...last, secs: Math.max(1, Math.round((Date.now() - (last.started ?? Date.now())) / 1000)) };
+          if (last?.role === "assistant") {
+            copy[copy.length - 1] = {
+              ...last,
+              secs: Math.max(1, Math.round((Date.now() - (last.started ?? Date.now())) / 1000)),
+              toolStatus: last.toolStatus === "executando" ? "concluida" : last.toolStatus,
+            };
+          }
           return copy;
         });
       },
@@ -154,8 +200,8 @@ export default function Home() {
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
-          if (last && last.role === "assistant" && last.text === "") copy.pop();
-          else copy[copy.length - 1] = { ...last, text: `> ${message}` };
+          if (last && last.role === "assistant" && last.text === "" && !last.fontes?.length) copy.pop();
+          else if (last && last.role === "assistant") copy[copy.length - 1] = { ...last, text: `> ${message}` };
           return copy;
         });
         say(message);
@@ -340,7 +386,33 @@ export default function Home() {
                   </>
                 ) : (
                   <>
+                    {message.role === "assistant" && message.toolStatus === "executando" && (
+                      <div className="tool-status executando">
+                        <IconGlobe className="tool-icon spin" width={14} height={14} />
+                        <span>Pesquisando...</span>
+                      </div>
+                    )}
+                    {message.role === "assistant" && message.toolStatus === "falhou" && (!message.fontes || message.fontes.length === 0) && (
+                      <div className="tool-status falhou">
+                        <span>pesquisa indisponível agora</span>
+                      </div>
+                    )}
                     {message.image ? <img src={message.image} alt="imagem gerada" className="gen-img" /> : message.text}
+                    {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (
+                      <div className="tool-fontes">
+                        <div className="fontes-chips">
+                          {message.fontes.map((f, i) => (
+                            <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" className="fonte-chip" title={f.titulo}>
+                              <IconGlobe width={12} height={12} />
+                              <span>{f.titulo || f.url}</span>
+                            </a>
+                          ))}
+                        </div>
+                        {message.toolQuando && (
+                          <span className="fontes-nota">dados obtidos em {formatHora(message.toolQuando)}</span>
+                        )}
+                      </div>
+                    )}
                     <span className="bubble-actions">
                       {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
                       {message.role === "user" && !busy && <button type="button" onClick={() => comecarEdicao(index)}>Editar</button>}
@@ -350,14 +422,14 @@ export default function Home() {
                 )}
               </article>
             ))}
-            {busy && messages[messages.length - 1]?.text === "" && (
+            {busy && messages[messages.length - 1]?.text === "" && !messages[messages.length - 1]?.toolStatus && (
               <article className="bubble assistant typing-bubble">●●●</article>
             )}
           </section>
         )}
       </main>
 
-            {bellOpen && (
+      {bellOpen && (
         <div className="notif-panel">
           <b className="notif-title">NOTIFICAÇÕES</b>
           {notifs.length === 0 && <p className="notif-empty">Nenhuma notificação.</p>}
@@ -371,7 +443,7 @@ export default function Home() {
         </div>
       )}
 
-            {messages.length > 0 && (
+      {messages.length > 0 && (
         <Link to="/account?tab=assinatura" className="pro-link">Assinar SKYNETchat PRO →</Link>
       )}
 

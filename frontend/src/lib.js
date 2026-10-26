@@ -63,14 +63,18 @@ export async function streamChat({ conversationId, content, model }, handlers) {
     const parts = buffer.split("\n\n");
     buffer = parts.pop() ?? "";
     for (const part of parts) {
-      const line = part.trim();
-      if (!line.startsWith("data:")) continue;
-      try {
-        const ev = JSON.parse(line.slice(5).trim());
-        if (ev.delta) handlers.onDelta(String(ev.delta));
-        else if (ev.done) handlers.onDone({ conversationId: ev.conversationId ?? null, model: ev.model });
-        else if (ev.error) handlers.onError(String(ev.error));
-      } catch { /* linha parcial */ }
+      const lines = part.split("\n");
+      for (const lineRaw of lines) {
+        const line = lineRaw.trim();
+        if (!line.startsWith("data:")) continue;
+        try {
+          const ev = JSON.parse(line.slice(5).trim());
+          if (ev.tool && handlers.onTool) handlers.onTool(ev);
+          if (ev.delta) handlers.onDelta(String(ev.delta));
+          if (ev.done) handlers.onDone({ conversationId: ev.conversationId ?? null, model: ev.model });
+          if (ev.error) handlers.onError(String(ev.error));
+        } catch { /* linha parcial */ }
+      }
     }
   }
 }
@@ -108,6 +112,7 @@ export async function streamChatAuto({ conversationId, content, model }, handler
     let recebeuTexto = false;
     const r = await new Promise((resolve) => {
       streamChat({ conversationId, content, model: tentativa }, {
+        onTool: (toolEv) => handlers.onTool?.(toolEv),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
         onDone: (info) => resolve({ ok: true, info: info ?? {} }),
         onError: (msg, configured) => resolve({ ok: false, erro: msg, configured }),

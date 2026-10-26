@@ -10,7 +10,7 @@ export default function AuthShell({ title, children, links }) {
         O DIREITO À PRIVACIDADE E O ACESSO IRRESTRITO À INFORMAÇÃO É UM DIREITO UNIVERSAL DE TODOS.
       </p>
       <section className="terminal">
-        <div className="term-top">>_ {title} <span className="secure">SECURE</span></div>
+        <div className="term-top">&gt;_ {title} <span className="secure">SECURE</span></div>
         {children}
         <div className="term-foot">E2E | AES-256 | ZERO-TRUST</div>
         <nav className="auth-links">{links}</nav>
