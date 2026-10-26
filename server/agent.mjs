@@ -263,7 +263,7 @@ export function calcular(expr) {
     return parseFloat(s.slice(j, i));
   }
   function fator() {
-    if (peek() === "(") { i++; const v = expr(); if (peek() !== ")") throw new Error("falta )"); i++; return v; }
+    if (peek() === "(") { i++; const v = raiz(); if (peek() !== ")") throw new Error("falta )"); i++; return v; }
     if (peek() === "-") { i++; return -fator(); }
     if (peek() === "+") { i++; return fator(); }
     let b = numero();
@@ -276,13 +276,13 @@ export function calcular(expr) {
     while (peek() === "*" || peek() === "/") { const op = s[i++]; const r = fator(); v = op === "*" ? v * r : v / r; }
     return v;
   }
-  function expr() {
+  function raiz() {
     let v = termo();
     while (peek() === "+" || peek() === "-") { const op = s[i++]; const r = termo(); v = op === "+" ? v + r : v - r; }
     return v;
   }
   try {
-    const v = expr();
+    const v = raiz();
     if (i !== s.length || !Number.isFinite(v)) return { ok: false, erro: "expressao invalida" };
     return { ok: true, expressao: String(expr), resultado: v };
   } catch { return { ok: false, erro: "expressao invalida" }; }
