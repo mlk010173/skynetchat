@@ -8,6 +8,8 @@
   var REST = SUPA + "/rest/v1";
   var AGENT = "https://skynet-agent.onrender.com";
   var MODELO_PADRAO = "nvidia/nemotron-3-ultra-550b-a55b";
+  var TURNSTILE_SITE_KEY = "0x4AAAAAAfMLV6C2QyPpsxZe";
+  var turnstileToken = null;
   var CATALOGO = ["nvidia/nemotron-3-ultra-550b-a55b","nvidia/nemotron-3.5-super-vl-120b-a12b","deepseek-ai/deepseek-v4.1-flash","minimaxai/minimax-m3.1-flash","stepfun-ai/step-5-preview","meta/muse-glimmer-30b","google/gemma-4-31b-it","google/diffusiongemma-26b-a4b-it","openai/gpt-oss-20b","poolside/laguna-xs-2.1","meta/llama-3.2-90b-vision-instruct","meta/llama-3.2-11b-vision-instruct","nvidia/nemotron-3-nano-omni-30b-a3b-reasoning","nvidia/nemotron-3.5-lightning-30b-a3b","nvidia/nemotron-3.5-bolt-e4b","meta/llama-guard-4-12b","nvidia/ising-calibration-1.5-31b"];
   var LIGADAS = ["/api/session","/api/models","/api/chat","/api/chat-V2-fast","/api/chat-V2-thinking","/api/chat-V3","/api/chat-V3-interacao","/api/chat-V3-thinking","/api/chat-V4","/api/chat-search","/api/classify-intent","/api/title","/api/code-repair","/api/image-gen","/api/image-followups","/api/access-code","/api/security/new-code","/api/recovery/request","/api/recovery/email","/api/memory","/api/memory/toggle","/api/preferences","/api/projects","/api/prompts","/api/groups","/api/files/upload","/api/files/","/api/file-extract","/api/conversations","/api/conversations/config","/api/conversations/migrate","/api/updates","/api/support","/api/support/session","/api/feedback","/api/initial-feedback","/api/log","/api/log/message","/api/analytics","/api/currency-verify","/api/vision","/api/tts","/api/tts-eleven","/api/speak","/api/export-pdf","/api/pdf-generate","/api/pix","/api/checkout-recover","/api/stripe/checkout","/api/stripe/portal","/api/monetize-interest","/api/affiliate","/api/affiliate/withdraw","/api/admin/accounts","/api/admin/feedback","/api/admin/influencer","/api/admin/metrics-refresh","/api/admin/pix-metrics-details","/api/admin/pix-summary","/api/admin/product-analytics","/api/admin/subaccounts","/api/admin/support","/api/osint","/api/integrations","/api/integrations/gmail/permissions"];
   // Rotas que dependem de provedor externo ainda nao contratado/configurado.
@@ -92,6 +94,7 @@
   async function pedirAuthCode(corpo) {
     var acao = corpo.action; if (!acao) acao = corpo.code ? "login" : "signup";
     var envio = Object.assign({}, corpo, { action: acao });
+    if (turnstileToken) envio.turnstile_token = turnstileToken;
     var r = await fetch(SUPA + "/functions/v1/auth-code", { method: "POST", headers: { "content-type": "application/json", apikey: ANON }, body: JSON.stringify(envio) });
     var d = await r.json().catch(function () { return { ok: false, error: "resposta invalida" }; });
     if (d && d.session) guardarSessao(d.session, d.user || null);
@@ -236,6 +239,33 @@
     } catch (e) {}
     return fetchOriginal ? fetchOriginal(input, init) : Promise.reject(new Error("fetch indisponivel"));
   };
-  window.__skynetBridge = { versao: "2.0.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO };
+  function paginaDeConta() {
+    var p = (location.pathname || "") + (document.title || "");
+    return /login|sign-?up|cadastro|recovery|recuperar|acessar|entrar/i.test(p);
+  }
+  function montarTurnstile() {
+    if (!TURNSTILE_SITE_KEY || !paginaDeConta()) return;
+    if (document.querySelector(".cf-turnstile")) return;
+    var alvo = document.querySelector("form button[type=submit]") || document.querySelector("form") || document.querySelector("main") || document.body;
+    if (!alvo) return;
+    window.__skynetTurnstileOk = function (t) { turnstileToken = t; };
+    var caixa = document.createElement("div");
+    caixa.className = "cf-turnstile";
+    caixa.style.margin = "12px 0";
+    caixa.setAttribute("data-sitekey", TURNSTILE_SITE_KEY);
+    caixa.setAttribute("data-callback", "__skynetTurnstileOk");
+    caixa.setAttribute("data-theme", "auto");
+    if (alvo.tagName === "FORM") alvo.insertBefore(caixa, alvo.firstChild); else alvo.parentNode.insertBefore(caixa, alvo);
+    if (!document.querySelector("script[data-turnstile]")) {
+      var sc = document.createElement("script");
+      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      sc.async = true; sc.defer = true; sc.setAttribute("data-turnstile", "1");
+      document.head.appendChild(sc);
+    } else if (window.turnstile) { try { window.turnstile.render(caixa); } catch (e) {} }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", montarTurnstile); else montarTurnstile();
+  setTimeout(montarTurnstile, 1500);
+
+  window.__skynetBridge = { versao: "2.1.0", backend: SUPA, agente: AGENT, rotasTratadas: LIGADAS.length, indisponiveis: Object.keys(INDISPONIVEIS).length, catalogo: CATALOGO.length, modeloPadrao: MODELO_PADRAO, turnstile: Boolean(TURNSTILE_SITE_KEY) };
   console.log("[bridge] v2: " + LIGADAS.length + " rotas tratadas (" + Object.keys(INDISPONIVEIS).length + " com aviso honesto), catalogo de " + CATALOGO.length + " modelos");
 })();
