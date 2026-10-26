@@ -10,6 +10,8 @@ const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PEPPER = Deno.env.get("AUTH_CODE_PEPPER")!;
 
 const admin = createClient(SUPA_URL, SERVICE, { auth: { autoRefreshToken: false, persistSession: false } });
+const TURNSTILE_SECRET = Deno.env.get("TURNSTILE_SECRET") ?? "";
+const LIMITE_HORA = 12;
 
 const enc = new TextEncoder();
 async function hmacHex(msg: string): Promise<string> {
@@ -48,11 +50,43 @@ async function mintSession(email: string) {
 const json = (status: number, body: object) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
 
+async function ipDoPedido(req: Request): Promise<string> {
+  const bruto = req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "desconhecido";
+  return bruto.split(",")[0].trim();
+}
+
+// Cloudflare Turnstile: fica pronto e passa a valer sozinho assim que
+// a variavel TURNSTILE_SECRET for definida nos secrets do projeto.
+async function turnstileOk(req: Request, token: string): Promise<boolean> {
+  if (!TURNSTILE_SECRET) return true;
+  if (!token) return false;
+  const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: new URLSearchParams({ secret: TURNSTILE_SECRET, response: token, remoteip: await ipDoPedido(req) }),
+  });
+  const d = await r.json().catch(() => null);
+  return Boolean(d && d.success);
+}
+
+async function dentroDoLimite(ip: string): Promise<boolean> {
+  const desde = new Date(Date.now() - 3600_000).toISOString();
+  const { count } = await admin.from("anon_requests").select("id", { count: "exact", head: true }).eq("ip", ip).gte("created_at", desde);
+  await admin.from("anon_requests").insert({ ip });
+  return (count ?? 0) < LIMITE_HORA;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" } });
+  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: Boolean(TURNSTILE_SECRET), limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover", "newcode"] });
   let body: any = {};
   try { body = await req.json(); } catch { return json(400, { ok: false, error: "bad_request" }); }
   const action = String(body.action || "");
+
+  if (action === "signup" || action === "newcode") {
+    const ip = await ipDoPedido(req);
+    if (!(await dentroDoLimite(ip))) return json(429, { ok: false, error: "muitas tentativas por hora" });
+    if (!(await turnstileOk(req, String(body.turnstile_token || "")))) return json(403, { ok: false, error: "verificacao de robo falhou" });
+  }
 
   if (action === "signup") {
     const recoveryEmail = typeof body.recovery_email === "string" && /.+@.+\..+/.test(body.recovery_email) ? body.recovery_email : null;
@@ -90,6 +124,22 @@ Deno.serve(async (req) => {
     const mint = await mintSession(row.email);
     if (mint.error) return json(500, { ok: false, error: mint.error });
     return json(200, { ok: true, session: mint.session });
+  }
+
+  if (action === "newcode") {
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!/.+@.+\..+/.test(email)) return json(400, { ok: false, error: "email invalido" });
+    const { data: row } = await admin.from("auth_codes").select("id, email").eq("recovery_email", email).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (!row) return json(404, { ok: false, error: "conta nao encontrada" });
+    const novo = genCode();
+    const lookup = await hmacHex(novo);
+    const { error: uerr } = await admin.from("auth_codes").update({
+      code_hash: bcrypt.hashSync(novo, 10), code_lookup: lookup, code_enc: await aesEncrypt(novo),
+    }).eq("id", row.id);
+    if (uerr) return json(500, { ok: false, error: "code_update" });
+    const mint = await mintSession(row.email);
+    if (mint.error) return json(500, { ok: false, error: mint.error });
+    return json(200, { ok: true, code: novo, session: mint.session });
   }
 
   if (action === "recover") {
