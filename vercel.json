@@ -148,6 +148,15 @@
   ],
   "headers": [
     {
+      "source": "/(?:about|affiliate-panel|afiliado|chat|checkout|dev|docs|indique-ganhe|login|monetize|novo|politicos|recovery|sign-up|termos|v3|voz)?/?",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {
@@ -157,6 +166,10 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
         }
       ]
     }

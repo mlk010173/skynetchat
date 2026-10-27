@@ -212,78 +212,47 @@
 				}
 			}
 
-			// Auto-reload em caso de chunk 404 durante deploy (com proteção anti-loop)
-			const RELOAD_KEY = 'chunk-reload-count';
-			const MAX_RELOADS = 2;
-			const RELOAD_WINDOW = 30000; // 30 segundos
+// Recuperação de chunk: no máximo 1 recarga por minuto e NUNCA apaga a página.
+			const RELOAD_KEY = 'chunk-reload-at';
+			const RELOAD_WINDOW = 60000;
 
-			function canReload() {
-				const data = sessionStorage.getItem(RELOAD_KEY);
-				if (!data) return true;
-
-				const { count, firstAttempt } = JSON.parse(data);
-				const elapsed = Date.now() - firstAttempt;
-
-				// Reset contador após 30 segundos
-				if (elapsed > RELOAD_WINDOW) {
-					sessionStorage.removeItem(RELOAD_KEY);
+			function podeRecarregar() {
+				try {
+					const ultimo = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+					if (Date.now() - ultimo < RELOAD_WINDOW) return false;
+					sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
 					return true;
-				}
+				} catch (e) { return false; }
+			}
 
-				// Permite até 2 reloads em 30 segundos
-				return count < MAX_RELOADS;
+			function avisarAtualizacao() {
+				if (document.getElementById('skynet-chunk-aviso')) return;
+				const aviso = document.createElement('div');
+				aviso.id = 'skynet-chunk-aviso';
+				aviso.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:99999;background:#1b1b1b;border:1px solid #3a3a3a;color:#eee;border-radius:10px;padding:10px 14px;font:13px ui-sans-serif,system-ui;display:flex;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.5)';
+				const texto = document.createElement('span');
+				texto.textContent = 'Saíram novidades. Recarregue para pegar a versão nova.';
+				const bt = document.createElement('button');
+				bt.textContent = 'Recarregar';
+				bt.style.cssText = 'background:#1f6feb;border:0;color:#fff;border-radius:8px;padding:6px 10px;font:12px ui-sans-serif;cursor:pointer';
+				bt.onclick = function () { try { sessionStorage.removeItem(RELOAD_KEY); } catch (e) {} location.reload(); };
+				const fechar = document.createElement('button');
+				fechar.textContent = '×';
+				fechar.style.cssText = 'background:transparent;border:0;color:#8a8a8a;font-size:16px;cursor:pointer';
+				fechar.onclick = function () { aviso.remove(); };
+				aviso.appendChild(texto); aviso.appendChild(bt); aviso.appendChild(fechar);
+				document.body.appendChild(aviso);
 			}
 
 			async function handleChunkError() {
-				if (canReload()) {
-					const data = sessionStorage.getItem(RELOAD_KEY);
-					const count = data ? JSON.parse(data).count + 1 : 1;
-					const firstAttempt = data ? JSON.parse(data).firstAttempt : Date.now();
-
-					sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ count, firstAttempt }));
-
-					// LIMPAR TODO O CACHE antes de recarregar
-					try {
-						// 1. Desregistrar service workers
-						if ('serviceWorker' in navigator) {
-							const registrations = await navigator.serviceWorker.getRegistrations();
-							await Promise.all(registrations.map(reg => reg.unregister()));
-						}
-
-						// 2. Limpar todos os caches
-						if ('caches' in window) {
-							const cacheNames = await caches.keys();
-							await Promise.all(cacheNames.map(name => caches.delete(name)));
-						}
-					} catch (e) {
-						console.error('❌ Erro ao limpar cache:', e);
-					}
-
-					// 3. Hard reload com delay maior para PM2 estabilizar
-					// Primeira tentativa: 2s de delay
-					// Segunda tentativa: 5s de delay (PM2 reload pode demorar)
-					const delay = count === 1 ? 2000 : 5000;
-
-					setTimeout(() => {
-						// CRITICAL: Forçar bypass TOTAL do cache HTTP disk
-						// Adicionar timestamp único força navegador a ignorar cache disk
-						const url = new URL(window.location.href);
-						// Remove query params antigos de reload
-						url.searchParams.delete('_r');
-						// Adiciona novo timestamp único
-						url.searchParams.set('_r', Date.now() + '_' + Math.random().toString(36).slice(2));
-
-						// location.replace não mantém histórico e força hard reload
-						window.location.replace(url.href);
-					}, delay);
-				} else {
-					console.error('❌ Muitos erros de chunk. Recarregue manualmente a página.');
-					// Mostra mensagem ao usuário
-					document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:10px;">🔄 Atualização em andamento</h1><p style="opacity:0.7;">Por favor, recarregue a página manualmente (Ctrl+Shift+R ou Cmd+Shift+R)</p><button onclick="location.reload(true)" style="margin-top:20px;padding:12px 24px;background:#C41E3A;border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:16px;">Recarregar agora</button></div></div>';
+				if (window.__skynetDocumentLeaving) return;
+				if (podeRecarregar()) {
+					try { location.reload(); return; } catch (e) {}
 				}
+				avisarAtualizacao();
 			}
 
-			window.addEventListener('error', (event) => {
+						window.addEventListener('error', (event) => {
 				if (event.message &&
 					(event.message.includes('Failed to fetch dynamically imported module') ||
 					 event.message.includes('/_app/immutable/'))) {
