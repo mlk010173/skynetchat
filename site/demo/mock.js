@@ -140,11 +140,66 @@
     return Promise.resolve(new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } }));
   }
 
+  /* ================= AUTH REAL ================= */
+  function authToken() { try { return localStorage.getItem("sky_session") || ""; } catch (e) { return ""; } }
+  function authGuardar(t) { try { if (t) localStorage.setItem("sky_session", t); } catch (e) {} }
+  function authLimpar() { try { localStorage.removeItem("sky_session"); } catch (e) {} }
+
+  /* mapeia a rota que o app chama para a acao da edge function "auth" */
+  function authRota(p, metodo) {
+    if (p.indexOf("/api/access-code") !== -1) return "access-code";
+    if (p.indexOf("/api/recovery/request") !== -1) return "recovery-request";
+    if (p.indexOf("/api/recovery/email") !== -1) return "recovery-email";
+    if (p.indexOf("/api/security/new-code") !== -1) return "new-code";
+    if (p.indexOf("/api/support") !== -1 && p.indexOf("session") === -1) return "support";
+    if (p.endsWith("/api/session") || p.indexOf("/api/session?") !== -1) {
+      if (metodo === "DELETE") return "logout";
+      if (metodo === "POST") return "login";
+      return "session";
+    }
+    return null;
+  }
+
+  function authReal(orig, acao, init, corpoTxt) {
+    var cfg = (window.__SKY_AUTH || {});
+    var metodo = (init && init.method) || (acao === "session" ? "GET" : "POST");
+    var headers = { "Content-Type": "application/json", "apikey": cfg.key, "Authorization": "Bearer " + cfg.key };
+    var t = authToken();
+    if (t) headers["x-session"] = t;
+    var opts = { method: metodo, headers: headers };
+    if (metodo !== "GET") opts.body = corpoTxt || "{}";
+    return orig(cfg.url + "/functions/v1/auth?action=" + encodeURIComponent(acao), opts)
+      .then(function (r) {
+        return r.text().then(function (txt) {
+          var dados = {};
+          try { dados = JSON.parse(txt); } catch (e) { dados = { ok: false, error: txt.slice(0, 200) }; }
+          if (acao === "access-code" || acao === "login") {
+            if (dados && dados.session) authGuardar(dados.session);
+          }
+          if (acao === "logout") authLimpar();
+          /* 409 = conta ja existe / ja logado (o app redireciona) */
+          if (acao === "access-code" && dados && dados.code) {
+            dados.registration_event_id = "signup_" + Date.now();
+            dados.signup_event_id = "signup_ok_" + Date.now();
+          }
+          if (r.status === 401 && acao === "session") return json({ error: "unauthorized" }, 401);
+          return json(dados, r.status);
+        });
+      })
+      .catch(function () { return json({ ok: false, error: "servidor indisponivel" }, 503); });
+  }
+
   window.fetch = function (input, init) {
     var url = typeof input === "string" ? input : (input && input.url) || "";
     var p = url.split("?")[0];
+    var body0 = (init && typeof init.body === "string") ? init.body : "";
     if (p.indexOf("/api/") === -1) return orig(input, init);
 
+    /* ---- AUTH REAL (código secreto) via edge function "auth" ---- */
+    if (window.__SKY_AUTH) {
+      var rota = authRota(p, (init || {}).method || "GET");
+      if (rota) return authReal(orig, rota, init, body0);
+    }
     if (p.endsWith("/api/session")) return Promise.resolve(json({ user: persona().user }));
     if (p.endsWith("/api/preferences")) return Promise.resolve(json({ theme: "black", model: "skynet-v4" }));
     if (p.indexOf("/api/conversations/config") !== -1)
