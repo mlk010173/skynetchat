@@ -1,0 +1,53 @@
+# Modelo para o agente integrar/revisar. Não renomear para .yml antes de validar
+# a resposta real de /models e confirmar que a URL Vercel é a versão correta.
+name: Platform smoke checks
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 */6 * * *"
+permissions:
+  contents: read
+concurrency:
+  group: platform-smoke-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check Render health
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --location --retry 5 --retry-delay 5 --retry-all-errors --max-time 30 -o /tmp/render-health.json -w '%{http_code}' https://skynet-agent.onrender.com/health)"
+          echo "Render /health HTTP $code"
+          test "$code" = "200"
+          node -e 'const d=require("/tmp/render-health.json"); if(d.ok!==true || d.servico!=="skynet-agent") process.exit(1); console.log("Render health OK")'
+      - name: Check Supabase models endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --location --retry 3 --retry-delay 3 --retry-all-errors --max-time 25 -o /tmp/models.json -w '%{http_code}' https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1/models)"
+          echo "Supabase /models HTTP $code"
+          test "$code" = "200"
+          node -e 'const d=require("/tmp/models.json"); if(!d || typeof d!=="object" || d.ok===false) process.exit(1); console.log("Supabase models JSON OK")'
+      - name: Check GitHub Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --silent --show-error --location --retry 3 --retry-delay 3 --retry-all-errors --max-time 25 -o /dev/null -w '%{http_code}' https://mlk010173.github.io/skynetchat/)"
+          echo "GitHub Pages HTTP $code"
+          test "$code" = "200"
+      - name: Check Vercel only when explicitly configured
+        if: ${{ vars.VERCEL_SMOKE_URL != '' }}
+        env:
+          VERCEL_SMOKE_URL: ${{ vars.VERCEL_SMOKE_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$VERCEL_SMOKE_URL" in https://*) ;; *) echo "VERCEL_SMOKE_URL must use HTTPS"; exit 1;; esac
+          code="$(curl --silent --show-error --location --retry 3 --retry-delay 3 --retry-all-errors --max-time 25 -o /dev/null -w '%{http_code}' "$VERCEL_SMOKE_URL")"
+          echo "Vercel homepage HTTP $code"
+          test "$code" = "200"
