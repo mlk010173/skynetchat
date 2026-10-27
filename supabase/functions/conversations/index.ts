@@ -4,10 +4,11 @@
 // PATCH ?id=X   → renomear { title }
 // DELETE ?id=X  → apagar conversa
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { contaDaSessao } from "../_shared/sessao.ts";
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session",
   "Access-Control-Allow-Methods": "GET, PATCH, DELETE, OPTIONS",
 };
 
@@ -28,14 +29,26 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  // ---- exige usuário logado ----
-  const authHeader = req.headers.get("Authorization") ?? "";
-  if (!authHeader.startsWith("Bearer ")) {
-    return json({ ok: false, error: "Autenticação necessária." }, 401);
+  // ---- exige sessão: token opaco (x-session) da conta, ou JWT do Supabase ----
+  const sessao = req.headers.get("x-session") ?? "";
+  let userId: string | null = null;
+  let accountId: string | null = null;
+
+  if (sessao) {
+    const conta = await contaDaSessao(req);
+    if (!conta) return json({ ok: false, error: "Sessão inválida ou expirada." }, 401);
+    accountId = conta.id;
+  } else {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return json({ ok: false, error: "Autenticação necessária." }, 401);
+    }
+    const { data } = await svc.auth.getUser(authHeader.slice(7));
+    userId = data?.user?.id ?? null;
+    if (!userId) return json({ ok: false, error: "Sessão inválida ou expirada." }, 401);
   }
-  const { data } = await svc.auth.getUser(authHeader.slice(7));
-  const userId = data?.user?.id;
-  if (!userId) return json({ ok: false, error: "Sessão inválida ou expirada." }, 401);
+
+  const dono = (query: any) => (accountId ? query.eq("account_id", accountId) : query.eq("user_id", userId!));
 
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
@@ -51,10 +64,9 @@ Deno.serve(async (req) => {
       conversations = r.data as ConvRow[] | null;
       error = r.error;
     } else {
-      const r = await svc
-        .from("conversations")
-        .select("id, title, updated_at")
-        .eq("user_id", userId)
+      const r = await dono(
+        svc.from("conversations").select("id, title, updated_at"),
+      )
         .order("updated_at", { ascending: false })
         .limit(100);
       conversations = r.data as ConvRow[] | null;
@@ -67,12 +79,9 @@ Deno.serve(async (req) => {
   if (!id) return json({ ok: false, error: "Parâmetro id obrigatório." }, 400);
 
   // garante que a conversa é do usuário antes de qualquer operação
-  const { data: conv } = await svc
-    .from("conversations")
-    .select("id")
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data: conv } = await dono(
+    svc.from("conversations").select("id").eq("id", id),
+  ).maybeSingle();
   if (!conv) return json({ ok: false, error: "Conversa não encontrada." }, 404);
 
   if (req.method === "GET") {
@@ -90,13 +99,13 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null);
     const title = typeof body?.title === "string" ? body.title.trim().slice(0, 120) : "";
     if (!title) return json({ ok: false, error: "Título inválido." }, 400);
-    const { error } = await svc.from("conversations").update({ title }).eq("id", id);
+    const { error } = await dono(svc.from("conversations").update({ title }).eq("id", id));
     if (error) return json({ ok: false, error: "Falha ao renomear." }, 500);
     return json({ ok: true });
   }
 
   if (req.method === "DELETE") {
-    const { error } = await svc.from("conversations").delete().eq("id", id);
+    const { error } = await dono(svc.from("conversations").delete().eq("id", id));
     if (error) return json({ ok: false, error: "Falha ao apagar." }, 500);
     return json({ ok: true });
   }

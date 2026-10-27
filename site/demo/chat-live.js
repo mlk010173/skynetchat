@@ -6,6 +6,15 @@
   var enviando = false;
 
   function sessao() { try { return localStorage.getItem("sky_session") || ""; } catch (e) { return ""; } }
+  function slugAtual() { var m = location.pathname.match(/^\/chat\/([^/?#]+)/); return m ? m[1] : ""; }
+  function mapa() { try { return JSON.parse(localStorage.getItem("sky_conv_map") || "{}"); } catch (e) { return {}; } }
+  function guardarMapa(slug, id) { try { if (!slug || !id) return; var m = mapa(); m[slug] = id; localStorage.setItem("sky_conv_map", JSON.stringify(m)); } catch (e) {} }
+  function apiBase() { return cfg.url + "/functions/v1/"; }
+  function cabecalhos() {
+    var h = { "Content-Type": "application/json", "apikey": cfg.key, "Authorization": "Bearer " + cfg.key };
+    var s = sessao(); if (s) h["x-session"] = s;
+    return h;
+  }
   function conv() { try { return sessionStorage.getItem("sky_conv_id") || ""; } catch (e) { return ""; } }
   function guardarConv(id) { try { if (id) sessionStorage.setItem("sky_conv_id", id); } catch (e) {} }
 
@@ -79,6 +88,111 @@
     if (ta) { ta.value = ""; ta.dispatchEvent(new Event("input", { bubbles: true })); }
   }
 
+
+  /* ---------- historico ---------- */
+  function limparThread() {
+    var t = document.querySelector("[data-sky-thread]");
+    if (!t) return;
+    var inner = t.querySelector("[data-thread-inner]");
+    if (inner) inner.innerHTML = "";
+  }
+
+  function renderMensagens(lista) {
+    limparThread();
+    (lista || []).forEach(function (m) {
+      if (!m || !m.content) return;
+      var quem = m.role === "user" ? "user" : "bot";
+      var b = bolha(quem, m.content);
+      if (quem === "bot" && m.model) {
+        var tag = document.createElement("div");
+        tag.style.cssText = "font:11px/1.4 ui-sans-serif,system-ui;color:#7a7a7a;margin-top:-6px";
+        tag.textContent = m.model;
+        b.parentElement.appendChild(tag);
+      }
+    });
+  }
+
+  function quando(iso) {
+    try {
+      var d = new Date(iso), hoje = new Date();
+      var dias = Math.floor((hoje - d) / 86400000);
+      if (dias <= 0) return "hoje " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      if (dias === 1) return "ontem";
+      if (dias < 7) return dias + " dias";
+      return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    } catch (e) { return ""; }
+  }
+
+  async function carregarConversa(id) {
+    try {
+      var r = await fetch(apiBase() + "conversations?id=" + encodeURIComponent(id), { headers: cabecalhos() });
+      var d = await r.json();
+      if (!d || !d.ok) return false;
+      renderMensagens(d.messages);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function montarHistorico() {
+    if (document.querySelector("[data-sky-hist-btn]")) return;
+    var b = document.createElement("button");
+    b.setAttribute("data-sky-hist-btn", "1");
+    b.type = "button";
+    b.textContent = "Histórico";
+    b.style.cssText = "position:fixed;right:14px;top:12px;z-index:40;font:12px/1 ui-sans-serif,system-ui;padding:8px 11px;border-radius:9px;border:1px solid #2b2b2b;background:#141414;color:#dcdcdc;cursor:pointer";
+    var painel = document.createElement("div");
+    painel.setAttribute("data-sky-hist-panel", "1");
+    painel.style.cssText = "position:fixed;right:14px;top:48px;z-index:41;width:min(330px,88vw);max-height:60vh;overflow-y:auto;display:none;background:#111;border:1px solid #2b2b2b;border-radius:12px;padding:8px;box-shadow:0 12px 34px rgba(0,0,0,.55)";
+    b.onclick = async function () {
+      if (painel.style.display === "block") { painel.style.display = "none"; return; }
+      painel.style.display = "block";
+      painel.innerHTML = '<div style="font:12px ui-sans-serif;color:#8a8a8a;padding:6px 8px">Carregando…</div>';
+      try {
+        var r = await fetch(apiBase() + "conversations", { headers: cabecalhos() });
+        var d = await r.json();
+        var lista = (d && d.conversations) || [];
+        painel.innerHTML = "";
+        if (!lista.length) {
+          painel.innerHTML = '<div style="font:12px ui-sans-serif;color:#8a8a8a;padding:8px">Nenhuma conversa ainda.</div>';
+          return;
+        }
+        lista.forEach(function (c) {
+          var item = document.createElement("button");
+          item.type = "button";
+          item.style.cssText = "display:block;width:100%;text-align:left;padding:8px 9px;border:0;border-radius:8px;background:transparent;color:#dcdcdc;cursor:pointer;font:13px/1.35 ui-sans-serif,system-ui";
+          item.onmouseenter = function () { item.style.background = "#1c1c1c"; };
+          item.onmouseleave = function () { item.style.background = "transparent"; };
+          var titulo = document.createElement("div");
+          titulo.textContent = c.title || "Conversa sem título";
+          titulo.style.cssText = "white-space:nowrap;overflow:hidden;text-overflow:ellipsis";
+          var meta = document.createElement("div");
+          meta.textContent = quando(c.updated_at);
+          meta.style.cssText = "font-size:11px;color:#7a7a7a;margin-top:2px";
+          item.appendChild(titulo); item.appendChild(meta);
+          item.onclick = async function () {
+            painel.style.display = "none";
+            guardarConv(c.id); guardarMapa(slugAtual(), c.id);
+            var ok = await carregarConversa(c.id);
+            if (!ok) alert("Não consegui abrir essa conversa agora.");
+          };
+          painel.appendChild(item);
+        });
+      } catch (e) {
+        painel.innerHTML = '<div style="font:12px ui-sans-serif;color:#e33;padding:8px">Falha ao carregar o histórico.</div>';
+      }
+    };
+    document.body.appendChild(b);
+    document.body.appendChild(painel);
+  }
+
+  async function restaurarAoAbrir() {
+    if (!sessao()) return;
+    var id = mapa()[slugAtual()] || conv();
+    if (!id) return;
+    guardarConv(id);
+    await carregarConversa(id);
+  }
+
   async function enviar() {
     var texto = textoDoComposer();
     if (!texto || enviando) return;
@@ -89,9 +203,7 @@
     var t0 = Date.now();
     var corpo = { content: texto, model: "auto" };
     if (conv()) corpo.conversationId = conv();
-    var headers = { "Content-Type": "application/json", "apikey": cfg.key, "Authorization": "Bearer " + cfg.key };
-    var s = sessao();
-    if (s) headers["x-session"] = s;
+    var headers = cabecalhos();
     try {
       var r = await fetch(cfg.url + "/functions/v1/chat", { method: "POST", headers: headers, body: JSON.stringify(corpo) });
       if (!r.ok || !r.body) {
@@ -115,7 +227,7 @@
           if (dados.done) {
             modelo = dados.model || "";
             tentativas = dados.tentativas || [];
-            if (dados.conversationId) guardarConv(dados.conversationId);
+            if (dados.conversationId) { guardarConv(dados.conversationId); guardarMapa(slugAtual(), dados.conversationId); }
           }
           var tEl = document.querySelector("[data-sky-thread]");
           if (tEl) tEl.scrollTop = tEl.scrollHeight;
@@ -152,6 +264,11 @@
     }, true);
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", interceptar);
-  else interceptar();
+  function iniciar() {
+    interceptar();
+    montarHistorico();
+    setTimeout(restaurarAoAbrir, 700);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
+  else iniciar();
 })();
