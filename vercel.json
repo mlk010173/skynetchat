@@ -4,13 +4,152 @@
   "installCommand": "echo sem-install",
   "buildCommand": "echo servindo o espelho estatico do frontend",
   "outputDirectory": "site",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/about",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/about/(.*)",
+      "destination": "/about/index.html"
+    },
+    {
+      "source": "/affiliate-panel",
+      "destination": "/affiliate-panel/index.html"
+    },
+    {
+      "source": "/affiliate-panel/(.*)",
+      "destination": "/affiliate-panel/index.html"
+    },
+    {
+      "source": "/afiliado",
+      "destination": "/afiliado/index.html"
+    },
+    {
+      "source": "/afiliado/(.*)",
+      "destination": "/afiliado/index.html"
+    },
+    {
+      "source": "/chat",
+      "destination": "/chat/index.html"
+    },
+    {
+      "source": "/chat/(.*)",
+      "destination": "/chat/index.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/checkout/index.html"
+    },
+    {
+      "source": "/checkout/(.*)",
+      "destination": "/checkout/index.html"
+    },
+    {
+      "source": "/dev/security",
+      "destination": "/dev/security/index.html"
+    },
+    {
+      "source": "/dev/security/(.*)",
+      "destination": "/dev/security/index.html"
+    },
+    {
+      "source": "/indique-ganhe",
+      "destination": "/indique-ganhe/index.html"
+    },
+    {
+      "source": "/indique-ganhe/(.*)",
+      "destination": "/indique-ganhe/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login/index.html"
+    },
+    {
+      "source": "/login/(.*)",
+      "destination": "/login/index.html"
+    },
+    {
+      "source": "/monetize",
+      "destination": "/monetize/index.html"
+    },
+    {
+      "source": "/monetize/(.*)",
+      "destination": "/monetize/index.html"
+    },
+    {
+      "source": "/novo",
+      "destination": "/novo/index.html"
+    },
+    {
+      "source": "/novo/(.*)",
+      "destination": "/novo/index.html"
+    },
+    {
+      "source": "/politicos",
+      "destination": "/politicos/index.html"
+    },
+    {
+      "source": "/politicos/(.*)",
+      "destination": "/politicos/index.html"
+    },
+    {
+      "source": "/recovery",
+      "destination": "/recovery/index.html"
+    },
+    {
+      "source": "/recovery/(.*)",
+      "destination": "/recovery/index.html"
+    },
+    {
+      "source": "/sign-up",
+      "destination": "/sign-up/index.html"
+    },
+    {
+      "source": "/sign-up/(.*)",
+      "destination": "/sign-up/index.html"
+    },
+    {
+      "source": "/termos",
+      "destination": "/termos/index.html"
+    },
+    {
+      "source": "/termos/(.*)",
+      "destination": "/termos/index.html"
+    },
+    {
+      "source": "/v3",
+      "destination": "/v3/index.html"
+    },
+    {
+      "source": "/v3/(.*)",
+      "destination": "/v3/index.html"
+    },
+    {
+      "source": "/voz",
+      "destination": "/voz/index.html"
+    },
+    {
+      "source": "/voz/(.*)",
+      "destination": "/voz/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     }
   ]
