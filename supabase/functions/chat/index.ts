@@ -125,9 +125,11 @@ async function callTool(tool: DetectedTool) {
   try {
     const agentTok = Deno.env.get("AGENT_TOKEN");
     const res = await fetch(`https://skynet-agent.onrender.com/tools/${tool.name}`, {
-      headers: agentTok ? { Authorization: `Bearer ${agentTok}` } : {},
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(agentTok ? { Authorization: `Bearer ${agentTok}` } : {}),
+      },
       body: JSON.stringify(tool.payload),
       signal: ctrl.signal,
     });
