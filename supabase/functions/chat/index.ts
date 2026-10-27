@@ -331,20 +331,23 @@ Deno.serve(async (req) => {
 
   // ---- conversa (persistência apenas para usuários logados) ----
   let convId: string | null = body.conversationId ?? null;
-  if (contaId && convId) {
-    const { data: conv } = await svc
-      .from("conversations")
-      .select("id")
-      .eq("id", convId)
-      .eq("account_id", contaId)
-      .maybeSingle();
-    if (!conv) return json({ ok: false, error: "Conversa não encontrada." }, 404);
-  } else if (contaId) {
-    convId = crypto.randomUUID();
-    const { error: cErr } = await svc
-      .from("conversations")
-      .insert({ id: convId, account_id: contaId, title: content.slice(0, 80) });
-    if (cErr) return json({ ok: false, error: "Falha ao criar conversa." }, 500);
+  if (contaId) {
+    if (convId) {
+      const { data: conv } = await svc
+        .from("conversations")
+        .select("id")
+        .eq("id", convId)
+        .eq("account_id", contaId)
+        .maybeSingle();
+      if (!conv) convId = null; // conversa de outra conta/antiga: começa uma nova
+    }
+    if (!convId) {
+      convId = crypto.randomUUID();
+      const { error: cErr } = await svc
+        .from("conversations")
+        .insert({ id: convId, account_id: contaId, title: content.slice(0, 80) });
+      if (cErr) return json({ ok: false, error: "Falha ao criar conversa." }, 500);
+    }
   } else if (userId && convId) {
     const { data: conv } = await svc
       .from("conversations")
