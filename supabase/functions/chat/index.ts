@@ -5,6 +5,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
 import { contaDaSessao, consumirMensagem, memoriasDaConta } from "../_shared/sessao.ts";
+import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -241,6 +242,9 @@ Deno.serve(async (req) => {
       }, 429);
     }
   }
+
+  // ---- visitante sem conta: limite por IP para não virar torneira de graça ----
+  if (!conta && !(await liberar("chat-anon:" + ipDe(req), 8, "hour"))) return respostaLimite();
 
   // ---- corpo ----
   let body: { conversationId?: string; content?: string; model?: string };

@@ -2,6 +2,7 @@
 // Compatível com o transporte "streamable http" na forma simples: POST com JSON-RPC, resposta JSON.
 // Autenticação: Authorization: Bearer sk-... (mesmas chaves da API pública).
 import { autorizar, json, registrar } from "../_shared/apikey.ts";
+import { liberar, respostaLimite } from "../_shared/limite.ts";
 import { svc } from "../_shared/sessao.ts";
 import { perguntar } from "../_shared/chat.ts";
 
@@ -101,6 +102,8 @@ Deno.serve(async (req) => {
     await registrar(null, "/mcp", 401, Math.round(performance.now() - inicio));
     return json({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Chave MCP inválida." } }, 401);
   }
+
+  if (!(await liberar("mcp:" + autor.keyId, 90, "minute"))) return respostaLimite();
 
   const corpo = await req.json().catch(() => null) as any;
   if (!corpo || typeof corpo.method !== "string") {

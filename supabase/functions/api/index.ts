@@ -6,6 +6,7 @@
 // GET  /api/conversations  → histórico
 // GET  /api/conversations?id=X → mensagens
 import { autorizar, json, registrar, contadorDeChamadas } from "../_shared/apikey.ts";
+import { liberar, respostaLimite } from "../_shared/limite.ts";
 import { svc } from "../_shared/sessao.ts";
 import { perguntar } from "../_shared/chat.ts";
 
@@ -27,6 +28,7 @@ Deno.serve(async (req) => {
   }
 
   await contadorDeChamadas(autor.keyId);
+  if (!(await liberar("api:" + autor.keyId, 60, "minute"))) return respostaLimite();
   const db = svc();
 
   if (caminho === "/" || caminho === "") {

@@ -8,6 +8,7 @@
 //  - e-mail sai por fila com limite diário do plano free (5/dia por conta);
 //  - respostas de recuperação são sempre neutras (não revelam se o e-mail existe).
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
 import {
   firestoreAtivo,
   firestoreContar,
@@ -191,6 +192,7 @@ Deno.serve(async (req) => {
 
     // ---- cadastro: gera a conta e devolve o código uma única vez ----
     if (acao === "access-code") {
+      if (!(await liberar("acesso:" + ipDe(req), 5, "hour"))) return respostaLimite(CORS);
       const ipCliente = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
       const captcha = await turnstileValidar(String(corpo.turnstileToken ?? corpo.cfToken ?? ""), ipCliente);
       if (!captcha.ok) return json({ ok: false, error: "Verificação de segurança falhou. Recarregue e tente de novo." }, 403);
@@ -231,6 +233,7 @@ Deno.serve(async (req) => {
 
     // ---- login por código ----
     if (acao === "login") {
+      if (!(await liberar("login:" + ipDe(req), 30, "hour"))) return respostaLimite(CORS);
       const digitado = normaliza(String(corpo.code ?? ""));
       if (digitado.length !== 12) return json({ ok: false, error: "Código incompleto: são 12 dígitos." }, 400);
 
@@ -273,6 +276,7 @@ Deno.serve(async (req) => {
 
     // ---- recuperação: pede o código por e-mail ----
     if (acao === "recovery-request") {
+      if (!(await liberar("recuperar:" + ipDe(req), 5, "hour"))) return respostaLimite(CORS);
       const email = String(corpo.email ?? "").trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) {
         return json({ ok: false, error: "Digite um e-mail válido." }, 400);

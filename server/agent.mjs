@@ -498,33 +498,42 @@ export const handler = async (req, res) => {
   }
 
   if (url.pathname === "/tools/web_pesquisar" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const dados = await lerCorpo(req);
     if (!dados) return json(res, 400, { ok: false, erro: "JSON invalido" });
     return json(res, 200, await pesquisarWeb(dados.consulta ?? dados.q));
   }
 
   if (url.pathname === "/tools/imagem" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const dados = await lerCorpo(req);
     if (!dados) return json(res, 400, { ok: false, erro: "JSON invalido" });
     return json(res, 200, await gerarImagem(dados.prompt ?? dados.p, dados.aspect_ratio));
   }
 
   if (url.pathname === "/tools/abrir" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const dados = await lerCorpo(req);
     if (!dados) return json(res, 400, { ok: false, erro: "JSON invalido" });
     return json(res, 200, await abrirPagina(dados.url));
   }
 
   if (url.pathname === "/tools/calcular" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req); return json(res, 200, calcular(b?.expressao ?? b?.expr ?? b?.q));
   }
   if (url.pathname === "/tools/moeda" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req); return json(res, 200, await converterMoeda(b?.de, b?.para, b?.valor));
   }
   if (url.pathname === "/tools/clima" && req.method === "POST") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req); return json(res, 200, await clima(b?.cidade ?? b?.q));
   }
-  if (url.pathname === "/tools/hora") return json(res, 200, agora());
+  if (url.pathname === "/tools/hora") {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
+    return json(res, 200, agora());
+  }
   if (url.pathname === "/tools/perguntar" && req.method === "POST") {
     if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
     const b = await lerCorpo(req); return json(res, 200, await perguntar(b?.pergunta ?? b?.q ?? b?.prompt, b?.email));
