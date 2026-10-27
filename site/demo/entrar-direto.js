@@ -1,9 +1,9 @@
-/* Entrar direto: se o formulario do site nao disparar sozinho (Turnstile removido),
-   a ponte faz o login pelo codigo de 12 digitos e abre o chat. */
+/* Entrar direto: o formulario do site nao dispara sozinho sem o Turnstile.
+   Assumimos o clique em ENTRAR (e o Enter) e fazemos o login pelo codigo de 12 digitos. */
 (function () {
   var ocupado = false;
 
-  function digitos(txt) { return (txt || "").replace(/\D/g, ""); }
+  function digitos(t) { return (t || "").replace(/\D/g, ""); }
   function base() { return location.pathname.indexOf("/skynetchat") === 0 ? "/skynetchat" : ""; }
   function aviso(msg) {
     var velho = document.getElementById("sky-entrar-aviso");
@@ -16,45 +16,49 @@
     setTimeout(function () { d.remove(); }, 5000);
   }
   function codigoNaTela() {
-    var nos = document.querySelectorAll("input");
+    var nos = document.querySelectorAll("input:not([type=hidden])");
     for (var i = 0; i < nos.length; i++) {
       var v = digitos(nos[i].value);
       if (v.length >= 12) return v.slice(0, 12);
     }
-    var m = (document.body.innerText.match(/\d{4}[\s-]?\d{4}[\s-]?\d{4}/) || [])[0];
-    return m ? digitos(m) : "";
+    return "";
   }
   function entrar(codigo) {
-    if (ocupado || !codigo || codigo.length < 12) return;
+    if (ocupado) return;
+    if (!codigo || codigo.length < 12) { aviso("Digite os 12 digitos do seu codigo de acesso."); return; }
     ocupado = true;
     if (localStorage.getItem("sky_session")) { location.href = base() + "/chat/"; return; }
-    window.fetch("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ numberId: codigo, code: codigo }) })
+    window.fetch("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ numberId: codigo }) })
       .then(function (r) { return r.json().catch(function () { return {}; }); })
       .then(function (d) {
         if (localStorage.getItem("sky_session")) {
+          try { localStorage.setItem("skynet:session-change:v1", String(Date.now())); } catch (e) {}
           location.href = base() + "/chat/";
           return;
         }
         ocupado = false;
-        aviso((d && (d.error || d.message || d.motivo)) || "Codigo nao reconhecido. Gere um novo em Criar conta.");
+        aviso((d && (d.error || d.message || d.motivo)) || "Codigo nao reconhecido.");
       })
       .catch(function () { ocupado = false; aviso("Nao consegui falar com o servidor agora."); });
   }
-
-  function tentar(ev) {
-    var codigo = codigoNaTela();
-    if (!codigo) return;
-    var alvo = ev && ev.target && ev.target.closest ? ev.target.closest("button,form,input") : null;
-    var clicouEntrar = alvo && /entrar|acessar|login/i.test((alvo.textContent || "") + " " + (alvo.getAttribute && (alvo.getAttribute("aria-label") || "") || ""));
-    var enter = ev && ev.key === "Enter";
-    if (!clicouEntrar && !enter && ev && ev.type === "click") return;
-    setTimeout(function () {
-      if (localStorage.getItem("sky_session")) return;
-      entrar(codigo);
-    }, 700);
+  function ehEntrar(el) {
+    if (!el || !el.closest) return false;
+    var b = el.closest("button,[role=button],input[type=submit],a");
+    if (!b) return false;
+    var t = ((b.textContent || "") + " " + (b.value || "") + " " + (b.getAttribute("aria-label") || "")).trim();
+    return /entrar|acessar|login|continuar/i.test(t);
   }
-
-  document.addEventListener("submit", tentar, true);
-  document.addEventListener("click", tentar, true);
-  document.addEventListener("keydown", function (ev) { if (ev.key === "Enter") tentar(ev); }, true);
+  function pegar(ev) {
+    if (!codigoNaTela()) return false;
+    var alvo = ev.target;
+    var entrarNoBotao = ehEntrar(alvo) || ev.type === "submit" || (ev.type === "keydown" && ev.key === "Enter");
+    if (!entrarNoBotao) return false;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    entrar(codigoNaTela());
+    return true;
+  }
+  document.addEventListener("click", pegar, true);
+  document.addEventListener("submit", pegar, true);
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Enter") pegar(ev); }, true);
 })();
