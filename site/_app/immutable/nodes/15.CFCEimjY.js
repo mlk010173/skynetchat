@@ -1,1 +1,1 @@
-import"../chunks/DsnmJJEf.js";import"../chunks/69_IOA4Y.js";import{p as a}from"../chunks/Cvy3iyk_.js";import{_ as e}from"../chunks/CO9tDTwu-v2.js";function s(t,o){let p=a(o,"data",8);e(t,{get data(){return p()},enableDesktopComposerV2:!0})}export{s as component};
+import"../chunks/DsnmJJEf.js";import"../chunks/69_IOA4Y.js";import{p as a}from"../chunks/Cvy3iyk_.js";import{_ as e}from"../chunks/CO9tDTwu-v3.js";function s(t,o){let p=a(o,"data",8);e(t,{get data(){return p()},enableDesktopComposerV2:!0})}export{s as component};

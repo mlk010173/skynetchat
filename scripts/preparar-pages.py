@@ -30,6 +30,8 @@ for pasta, _, nomes in os.walk(RAIZ):
         # atributos absolutos viram relativos (mesmo resultado nos dois hosts)
         for atributo in ('href="/_app/', 'src="/_app/', 'href="/demo/', 'src="/demo/'):
             s = s.replace(atributo, atributo.replace('="/', '="' + sobe))
+        s = s.replace('"/skynetchat-frontend/', '"' + sobe)
+        s = s.replace('skynetchat-frontend/', '')
         for estatico in ("favicon-32-v2.png", "favicon-96-v2.png", "apple-touch-icon-v2.png",
                          "manifest-v2.json", "skynet-logo-vermelha.png", "pwa-icon-any-192-v2.png"):
             s = s.replace('="/' + estatico, '="' + sobe + estatico)
@@ -37,13 +39,24 @@ for pasta, _, nomes in os.walk(RAIZ):
         # js inline: import() de entrada e base do SvelteKit
         s = s.replace('import("/_app/', 'import(' + MARCA + '+"/_app/')
         s = s.replace('base: ""', 'base: ' + MARCA)
-        # ponte de envio: assume o composer (o app compilado nao dispara sozinho)
-        if "chat-live.js" not in s and re.search(r'src="[\w./]*demo/mock\.js', s):
-            s = re.sub(r'(<script src="([\w./]*)demo/mock\.js[^"]*"></script>)',
-                       r'\1<script src="\2demo/chat-live.js?v=2"></script>', s, count=1)
-        if "guarda.js" not in s:
-            s = re.sub(r'(<script src="([\w./]*)demo/chat-live\.js[^"]*"></script>)',
-                       r'\1<script src="\2demo/guarda.js?v=1"></script>', s, count=1)
+        # cadeia do demo: config -> auth -> mock -> ponte de envio -> guarda
+        def injetar_depois(texto, ancora, src):
+            if src.split("?")[0] in texto:
+                return texto
+            alvo = re.search(r'(<script src="[^"]*' + re.escape(ancora) + r'[^"]*"></script>)', texto)
+            if not alvo:
+                return texto
+            return texto.replace(alvo.group(1), alvo.group(1) + '<script src="' + src + '"></script>', 1)
+
+        if "demo/mock.js" in s and "live-config.js" not in s:
+            s = re.sub(r'(<script src="[^"]*demo/mock\.js[^"]*"></script>)',
+                       r'<script src="' + sobe + r'demo/live-config.js?v=1"></script>'
+                       r'<script src="' + sobe + r'demo/live-auth.js?v=1"></script>\1', s, count=1)
+            s = injetar_depois(s, "demo/mock.js", sobe + "demo/chat-live.js?v=3")
+            s = injetar_depois(s, "demo/chat-live.js", sobe + "demo/guarda.js?v=2")
+        elif "demo/mock.js" in s:
+            s = injetar_depois(s, "demo/mock.js", sobe + "demo/chat-live.js?v=3")
+            s = injetar_depois(s, "demo/chat-live.js", sobe + "demo/guarda.js?v=2")
         if s != antes:
             with open(caminho, "w", encoding="utf-8") as f:
                 f.write(s)
