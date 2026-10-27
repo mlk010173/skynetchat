@@ -22,6 +22,26 @@ const json = (body: unknown, status = 200) =>
 const sseHeaders = { ...CORS, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" };
 const sse = (event: unknown) => new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
 
+// ---- protocolo de streaming do Vercel AI SDK (UI message stream) ----
+const enc = new TextEncoder();
+const tTexto = (t: string) => enc.encode(`0:${JSON.stringify(t)}\n`);
+const tDados = (o: unknown) => enc.encode(`2:${JSON.stringify([o])}\n`);
+const tErro = (m: string) => enc.encode(`3:${JSON.stringify(m)}\n`);
+const tFim = (meta: unknown) => enc.encode(`d:${JSON.stringify({ finishReason: "stop", messageMetadata: meta })}\n`);
+
+const ROTULOS: Record<string, string> = {
+  web_pesquisar: "Pesquisar na web",
+  abrir: "Abrir página",
+  calcular: "Calcular",
+  moeda: "Consultar câmbio",
+  clima: "Consultar clima",
+  hora: "Ver hora",
+  imagem: "Gerar imagem",
+  politicos: "Abrir painel de políticos",
+  memoria: "Consultar memória",
+};
+const rotuloFerramenta = (n: string) => ROTULOS[n] ?? n;
+
 const service = () =>
   createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -424,35 +444,40 @@ Deno.serve(async (req) => {
   // ---- streaming da resposta (SSE) ----
   const stream = new ReadableStream({
     async start(controller) {
+      const legado = new URL(req.url).searchParams.get("protocol") === "legacy";
+      const enviaEtapa = (o: Record<string, unknown>) => controller.enqueue(legado ? sse({ tool: o.ferramenta ?? o.tool, status: o.estado ?? o.status, ...o }) : tDados({ tipo: "etapa", ...o }));
+      const enviaModelo = (modelo: string, tentativas: string[]) => controller.enqueue(legado ? sse({ modelo, tentativas }) : tDados({ tipo: "modelo", modelo, tentativas }));
+      const enviaTexto = (d: string) => controller.enqueue(legado ? sse({ delta: d }) : tTexto(d));
+      const enviaRaciocinio = (t: string) => controller.enqueue(legado ? sse({ raciocinio: t }) : tDados({ tipo: "raciocinio", texto: t }));
+      const enviaErro = (e: string) => controller.enqueue(legado ? sse({ ok: false, error: e }) : tErro(e));
+      const enviaFim = (meta: Record<string, unknown>) => controller.enqueue(legado ? sse({ done: true, ...meta }) : tFim(meta));
       try {
         // Detecção e execução de ferramentas
         const toolsToRun = detectTools(content);
         const toolContexts: string[] = [];
 
         for (const tool of toolsToRun) {
-          controller.enqueue(sse({ tool: tool.name, status: "executando" }));
+          enviaEtapa({ ferramenta: tool.name, titulo: rotuloFerramenta(tool.name), estado: "executando" });
           const toolResult = await callTool(tool);
           const { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
 
           if (toolResult && toolResult.ok) {
-            controller.enqueue(
-              sse({
-                tool: tool.name,
-                status: "concluida",
-                fontes,
-                quando: new Date().toISOString(),
-              })
-            );
+            enviaEtapa({
+              ferramenta: tool.name,
+              titulo: rotuloFerramenta(tool.name),
+              estado: "concluida",
+              fontes,
+              quando: new Date().toISOString(),
+            });
           } else {
-            controller.enqueue(
-              sse({
-                tool: tool.name,
-                status: "falhou",
-                erro: "pesquisa indisponível agora",
-                fontes: [],
-                quando: new Date().toISOString(),
-              })
-            );
+            enviaEtapa({
+              ferramenta: tool.name,
+              titulo: rotuloFerramenta(tool.name),
+              estado: "falhou",
+              erro: "pesquisa indisponível agora",
+              fontes: [],
+              quando: new Date().toISOString(),
+            });
           }
 
           if (contextText) {
@@ -519,8 +544,10 @@ Deno.serve(async (req) => {
           }
         }
 
+        enviaModelo(usado || "auto", tentativasFeitas);
+
         if (!res || !res.body) {
-          controller.enqueue(sse({ ok: false, error: `Nenhum modelo respondeu (${ultimoErro}).` }));
+          enviaErro(`Nenhum modelo respondeu (${ultimoErro}).`);
           controller.close();
           return;
         }
@@ -543,9 +570,11 @@ Deno.serve(async (req) => {
             try {
               const parsed = JSON.parse(payload);
               const delta = parsed?.choices?.[0]?.delta?.content;
+              const pensamento = parsed?.choices?.[0]?.delta?.reasoning_content ?? parsed?.choices?.[0]?.delta?.reasoning;
+              if (pensamento) enviaRaciocinio(String(pensamento));
               if (delta) {
                 full += delta;
-                controller.enqueue(sse({ delta }));
+                enviaTexto(delta);
               }
             } catch { /* ignora fragmentos parciais */ }
           }
@@ -573,21 +602,20 @@ Deno.serve(async (req) => {
               ...(replyEmbedding ? { embedding: replyEmbedding } : {}),
             });
           }
-          controller.enqueue(sse({
-            done: true,
+          enviaFim({
             conversationId: convId,
             model: usado,
             pedido: model,
             auto: rota.auto,
             fallback: !rota.auto && usado !== model,
             tentativas: tentativasFeitas,
-          }));
+          });
         } else {
-          controller.enqueue(sse({ ok: false, error: "O provedor de IA não retornou conteúdo." }));
+          enviaErro("O provedor de IA não retornou conteúdo.");
         }
         controller.close();
       } catch (err) {
-        controller.enqueue(sse({ ok: false, error: "Sem conexão com o provedor de IA." }));
+        enviaErro("Sem conexão com o provedor de IA.");
         controller.close();
       }
     },

@@ -146,7 +146,7 @@
 
   async function conversar(texto, opts) {
     opts = opts || {};
-    var r = await fetch(cfg.url + "/functions/v1/chat", {
+    var r = await fetch(cfg.url + "/functions/v1/chat?protocol=legacy", {
       method: "POST",
       headers: cabecalhos(),
       body: JSON.stringify({ content: texto, model: "auto" })

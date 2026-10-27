@@ -249,6 +249,101 @@
     await carregarConversa(id);
   }
 
+  /* ---- painel de pensamento ao vivo (streaming) ---- */
+  function criarPainel() {
+    var t = garantirThread();
+    var inner = t.querySelector("[data-thread-inner]");
+    var box = document.createElement("div");
+    estilo(box, "align-self:flex-start;max-width:88%;font:12px/1.5 ui-sans-serif,system-ui;color:#9a9a9a");
+    box.setAttribute("data-sky-pensar", "1");
+    var cab = document.createElement("div");
+    estilo(cab, "display:flex;align-items:center;gap:8px;cursor:pointer;color:#dcdcdc;padding:2px 0");
+    var ponto = document.createElement("span");
+    estilo(ponto, "color:#d29922;font-size:9px;line-height:1");
+    ponto.textContent = "\u25CF";
+    var rotulo = document.createElement("span");
+    rotulo.textContent = "Pensando\u2026";
+    var contador = document.createElement("span");
+    estilo(contador, "color:#6e6e6e");
+    cab.appendChild(ponto); cab.appendChild(rotulo); cab.appendChild(contador);
+    var corpo = document.createElement("div");
+    estilo(corpo, "display:block;border-left:1px solid #2b2b2b;margin-left:5px;padding:4px 0 2px 12px;max-height:220px;overflow:auto");
+    box.appendChild(cab); box.appendChild(corpo);
+    inner.appendChild(box);
+    t.scrollTop = t.scrollHeight;
+
+    var etapas = [], raciocinio = null, modelo = "", tentativas = [], aberto = true;
+    function rolar() { t.scrollTop = t.scrollHeight; }
+    function linha(icone, cor, titulo, detalhe) {
+      var d = document.createElement("div");
+      d.style.cssText = "padding:3px 0;display:flex;gap:8px";
+      var i = document.createElement("span"); i.style.color = cor; i.textContent = icone;
+      var c = document.createElement("div");
+      var a = document.createElement("div"); a.style.color = "#dcdcdc"; a.textContent = titulo;
+      c.appendChild(a);
+      if (detalhe) { var b = document.createElement("div"); b.style.color = "#8a8a8a"; b.textContent = detalhe; c.appendChild(b); }
+      d.appendChild(i); d.appendChild(c);
+      corpo.appendChild(d); rolar();
+      return { caixa: d, detalhe: c };
+    }
+    cab.onclick = function () {
+      aberto = !aberto;
+      corpo.style.display = aberto ? "block" : "none";
+    };
+    return {
+      etapa: function (p) {
+        var titulo = p.titulo || p.ferramenta || "Ferramenta";
+        var chave = p.ferramenta || titulo;
+        var atual = null;
+        for (var i = 0; i < etapas.length; i++) if (etapas[i].chave === chave) { atual = etapas[i]; break; }
+        if (p.estado === "executando") {
+          if (!atual) { atual = linha("\u25CB", "#d29922", titulo, "executando\u2026"); atual.chave = chave; etapas.push(atual); }
+          else { atual.caixa.querySelector("span").style.color = "#d29922"; }
+          ponto.style.color = "#d29922";
+          return;
+        }
+        var ok = p.estado !== "falhou";
+        var detalhe = ok ? (p.fontes && p.fontes.length ? "fontes: " + p.fontes.length : "concluida") : (p.erro || "falhou");
+        if (!atual) { atual = linha(ok ? "\u2713" : "\u2715", ok ? "#2ea043" : "#f85149", titulo, detalhe); atual.chave = chave; etapas.push(atual); }
+        else {
+          atual.caixa.querySelector("span").textContent = ok ? "\u2713" : "\u2715";
+          atual.caixa.querySelector("span").style.color = ok ? "#2ea043" : "#f85149";
+          var det = atual.detalhe.querySelector("div");
+          if (!det) { det = document.createElement("div"); det.style.color = "#8a8a8a"; atual.detalhe.appendChild(det); }
+          det.textContent = detalhe;
+        }
+        contador.textContent = "\u00B7 " + etapas.length + " etapa" + (etapas.length > 1 ? "s" : "");
+        rolar();
+      },
+      modelo: function (m, tt) {
+        modelo = m || "auto"; tentativas = tt || [];
+        linha("\u2713", "#2ea043", "Modelo escolhido", modelo + (tentativas.length > 1 ? " \u2190 tentativas: " + tentativas.join(" \u2192 ") : ""));
+        contador.textContent = "\u00B7 " + (etapas.length + 1) + " etapas";
+      },
+      raciocinio: function (txt) {
+        if (!raciocinio) {
+          raciocinio = linha("\u2026", "#58a6ff", "Racioc\u00EDnio", "");
+          raciocinio.texto = "";
+        }
+        raciocinio.texto += txt;
+        var det = raciocinio.detalhe.querySelector("div");
+        if (!det) { det = document.createElement("div"); det.style.cssText = "color:#8a8a8a;white-space:pre-wrap"; raciocinio.detalhe.appendChild(det); }
+        det.textContent = raciocinio.texto.length > 400 ? "\u2026" + raciocinio.texto.slice(-400) : raciocinio.texto;
+        rolar();
+      },
+      finalizar: function (ms, erro) {
+        aberto = false;
+        corpo.style.display = "none";
+        ponto.style.color = erro ? "#f85149" : "#2ea043";
+        var qtd = etapas.length + (modelo ? 1 : 0);
+        rotulo.textContent = "Pensou por " + (ms / 1000).toFixed(1).replace(".", ",") + "s";
+        contador.textContent = "\u00B7 " + qtd + " etapa" + (qtd === 1 ? "" : "s");
+        if (erro) { linha("\u2715", "#f85149", "Falhou", erro); corpo.style.display = "none"; }
+        rolar();
+      }
+    };
+  }
+
   async function enviar() {
     var texto = textoDoComposer();
     if (!texto || enviando) return;
@@ -256,44 +351,46 @@
     limparComposer();
     bolha("user", texto);
     var alvo = bolha("bot", "");
+    var cursor = document.createElement("span");
+    cursor.textContent = "\u258F";
+    cursor.style.cssText = "opacity:.6";
+    alvo.appendChild(cursor);
+    var painel = criarPainel();
     var t0 = Date.now();
-    var corpo = { content: texto, model: "auto" };
+    var corpo = { content: texto, model: "auto", stream: true };
     if (conv()) corpo.conversationId = conv();
-    var headers = cabecalhos();
+    var falha = "";
     try {
-      var r = await fetch(cfg.url + "/functions/v1/chat", { method: "POST", headers: headers, body: JSON.stringify(corpo) });
+      var r = await fetch(cfg.url + "/functions/v1/chat", { method: "POST", headers: cabecalhos(), body: JSON.stringify(corpo) });
       if (!r.ok || !r.body) {
         var err = await r.text().catch(function () { return ""; });
-        alvo.textContent = "Nao consegui falar com o servidor (HTTP " + r.status + ")." + (err ? " " + err.slice(0, 160) : "");
+        falha = "HTTP " + r.status + (err ? " " + err.slice(0, 160) : "");
+        alvo.textContent = "Nao consegui falar com o servidor (" + falha + ").";
+        painel.finalizar(Date.now() - t0, falha);
         return;
       }
-      var reader = r.body.getReader(), dec = new TextDecoder(), buf = "", modelo = "", tentativas = [], completo = "";
-      for (;;) {
-        var x = await reader.read();
-        if (x.done) break;
-        buf += dec.decode(x.value, { stream: true });
-        var partes = buf.split("\n\n");
-        buf = partes.pop() || "";
-        for (var i = 0; i < partes.length; i++) {
-          var linha = partes[i].trim();
-          if (linha.indexOf("data:") !== 0) continue;
-          var dados;
-          try { dados = JSON.parse(linha.slice(5).trim()); } catch (e) { continue; }
-          if (dados.delta) { completo += dados.delta; alvo.textContent = completo; }
-          if (dados.done) {
-            modelo = dados.model || "";
-            tentativas = dados.tentativas || [];
-            if (dados.conversationId) { guardarConv(dados.conversationId); guardarMapa(slugAtual(), dados.conversationId); }
-          }
-          var tEl = document.querySelector("[data-sky-thread]");
-          if (tEl) tEl.scrollTop = tEl.scrollHeight;
-        }
-      }
-      if (!completo) alvo.textContent = "O servidor respondeu vazio. Tente de novo.";
-      passos(Date.now() - t0, modelo, tentativas, "");
-      if (completo && autoFalar && window.SKYVoz) { try { window.SKYVoz.falar(completo, { onProgresso: function () {} }); } catch (e) {} }
+      var meta = {};
+      var completo = await window.SKYStream.ler(r, {
+        onTexto: function (txt) { alvo.textContent = txt; alvo.appendChild(cursor); var t = document.querySelector("[data-sky-thread]"); if (t) t.scrollTop = t.scrollHeight; },
+        onDado: function (p) {
+          if (!p) return;
+          if (p.tipo === "etapa") painel.etapa(p);
+          else if (p.tipo === "modelo") painel.modelo(p.modelo, p.tentativas);
+          else if (p.tipo === "raciocinio") painel.raciocinio(p.texto || "");
+        },
+        onErro: function (m) { falha = m || "erro"; },
+        onFim: function (d) { meta = d || {}; }
+      });
+      if (cursor.parentNode) cursor.remove();
+      if (!completo) alvo.textContent = falha ? "Erro: " + falha : "O servidor respondeu vazio. Tente de novo.";
+      if (meta.conversationId) { guardarConv(meta.conversationId); guardarMapa(slugAtual(), meta.conversationId); }
+      painel.finalizar(Date.now() - t0, falha);
+      if (!falha && completo && autoFalar && window.SKYVoz) { try { window.SKYVoz.falar(completo, { onProgresso: function () {} }); } catch (e) {} }
     } catch (e) {
-      alvo.textContent = "Falha de conexao: " + (e && e.message ? e.message : "erro");
+      if (cursor.parentNode) cursor.remove();
+      falha = e && e.message ? e.message : "erro";
+      alvo.textContent = "Falha de conexao: " + falha;
+      painel.finalizar(Date.now() - t0, falha);
     } finally {
       enviando = false;
     }
