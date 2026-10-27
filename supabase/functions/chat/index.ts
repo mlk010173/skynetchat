@@ -52,7 +52,11 @@ function detectTools(text: string): DetectedTool[] {
       .replace(/\b(me diga|me mostre|me de|me dê|quero saber|preciso saber|por favor)\b/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const consulta = (limpa || text).slice(0, 160);
+    const cortada = limpa
+      .split(/\s+(?:e\s+)?(?:calcule|calcular|quanto\s+e|quanto\s+é|entregue|me\s+de|me\s+dê|me\s+diga|me\s+mostre|e\s+me)\b/i)[0]
+      .replace(/[?.!]+\s*$/, "")
+      .trim();
+    const consulta = (cortada || limpa || text).slice(0, 120);
     tools.push({ name: "web_pesquisar", payload: { consulta } });
   }
 
