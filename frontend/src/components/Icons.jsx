@@ -41,3 +41,6 @@ export const IconInstagram = (props) => (
     <circle cx="16.2" cy="7.8" r=".9" fill="#fff"/>
   </svg>
 );
+
+export const IconClock = make(<><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></>);
+export const IconZap = make(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>);
