@@ -79,8 +79,20 @@
     }).catch(function () { role = "guest"; aplicar(); });
   }
 
+  function rotaBloqueada() {
+    // /dev e /admin nao podem ser abertos direto por quem nao e admin
+    var p = location.pathname.replace(/^\/skynetchat/, "");
+    if (!/^\/(dev|admin)(\/|$)/.test(p)) return false;
+    if (ehAdmin()) return false;
+    var base = location.pathname.indexOf("/skynetchat") === 0 ? "/skynetchat" : "";
+    try { sessionStorage.setItem("sky_rota_bloqueada", "1"); } catch (e) {}
+    location.replace(base + "/chat/");
+    return true;
+  }
+
   function iniciar() {
     carregar();
+    setTimeout(rotaBloqueada, 700);
     try {
       new MutationObserver(function () { if (!ehAdmin()) aplicar(); })
         .observe(document.body, { childList: true, subtree: true });
