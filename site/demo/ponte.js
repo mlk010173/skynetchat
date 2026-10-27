@@ -143,8 +143,8 @@
     for (var i = 0; i < chaves.length; i++) {
       if (chaves[i].slice(-1) === "/" && caminho.indexOf(chaves[i]) === 0) return ROTAS[chaves[i]](u, init);
     }
-    /* qualquer rota nao prevista: responde ok para a tela nao travar */
-    return j({ ok: true, dados: [], motivo: "modo local" });
+    /* rota nao tratada aqui: deixa o mock/backend responder (session, chat, auth...) */
+    return null;
   }
 
   window.fetch = function (entrada, init) {
