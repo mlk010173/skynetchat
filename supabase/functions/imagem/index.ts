@@ -1,6 +1,9 @@
-// imagem — geração de imagem pelo nosso backend (NVIDIA genai / flux).
+// imagem — geração de imagem pelo nosso backend.
+// Cadeia de provedores: NVIDIA genai/flux (principal), Hugging Face Inference (HF_TOKEN)
+// e Pollinations (sem chave) como último recurso, para a ferramenta nunca responder 401/502.
 import { createClient } from "npm:@supabase/supabase-js@2";
 const K = Deno.env.get("OPENAI_API_KEY") ?? "";
+const HF = Deno.env.get("HF_TOKEN") ?? "";
 const SUPA_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const admin = SUPA_URL && SERVICE_ROLE ? createClient(SUPA_URL, SERVICE_ROLE, { auth: { autoRefreshToken: false, persistSession: false } }) : null;
@@ -39,9 +42,52 @@ function corpoDoModelo(id: string, prompt: string, aspecto: string, passos: numb
   return { prompt, mode: "base" };
 }
 
+// Catálogo Hugging Face (texto -> imagem), vários formatos/famílias.
+const HF_IMAGENS: Record<string, string> = {
+  fluxschnell: "black-forest-labs/FLUX.1-schnell",
+  sdxl: "stabilityai/stable-diffusion-xl-base-1.0",
+  kolors: "Kwai-Kolors/Kolors",
+  playground: "playgroundai/playground-v2.5-1024px-aesthetic",
+};
+
+async function porHuggingFace(prompt: string, familia: string): Promise<{ ok: boolean; data_url?: string; modelo?: string }> {
+  if (!HF) return { ok: false };
+  const modelo = HF_IMAGENS[familia] ?? HF_IMAGENS.fluxschnell;
+  try {
+    const r = await fetch(`https://api-inference.huggingface.co/models/${modelo}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${HF}`, "content-type": "application/json", accept: "image/png" },
+      body: JSON.stringify({ inputs: prompt, options: { wait_for_model: true } }),
+      signal: AbortSignal.timeout(120_000),
+    });
+    if (!r.ok) return { ok: false };
+    const tipo = r.headers.get("content-type") ?? "image/png";
+    if (!tipo.startsWith("image/")) return { ok: false };
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.length < 1000) return { ok: false };
+    let bin = ""; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return { ok: true, modelo, data_url: `data:${tipo};base64,${btoa(bin)}` };
+  } catch { return { ok: false }; }
+}
+
+async function porPollinations(prompt: string, aspecto: string): Promise<{ ok: boolean; data_url?: string; modelo?: string }> {
+  const [w, h] = aspecto === "16:9" ? [1280, 720] : aspecto === "9:16" ? [720, 1280] : aspecto === "4:3" ? [1024, 768] : aspecto === "3:4" ? [768, 1024] : [1024, 1024];
+  try {
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&seed=${Math.floor(Math.random() * 1e9)}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(120_000) });
+    if (!r.ok) return { ok: false };
+    const tipo = r.headers.get("content-type") ?? "image/jpeg";
+    if (!tipo.startsWith("image/")) return { ok: false };
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.length < 1000) return { ok: false };
+    let bin = ""; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return { ok: true, modelo: "pollinations/turbo", data_url: `data:${tipo};base64,${btoa(bin)}` };
+  } catch { return { ok: false }; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
-  if (!K) return json(503, { ok: false, error: "chave de imagem nao configurada" });
+  if (!K && !HF) { /* segue para o Pollinations, que nao exige chave */ }
   const quota = await quotaDeImagem(req);
   if (!quota.ok) return json(quota.status, { ok: false, error: quota.error });
   let body: Record<string, unknown> = {};
@@ -53,6 +99,16 @@ Deno.serve(async (req) => {
   const allowedAspects = new Set(["1:1", "16:9", "9:16", "4:3", "3:4"]);
   const aspecto = allowedAspects.has(requestedAspect) ? requestedAspect : "1:1";
   const envio = corpoDoModelo(qual, prompt, aspecto, Math.min(Math.max(Number(body.steps) || 30, 10), 50));
+  const pedido = String(body.provedor ?? body.provider ?? "auto");
+  if (pedido !== "nvidia") {
+    const hf = pedido === "hf" || pedido === "huggingface" ? await porHuggingFace(prompt, String(body.familia ?? "fluxschnell")) : { ok: false } as { ok: boolean; data_url?: string; modelo?: string };
+    if (hf.ok) return json(200, { ok: true, provedor: "huggingface", modelo: hf.modelo, formato: "png", data_url: hf.data_url, disponiveis: Object.keys(HF_IMAGENS) });
+  }
+  if (!K) {
+    const po = await porPollinations(prompt, aspecto);
+    if (po.ok) return json(200, { ok: true, provedor: "pollinations", modelo: po.modelo, formato: "jpeg", data_url: po.data_url });
+    return json(503, { ok: false, error: "nenhum provedor de imagem disponivel" });
+  }
   const r = await fetch(`https://ai.api.nvidia.com/v1/genai/${qual}`, {
     method: "POST",
     headers: { authorization: `Bearer ${K}`, "content-type": "application/json", accept: "application/json" },
@@ -62,10 +118,15 @@ Deno.serve(async (req) => {
   const d = await r.json().catch(() => null);
   const artefato = d?.artifacts?.[0];
   if (!r.ok || !artefato?.base64) {
+    const hf = await porHuggingFace(prompt, String(body.familia ?? "fluxschnell"));
+    if (hf.ok) return json(200, { ok: true, provedor: "huggingface", modelo: hf.modelo, formato: "png", data_url: hf.data_url });
+    const po = await porPollinations(prompt, aspecto);
+    if (po.ok) return json(200, { ok: true, provedor: "pollinations", modelo: po.modelo, formato: "jpeg", data_url: po.data_url });
     return json(502, { ok: false, error: "geracao falhou", detalhe: JSON.stringify(d).slice(0, 220) });
   }
   return json(200, {
     ok: true,
+    provedor: "nvidia",
     modelo: qual,
     disponiveis: Object.keys(MODELOS),
     formato: "jpeg",

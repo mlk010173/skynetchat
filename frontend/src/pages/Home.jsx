@@ -93,13 +93,17 @@ export default function Home() {
     setMessages((prev) => [...prev, { role: "user", text: "Criar imagem: " + imgPrompt.trim() }, { role: "assistant", text: "", image: null, imgBusy: true }]);
     setPlusOpen(false);
     try {
-      const r = await fetch(`${AGENT_URL}/tools/imagem`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: imgPrompt.trim() }) });
-      const d = await r.json();
+      // nunca chamar o Render direto (ele exige AGENT_TOKEN); usa o backend, que tem fila de provedores
+      let d = await api("imagem", { prompt: imgPrompt.trim() }).catch(() => null);
+      if (!d || !d.ok) {
+        const ponte = await api("agent", { tool: "imagem", payload: { prompt: imgPrompt.trim() } }).catch(() => null);
+        if (ponte && ponte.ok) d = ponte;
+      }
       setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
-        if (d?.ok && d.data_url) copy[copy.length - 1] = { ...last, image: d.data_url, text: "Imagem gerada com flux-3:", secs: 0 };
-        else copy[copy.length - 1] = { ...last, text: "> " + (d?.erro || "falha ao gerar imagem"), imgBusy: false };
+        if (d?.ok && d.data_url) copy[copy.length - 1] = { ...last, image: d.data_url, text: `Imagem gerada (${d.provedor || "flux"} · ${d.modelo || "flux-3"})`, secs: 0, imgBusy: false };
+        else copy[copy.length - 1] = { ...last, text: "> " + (d?.error || d?.erro || "falha ao gerar imagem"), imgBusy: false };
         return copy;
       });
     } catch (e) {

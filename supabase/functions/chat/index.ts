@@ -480,7 +480,23 @@ Deno.serve(async (req) => {
 
         for (const tool of toolsToRun) {
           enviaEtapa({ ferramenta: tool.name, titulo: rotuloFerramenta(tool.name), estado: "executando" });
-          const toolResult = await callTool(tool);
+          let toolResult = await callTool(tool);
+          // se o agente do Render falhar (401/cota), a imagem sai pelo backend multiplexado
+          if (tool.name === "imagem" && !toolResult?.ok) {
+            try {
+              const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/imagem`, {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json",
+                  authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({ prompt: tool.payload?.prompt }),
+                signal: AbortSignal.timeout(120_000),
+              });
+              const d = await r.json();
+              if (d?.ok) toolResult = { ok: true, url: d.data_url, provedor: d.provedor, modelo: d.modelo };
+            } catch { /* segue com erro do agente */ }
+          }
           const { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
 
           if (toolResult && toolResult.ok) {
