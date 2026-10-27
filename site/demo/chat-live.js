@@ -446,4 +446,12 @@
   else iniciar();
   normalizarUrl();
   window.addEventListener("popstate", normalizarUrl);
+  try {
+    var empurrar = history.pushState;
+    history.pushState = function () {
+      var r = empurrar.apply(history, arguments);
+      setTimeout(normalizarUrl, 0);
+      return r;
+    };
+  } catch (e) {}
 })();
