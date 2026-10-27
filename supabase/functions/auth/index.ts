@@ -466,6 +466,40 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- chaves da API pública ----
+    if (acao === "apikey-new") {
+      const conta = await contaPorToken(svc, token);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      const bruta = "sk-" + Array.from(crypto.getRandomValues(new Uint8Array(24)))
+        .map((b) => b.toString(16).padStart(2, "0")).join("");
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(bruta));
+      const hash = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      const nome = String(corpo.nome ?? corpo.name ?? "chave").slice(0, 60);
+      const { error } = await svc.from("api_keys").insert({
+        account_id: conta.id, name: nome, prefix: bruta.slice(0, 10), key_hash: hash,
+      });
+      if (error) return json({ ok: false, error: "Não consegui criar a chave." }, 500);
+      return json({ ok: true, chave: bruta, aviso: "Guarde agora: ela não aparece de novo." });
+    }
+
+    if (acao === "apikey-list" && req.method === "GET") {
+      const conta = await contaPorToken(svc, token);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      const { data } = await svc.from("api_keys")
+        .select("id, name, prefix, created_at, last_used, calls, revoked")
+        .eq("account_id", conta.id).order("created_at", { ascending: false });
+      return json({ ok: true, chaves: data ?? [] });
+    }
+
+    if (acao === "apikey-revoke") {
+      const conta = await contaPorToken(svc, token);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      const id = String(corpo.id ?? "").trim();
+      if (!id) return json({ ok: false, error: "Informe o id da chave." }, 400);
+      await svc.from("api_keys").update({ revoked: true }).eq("id", id).eq("account_id", conta.id);
+      return json({ ok: true });
+    }
+
     if (acao === "health") {
       const dia = new Date();
       dia.setUTCHours(0, 0, 0, 0);

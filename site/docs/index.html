@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>API e MCP — SKYNETchat</title>
+<style>
+  :root { --bg:#0a0a0a; --card:#121212; --line:#242424; --dim:#8b8b8b; --txt:#ececec; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:#9cc4ff; text-decoration:none; }
+  .topo { display:flex; gap:14px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; background:rgba(10,10,10,.94); backdrop-filter:blur(8px); }
+  .wrap { max-width:860px; margin:0 auto; padding:26px 18px 80px; }
+  h1 { font-size:24px; margin:0 0 6px; }
+  h2 { font-size:17px; margin:30px 0 10px; }
+  p, li { color:#cfcfcf; }
+  code { background:#181818; border:1px solid #262626; border-radius:6px; padding:1px 6px; font:13px ui-monospace,SFMono-Regular,Menlo,monospace; color:#e6e6e6; }
+  pre { background:#0f0f0f; border:1px solid #242424; border-radius:12px; padding:14px; overflow-x:auto; }
+  pre code { border:0; background:none; padding:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin:14px 0; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid #1e1e1e; vertical-align:top; }
+  th { color:#9a9a9a; font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .m { color:#8b8b8b; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="topo">
+  <strong>SKYNET · API e MCP</strong>
+  <span class="m">v1.0</span>
+  <span style="flex:1"></span>
+  <a href="/voz/">Studio de voz</a>
+  <a href="/chat/">Chat</a>
+</div>
+<div class="wrap">
+  <h1>API pública</h1>
+  <p>Fale com o SKYNET por HTTP ou conecte por MCP. Os modelos ficam no servidor: você pede <code>auto</code> e o roteador escolhe o melhor disponível, com failover por latência.</p>
+
+  <div class="card">
+    <h2 style="margin-top:0">1. Pegar sua chave</h2>
+    <p>Com a sessão da sua conta (o mesmo <code>sky_session</code> do chat):</p>
+    <pre><code>curl -X POST "https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1/auth?action=apikey-new" \
+  -H "apikey: &lt;chave pública do projeto&gt;" \
+  -H "x-session: &lt;token da sua sessão&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"nome":"meu app"}'</code></pre>
+    <p class="m">A chave sai uma única vez, no formato <code>sk-...</code>. Para listar: <code>?action=apikey-list</code> (GET). Para revogar: <code>?action=apikey-revoke</code> com <code>{"id":"..."}</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">2. Rotas</h2>
+    <table>
+      <tr><th>Rota</th><th>O que faz</th></tr>
+      <tr><td><code>GET /api</code></td><td>índice de rotas</td></tr>
+      <tr><td><code>GET /api/me</code></td><td>sua conta, nível e chamadas registradas</td></tr>
+      <tr><td><code>POST /api/chat</code></td><td>pergunta e recebe a resposta completa em JSON</td></tr>
+      <tr><td><code>GET /api/models</code></td><td>saúde e latência dos modelos medidos</td></tr>
+      <tr><td><code>GET /api/conversations</code></td><td>suas conversas</td></tr>
+      <tr><td><code>GET /api/conversations?id=...</code></td><td>mensagens de uma conversa</td></tr>
+      <tr><td><code>GET /status</code></td><td>saúde geral do backend (público)</td></tr>
+    </table>
+    <p class="m">Base: <code>https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1</code>. Autentique com <code>Authorization: Bearer sk-...</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">3. Conversar</h2>
+    <pre><code>curl -X POST ".../functions/v1/api/chat" \
+  -H "Authorization: Bearer sk-..." \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Explique o que é MCP em duas linhas"}'</code></pre>
+    <pre><code>{
+  "ok": true,
+  "answer": "MCP é um protocolo aberto ...",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "conversationId": "9f2c..."
+}</code></pre>
+    <p>Campos aceitos: <code>message</code> (ou <code>messages</code> no formato OpenAI), <code>model</code> (padrão <code>auto</code>), <code>conversation</code> (ID para manter contexto). Limite de 4000 caracteres por mensagem.</p>
+    <p class="m">Quem chama com a chave do dono cai na cota do dono; a cota diária segue o nível da conta.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">4. MCP (Claude Desktop, Cursor, Cline…)</h2>
+    <p>Servidor em <code>/functions/v1/mcp</code>, JSON-RPC 2.0 sobre HTTP, autenticado com a mesma chave.</p>
+    <pre><code>{
+  "mcpServers": {
+    "skynet": {
+      "url": "https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1/mcp",
+      "headers": { "Authorization": "Bearer sk-..." }
+    }
+  }
+}</code></pre>
+    <p>Ferramentas expostas:</p>
+    <ul>
+      <li><code>skynet_perguntar</code> — manda uma pergunta e recebe a resposta</li>
+      <li><code>skynet_modelos</code> — lista modelos e saúde</li>
+      <li><code>skynet_historico</code> — lista suas conversas</li>
+    </ul>
+    <pre><code>curl -X POST ".../functions/v1/mcp" \
+  -H "Authorization: Bearer sk-..." -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+       "params":{"name":"skynet_perguntar","arguments":{"mensagem":"oi"}}}'</code></pre>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">5. Voz</h2>
+    <p>O <a href="/voz/">Studio de Voz</a> transcreve pelo microfone do navegador e fala as respostas com o modelo aberto <b>MMS-TTS</b> rodando na própria máquina do usuário: sem chave, sem custo por áudio. A voz do sistema entra como reserva quando o modelo não carrega.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">6. Monitoramento</h2>
+    <p><code>GET /functions/v1/status</code> devolve banco, funções, modelos medidos, taxa de erro das últimas 24h e contadores. Serve para UptimeRobot, BetterStack ou um cron próprio.</p>
+  </div>
+
+  <p class="m">Nada de chave secreta nesta página: só a chave pública do projeto aparece nos exemplos, e a sua chave nunca é exibida depois de criada.</p>
+</div>
+</body>
+</html>

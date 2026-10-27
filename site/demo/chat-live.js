@@ -89,6 +89,61 @@
   }
 
 
+
+  /* ---------- voz no chat ---------- */
+  var autoFalar = true;
+  function montarVoz() {
+    if (!window.SKYVoz || document.querySelector("[data-sky-voz]")) return;
+    var box = document.createElement("div");
+    box.setAttribute("data-sky-voz", "1");
+    box.style.cssText = "position:fixed;right:14px;bottom:112px;z-index:40;display:flex;gap:8px";
+
+    var mic = document.createElement("button");
+    mic.type = "button"; mic.textContent = "🎙"; mic.title = "Falar em vez de digitar";
+    var fal = document.createElement("button");
+    fal.type = "button"; fal.textContent = "🔊"; fal.title = "Falar as respostas";
+    [mic, fal].forEach(function (b) {
+      b.style.cssText = "width:40px;height:40px;border-radius:50%;border:1px solid #2b2b2b;background:#141414;color:#e6e6e6;font-size:17px;cursor:pointer";
+    });
+
+    var rec = null, ouvindo = false;
+    mic.onclick = function () {
+      if (!window.SKYVoz.suportaMicrofone()) { alert("Este navegador não faz reconhecimento de voz. Use o Chrome ou o Edge."); return; }
+      if (ouvindo) { try { rec && rec.stop(); } catch (e) {} ouvindo = false; mic.style.borderColor = "#2b2b2b"; return; }
+      window.SKYVoz.parar();
+      ouvindo = true; mic.style.borderColor = "#ef4444"; mic.style.background = "#241414";
+      var dito = "";
+      rec = window.SKYVoz.ouvir({
+        onTexto: function (parcial, final) {
+          var ta = document.querySelector("textarea");
+          if (ta) { ta.value = (final || parcial); ta.dispatchEvent(new Event("input", { bubbles: true })); }
+          if (final) dito = final;
+        },
+        onFim: function () {
+          ouvindo = false; mic.style.borderColor = "#2b2b2b"; mic.style.background = "#141414";
+          if (dito && dito.trim()) enviar();
+        },
+        onErro: function () { ouvindo = false; mic.style.borderColor = "#2b2b2b"; mic.style.background = "#141414"; }
+      });
+      if (!rec) { ouvindo = false; mic.style.borderColor = "#2b2b2b"; }
+    };
+
+    fal.onclick = function () {
+      autoFalar = !autoFalar;
+      fal.textContent = autoFalar ? "🔊" : "🔇";
+      fal.style.opacity = autoFalar ? "1" : ".6";
+      if (!autoFalar) window.SKYVoz.parar();
+    };
+
+    var studio = document.createElement("a");
+    studio.href = "/voz/"; studio.textContent = "🎧"; studio.title = "Abrir o Studio de Voz";
+    studio.style.cssText = "width:40px;height:40px;border-radius:50%;border:1px solid #2b2b2b;background:#141414;color:#e6e6e6;font-size:17px;display:grid;place-items:center;text-decoration:none";
+
+    box.appendChild(mic); box.appendChild(fal); box.appendChild(studio);
+    document.body.appendChild(box);
+    window.__skyAutoFalar = function () { return autoFalar; };
+  }
+
   /* ---------- historico ---------- */
   function limparThread() {
     var t = document.querySelector("[data-sky-thread]");
@@ -235,6 +290,7 @@
       }
       if (!completo) alvo.textContent = "O servidor respondeu vazio. Tente de novo.";
       passos(Date.now() - t0, modelo, tentativas, "");
+      if (completo && autoFalar && window.SKYVoz) { try { window.SKYVoz.falar(completo, { onProgresso: function () {} }); } catch (e) {} }
     } catch (e) {
       alvo.textContent = "Falha de conexao: " + (e && e.message ? e.message : "erro");
     } finally {
@@ -266,6 +322,7 @@
 
   function iniciar() {
     interceptar();
+    montarVoz();
     montarHistorico();
     setTimeout(restaurarAoAbrir, 700);
   }

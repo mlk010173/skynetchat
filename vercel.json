@@ -54,6 +54,14 @@
       "destination": "/dev/security/index.html"
     },
     {
+      "source": "/docs",
+      "destination": "/docs/index.html"
+    },
+    {
+      "source": "/docs/(.*)",
+      "destination": "/docs/index.html"
+    },
+    {
       "source": "/indique-ganhe",
       "destination": "/indique-ganhe/index.html"
     },
