@@ -3,7 +3,7 @@
 (function () {
   var cfg = window.__SKY_LIVE || {};
   var estado = { carregado: false, carregando: null, falando: false, audio: null, ctx: null, voz: "neuronal" };
-  var MODELO = "onnx-community/mms-tts-por";
+  var MODELO = "Xenova/mms-tts-por";
 
   function sessao() { try { return localStorage.getItem("sky_session") || ""; } catch (e) { return ""; } }
   function cabecalhos() {
@@ -23,10 +23,11 @@
     if (estado.carregando) return estado.carregando;
     estado.carregando = (async function () {
       try {
-        var tf = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1");
+        var tf = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1/dist/transformers.min.js");
         tf.env.allowLocalModels = false;
         var tts = await tf.pipeline("text-to-speech", MODELO, {
           dtype: "q8",
+          device: "wasm",
           progress_callback: function (p) {
             if (onProgresso && p && p.status === "progress" && p.total) onProgresso(Math.round((p.loaded / p.total) * 100));
           }
