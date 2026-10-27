@@ -7,7 +7,13 @@
   var BASE_PAGINAS = location.pathname.indexOf("/skynetchat") === 0 ? "/skynetchat" : "";
 
   function sessao() { try { return localStorage.getItem("sky_session") || ""; } catch (e) { return ""; } }
-  function slugAtual() { var m = location.pathname.replace(BASE_PAGINAS, "").match(/^\/chat\/([^/?#]+)/); return m ? m[1] : ""; }
+  function convDaUrl() {
+    try {
+      var q = new URLSearchParams(location.search);
+      return (q.get("conv") || q.get("c") || "").trim();
+    } catch (e) { return ""; }
+  }
+  function slugAtual() { var m = location.pathname.replace(BASE_PAGINAS, "").match(/^\/chat\/([^/?#]+)/); return m ? m[1] : convDaUrl(); }
   function mapa() { try { return JSON.parse(localStorage.getItem("sky_conv_map") || "{}"); } catch (e) { return {}; } }
   function guardarMapa(slug, id) { try { if (!slug || !id) return; var m = mapa(); m[slug] = id; localStorage.setItem("sky_conv_map", JSON.stringify(m)); } catch (e) {} }
   function apiBase() { return cfg.url + "/functions/v1/"; }
@@ -243,7 +249,7 @@
 
   async function restaurarAoAbrir() {
     if (!sessao()) return;
-    var id = mapa()[slugAtual()] || conv();
+    var id = mapa()[slugAtual()] || conv() || (convDaUrl() && /^[0-9a-f-]{8,}$/i.test(convDaUrl()) ? convDaUrl() : "");
     if (!id) return;
     guardarConv(id);
     await carregarConversa(id);
