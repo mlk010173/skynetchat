@@ -151,6 +151,9 @@ export async function streamChatAuto({ conversationId, content, model }, handler
     const r = await new Promise((resolve) => {
       streamChat({ conversationId, content, model: tentativa }, {
         onTool: (toolEv) => handlers.onTool?.(toolEv),
+        onImage: (url) => handlers.onImage?.(url),
+        onReason: (txt) => handlers.onReason?.(txt),
+        onModelo: (info) => handlers.onModelo?.(info),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
         onDone: (info) => resolve({ ok: true, info: info ?? {} }),
         onError: (msg, configured) => resolve({ ok: false, erro: msg, configured }),

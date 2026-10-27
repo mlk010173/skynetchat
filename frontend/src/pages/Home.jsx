@@ -426,7 +426,8 @@ export default function Home() {
                         <span>pesquisa indisponível agora</span>
                       </div>
                     )}
-                    {message.image ? <img src={message.image} alt="imagem gerada" className="gen-img" /> : message.text}
+                    {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
+                    {message.image && !message.text ? null : message.text}
                     {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (
                       <div className="tool-fontes">
                         <div className="fontes-chips">
