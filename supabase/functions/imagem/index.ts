@@ -20,7 +20,7 @@ async function quotaDeImagem(req: Request): Promise<{ ok: boolean; status: numbe
 }
 const cors = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "authorization, content-type",
+  "access-control-allow-headers": "authorization, content-type, apikey, x-client-info",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 const json = (c: number, b: unknown) =>
