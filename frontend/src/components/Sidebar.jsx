@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   IconBell, IconBook, IconChat, IconClose, IconCode, IconEdit, IconFolder,
   IconGift, IconHistory, IconImage, IconInstagram, IconLife, IconMoney,
-  IconTheme, IconUser, IconUsers,
+  IconPlug, IconTheme, IconUser, IconUsers,
 } from "./Icons.jsx";
 import { api, getSession } from "../lib.js";
 
@@ -15,6 +15,7 @@ const items = [
   { label: "Imagens", tag: "BETA", desc: "Gere e explore imagens com IA", icon: IconImage },
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
   { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
+  { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
   { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
   { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
   { label: "Conheça o SKYNETchat", desc: "Descubra como funciona o projeto", icon: IconBook },
@@ -24,6 +25,7 @@ const items = [
 
 /** Drawer lateral: interface do site real com backend próprio. */
 export default function Sidebar({ open, onClose, active, onSelect, logged, onLogout, say, onOpenConv, draftFill }) {
+  const navigate = useNavigate();
   const [view, setView] = useState("menu");
   const [convs, setConvs] = useState([]);
 
@@ -47,7 +49,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   useEffect(() => { if (view === "history") loadConvs(); }, [view, loadConvs]);
 
   const soon = (label) => {
-    say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações e Terminal Codex.`);
+    say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações, Terminal Codex e Integrações.`);
     onClose();
   };
 
@@ -111,6 +113,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                   else if (label === "Suporte") { setView("support"); }
                   else if (label === "Conheça o SKYNETchat") { setView("about"); }
                   else if (label === "Codex") { setView("terminal"); }
+                  else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
                   else if (label !== "Fazer login") soon(label);
                 }}
               >
@@ -218,7 +221,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                   </div>
                 )}
 
-                <p style={{ color: "#666", fontSize: "10px", marginTop: "10px", marginBottom: 0 }}>
+                <p style={{ color: "#666", fontSize: "10px", marginTop: "10px", marginBottom: "0" }}>
                   Binários permitidos: ls, cat, grep, find, head, tail, wc, echo, node, python3, git, npm, df, du.
                 </p>
               </div>
@@ -227,19 +230,32 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
         )}
 
         {view === "history" && (
-          <div className="drawer-list">
+          <div className="drawer-list panel">
             <button type="button" className="drawer-item" onClick={() => setView("menu")}>
               <IconClose className="di-icon" />
               <span className="di-text"><span className="di-title">Voltar ao menu</span></span>
             </button>
-            {!logged && <p className="panel-empty">Entre para salvar e revisar conversas.</p>}
-            {logged && convs.length === 0 && <p className="panel-empty">Nenhuma conversa ainda.</p>}
-            {convs.map((c) => (
-              <button key={c.id} type="button" className="drawer-item" onClick={() => { onOpenConv(c.id); }}>
-                <IconHistory className="di-icon" />
-                <span className="di-text"><span className="di-title conv-title">{c.title}</span></span>
-              </button>
-            ))}
+            <p className="panel-title">HISTÓRICO</p>
+            {!logged ? (
+              <p className="panel-msg">Faça login para ver suas conversas salvas.</p>
+            ) : convs.length === 0 ? (
+              <p className="panel-msg">Nenhuma conversa salva ainda.</p>
+            ) : (
+              convs.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="drawer-item"
+                  onClick={() => { onOpenConv?.(c.id); onClose(); }}
+                >
+                  <IconChat className="di-icon" />
+                  <span className="di-text">
+                    <span className="di-title">{c.titulo || "Conversa sem título"}</span>
+                    <small>{new Date(c.updated_at).toLocaleDateString("pt-BR")}</small>
+                  </span>
+                </button>
+              ))
+            )}
           </div>
         )}
 
@@ -251,15 +267,10 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
             </button>
             <p className="panel-title">ATUALIZAÇÕES</p>
             <div className="panel-card">
-              <div className="panel-head"><span>25 DE OUTUBRO</span><b>Admin <i className="mini-badge">ADMIN</i></b></div>
-              <strong className="panel-tag">SKYNETchat</strong>
-              <p>Novo frontend do projeto: interface fiel do SKYNETchat (menu, hero, composer) sobre código próprio.</p>
-              <p>Login por código de 12 dígitos, igual ao modelo real. Chat em streaming, histórico e sessão persistente no Supabase.</p>
-            </div>
-            <div className="panel-card">
-              <div className="panel-head"><span>24 DE OUTUBRO</span><b>Admin <i className="mini-badge">ADMIN</i></b></div>
-              <strong className="panel-tag">SKYNETchat</strong>
-              <p>Memória de longo prazo (vetorial), busca em português no histórico e sincronização em tempo real entre dispositivos.</p>
+              <p className="panel-date">27 DE OUTUBRO DE 2026</p>
+              <div className="panel-head"><b>Central de Integrações e Terminal Real</b></div>
+              <p>Estado real de cada serviço (agente, IA, web, terminal, e-mail, banco) com verificação ao vivo.</p>
+              <p>Terminal seguro Codex disponível para executar comandos reais no container.</p>
             </div>
           </div>
         )}
@@ -270,13 +281,12 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               <IconClose className="di-icon" />
               <span className="di-text"><span className="di-title">Voltar</span></span>
             </button>
-            <p className="panel-title">PROMPTS</p>
+            <p className="panel-title">PROMPTS ÚTEIS</p>
             <div className="panel-card">
-              <div className="panel-head"><span>PROMPTS ÚTEIS</span><b>SKYNETchat</b></div>
               <p>Quanto mais contexto você der, melhores serão as respostas.</p>
-              <button className="prompt-btn" onClick={() => { draftFill("Explique como se eu tivesse 10 anos: "); }}>Explique como se eu tivesse 10 anos: …</button>
-              <button className="prompt-btn" onClick={() => { draftFill("Revisar e melhorar este texto: "); }}>Revisar e melhorar este texto: …</button>
-              <button className="prompt-btn" onClick={() => { draftFill("Resuma em tópicos, em português claro: "); }}>Resuma em tópicos: …</button>
+              <button className="prompt-btn" onClick={() => { draftFill("Explique como se eu tivesse 10 anos: "); onClose(); }}>Explique como se eu tivesse 10 anos: …</button>
+              <button className="prompt-btn" onClick={() => { draftFill("Revisar e melhorar este texto: "); onClose(); }}>Revisar e melhorar este texto: …</button>
+              <button className="prompt-btn" onClick={() => { draftFill("Resuma em tópicos, em português claro: "); onClose(); }}>Resuma em tópicos: …</button>
             </div>
           </div>
         )}

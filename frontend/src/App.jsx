@@ -6,6 +6,7 @@ import Recovery from "./pages/Recovery.jsx";
 import Account from "./pages/Account.jsx";
 import Settings from "./pages/Settings.jsx";
 import Terms from "./pages/Terms.jsx";
+import Integracoes from "./pages/Integracoes.jsx";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/account" element={<Account />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/terms" element={<Terms />} />
+      <Route path="/integracoes" element={<Integracoes />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

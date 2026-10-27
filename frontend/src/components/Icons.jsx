@@ -28,6 +28,10 @@ export const IconClose = make(<><path d="M6 6l12 12M18 6L6 18"/></>);
 export const IconMenu = make(<><path d="M4 8h16M4 16h10"/></>);
 export const IconChevron = make(<><path d="M6 9l6 6 6-6"/></>);
 export const IconWave = make(<><path d="M5 10v4M9 6v12M13 3v18M17 8v8M21 11v2"/></>);
+export const IconPlug = make(<><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8H6a2 2 0 0 0-2 2v3a6 6 0 0 0 12 0v-3a2 2 0 0 0-2-2z"/></>);
+export const IconMail = make(<><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></>);
+export const IconDatabase = make(<><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>);
+export const IconServer = make(<><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></>);
 export const IconInstagram = (props) => (
   <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" {...props}>
     <defs><linearGradient id="ig" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stopColor="#fd5"/><stop offset=".5" stopColor="#ff543e"/><stop offset="1" stopColor="#c837ab"/></linearGradient></defs>
