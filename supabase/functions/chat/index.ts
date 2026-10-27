@@ -47,7 +47,13 @@ function detectTools(text: string): DetectedTool[] {
     /\b(hoje|agora|atual|atualmente|notíc|noticia|noticias|pesquis|pesquisa|pesquise|busca|buscar)\b/i.test(text) ||
     /\bquem [eé]\b/i.test(text)
   ) {
-    tools.push({ name: "web_pesquisar", payload: { consulta: text } });
+    const limpa = text
+      .replace(/^(por favor[, ]*)?(pesquise|pesquisar|pesquisa|busque|buscar|busca|procure|procurar)\s*(na web|no google|pra mim|para mim|e me diga)?[: ]*/i, "")
+      .replace(/\b(me diga|me mostre|me de|me dê|quero saber|preciso saber|por favor)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const consulta = (limpa || text).slice(0, 160);
+    tools.push({ name: "web_pesquisar", payload: { consulta } });
   }
 
   // 3. 'cotação/dólar/euro/BTC' -> moeda
@@ -60,9 +66,9 @@ function detectTools(text: string): DetectedTool[] {
   }
 
   // 4. 'clima/tempo em CIDADE' -> clima
-  if (/\b(clima|tempo)\b/i.test(text)) {
+  if (/\b(clima|tempo|temperatura|calor|frio|chuva)\b/i.test(text)) {
     let cidade = "São Paulo";
-    const cityMatch = text.match(/(?:clima|tempo)\s+(?:em|de|para)?\s*([a-zA-ZáàâãéèêíóôõúçÁÀÂÃÉÈÊÍÓÔÕÚÇ\s]+)/i);
+    const cityMatch = text.match(/(?:clima|tempo|temperatura)\s+(?:em|de|para)?\s*([a-zA-ZáàâãéèêíóôõúçÁÀÂÃÉÈÊÍÓÔÕÚÇ\s]+)/i);
     if (cityMatch && cityMatch[1].trim()) {
       cidade = cityMatch[1].trim().replace(/[?!.,]+$/, "");
     }
