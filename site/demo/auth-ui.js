@@ -5,6 +5,7 @@
 (function () {
   var cfg = window.__SKY_AUTH;
   if (!cfg) return;
+  window.__SKY_UI = "2";
 
   /* ---------- utilidades ---------- */
   function toast(msg, erro) {
