@@ -140,16 +140,22 @@ export async function agentGet(caminho) {
   } catch { return { ok: false, erro: "sem conexao com o agente" }; }
 }
 
-/** Executa uma ferramenta do agente: runTool("web_pesquisar", { consulta }). */
+/** Executa uma ferramenta do agente pelo backend (a ponte `agent` guarda o token). */
 export async function runTool(nome, args = {}) {
-  if (!AGENT_URL) return { ok: false, erro: "agente nao configurado (VITE_AGENT_URL)" };
+  const session = await getSession();
   try {
-    const res = await fetch(`${AGENT_URL}/tools/${nome}`, {
+    const res = await fetch(`${API}/agent`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(args ?? {}),
+      headers: {
+        "Content-Type": "application/json",
+        apikey: SUPA_ANON,
+        ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ tool: nome, payload: args ?? {} }),
     });
-    return await res.json();
+    const data = await res.json().catch(() => null);
+    if (!data) return { ok: false, erro: `Erro do servidor (HTTP ${res.status}).` };
+    return data.ok ? data.resultado : { ok: false, erro: data.error };
   } catch { return { ok: false, erro: "sem conexao com o agente" }; }
 }
 

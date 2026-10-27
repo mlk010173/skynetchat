@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<script src="/demo/live-config.js?v=1"></script>
+		<script src="/demo/mock.js?v=14"></script>
+		<meta charset="utf-8" />
+		<script id="skynet-document-lifecycle" nonce="mWd0zI1Cywh6wi9JV3Yyuw==">
+			// Reload can begin while the chat's JavaScript chunk is still loading.
+			window.__skynetDocumentLeaving = false;
+			const markDocumentLeaving = () => { window.__skynetDocumentLeaving = true; };
+			window.addEventListener('beforeunload', markDocumentLeaving);
+			window.addEventListener('pagehide', markDocumentLeaving);
+			window.addEventListener('pageshow', event => {
+				if (event.persisted) window.__skynetDocumentLeaving = false;
+			});
+		</script>
+		<link rel="icon" type="image/png" href="/favicon-32-v2.png" sizes="32x32" />
+		<link rel="icon" type="image/png" href="/favicon-96-v2.png" sizes="96x96" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" sizes="180x180" />
+		<link rel="manifest" href="/manifest-v2.json" />
+		<meta name="mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="apple-mobile-web-app-title" content="SKYNETchat" />
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="/google-fonts.css" rel="stylesheet">
+		<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content"
+/>
+		<meta name="color-scheme" content="dark" />
+		<meta name="theme-color" content="#070000" />
+		<script>
+			// Informa o tema ao Safari antes da primeira pintura da interface do navegador.
+			(function() {
+				var theme = localStorage.getItem('skynet-theme-bg');
+				var isWhite = theme === 'white';
+				var background = isWhite ? '#ffffff' : theme === 'black' ? '#000000' : '#070000';
+				var scheme = isWhite ? 'light' : 'dark';
+				document.documentElement.style.background = background;
+				document.documentElement.style.colorScheme = scheme;
+				document.querySelector('meta[name="theme-color"]')?.setAttribute('content', background);
+				document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
+				document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+					?.setAttribute('content', isWhite ? 'default' : 'black-translucent');
+			})();
+		</script>
+		<style>
+		  html, body { height: 100%; }
+		  html { background:#0a0a0a; }
+		  body {
+		    margin: 0;
+		    background: #0a0a0a;
+		    background-image: linear-gradient(
+  180deg,
+  #A11111 0%,
+  #751414 10%,
+  #3C0909 31%,
+  #330808 39%,
+  #2E0707 46%,
+  #290606 60%,
+  #260505 67%,
+  #230505 73%,
+  #210404 83%,
+  #1F0404 83%,
+  #1B0303 92%
+);
+
+		    background-attachment: fixed;
+		    color: #fff;
+		    -webkit-font-smoothing: antialiased;
+		    -moz-osx-font-smoothing: grayscale;
+		    font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+		  }
+		</style>
+		<!-- Meta Pixel Code -->
+		<script>
+		!function(f,b,e,v,n,t,s)
+		{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+		n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+		if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+		n.queue=[];t=b.createElement(e);t.async=!0;
+		t.src=v;s=b.getElementsByTagName(e)[0];
+		s.parentNode.insertBefore(t,s)}(window, document,'script',
+		'https://connect.facebook.net/en_US/fbevents.js');
+		fbq('init', '1615978922937762');
+		fbq('track', 'PageView');
+		</script>
+		<noscript><img height="1" width="1" style="display:none"
+		src="https://www.facebook.com/tr?id=1615978922937762&ev=PageView&noscript=1"/></noscript>
+		<!-- End Meta Pixel Code -->
+		
+		<link href="/_app/immutable/assets/0.NDTWPgt7.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/Turnstile.Dnhv9yFl.css" rel="stylesheet">
+		<link href="/_app/immutable/assets/14.C1fs26Z8.css" rel="stylesheet"><!--[--><link rel="icon" type="image/png" href="/favicon-96-v2.png" sizes="96x96"/> <meta name="description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta name="robots" content="index,follow"/> <meta property="og:title" content="SKYNETchat — Chat de IA em português"/> <meta property="og:description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta property="og:type" content="website"/> <link rel="canonical" href="/"/><!--]--><!--[--><meta name="description" content="Transforme a SKYNETchat em uma fonte de renda. Cadastre seu e-mail para saber quando o programa começar." class="svelte-1q32qt6"/> <link rel="canonical" href="/monetize" class="svelte-1q32qt6"/><!--]--><title>Monetize com o SKYNETchat</title>
+	</head>
+	<body data-sveltekit-preload-data="hover">
+		<script>
+			// Aplica tema imediatamente para evitar flash de cor errada
+			(function() {
+				var theme = localStorage.getItem('skynet-theme-bg');
+				var themeColor = document.querySelector('meta[name="theme-color"]');
+				if (theme === 'white') {
+					document.body.classList.add('theme-white');
+					document.body.style.background = '#ffffff';
+					document.body.style.colorScheme = 'light';
+					document.documentElement.style.background = '#ffffff';
+					if (themeColor) themeColor.setAttribute('content', '#ffffff');
+				} else if (theme === 'black') {
+					document.body.classList.add('theme-black');
+					document.body.style.background = '#000000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#000000';
+					if (themeColor) themeColor.setAttribute('content', '#000000');
+				} else if (theme === 'red' || theme === 'dark' || theme === 'classic') {
+					// Legacy themes → treat as red
+					document.body.classList.add('theme-red');
+					document.body.style.background = '#070000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#070000';
+					if (themeColor) themeColor.setAttribute('content', '#070000');
+					localStorage.setItem('skynet-theme-bg', 'red');
+				} else {
+					document.body.classList.add('theme-black');
+					document.body.style.background = '#000000';
+					document.body.style.colorScheme = 'dark';
+					document.documentElement.style.background = '#000000';
+					if (themeColor) themeColor.setAttribute('content', '#000000');
+				}
+			})();
+		</script>
+		<div style="display: contents"><!--[--><!--[--><!----><!----><main class="page-shell svelte-1q32qt6"><div class="ambient ambient-one svelte-1q32qt6"></div> <div class="ambient ambient-two svelte-1q32qt6"></div> <nav class="topbar svelte-1q32qt6" aria-label="Navegação da página"><a class="back-link svelte-1q32qt6" href="/" aria-label="Voltar ao SKYNETchat"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="lucide-icon lucide lucide-arrow-left"><!--[--><!----><path d="m12 19-7-7 7-7"><!----></path><!----><!----><path d="M19 12H5"><!----></path><!----><!--]--><!----><!----><!----><!----></svg><!----> <span class="svelte-1q32qt6">Voltar</span></a></nav> <section class="hero svelte-1q32qt6" aria-labelledby="monetize-title"><div class="eyebrow svelte-1q32qt6"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-icon lucide lucide-sparkles"><!--[--><!----><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"><!----></path><!----><!----><path d="M20 3v4"><!----></path><!----><!----><path d="M22 5h-4"><!----></path><!----><!----><path d="M4 17v2"><!----></path><!----><!----><path d="M5 18H3"><!----></path><!----><!--]--><!----><!----><!----><!----></svg><!----> NOVO PROGRAMA</div> <h1 id="monetize-title" class="svelte-1q32qt6">Monetize com o <span class="svelte-1q32qt6">SKYNETchat</span></h1> <p class="lead svelte-1q32qt6">Uma nova forma de crescer junto com a SKYNETchat está chegando.
+      Cadastre-se para receber os detalhes em primeira mão.</p> <div class="launch-block svelte-1q32qt6" aria-live="polite"><p class="svelte-1q32qt6">Programa disponível</p> <!--[!--><!--[--><div class="countdown-skeleton svelte-1q32qt6" aria-label="Carregando contagem regressiva"></div><!--]--><!--]--></div></section> <section class="interest-card svelte-1q32qt6" aria-labelledby="interest-title"><h2 id="interest-title" class="svelte-1q32qt6">Seja um dos primeiros</h2> <form class="svelte-1q32qt6"><label for="monetize-email" class="svelte-1q32qt6">Coloque seu melhor e-mail</label> <div class="input-row svelte-1q32qt6"><div class="input-wrap svelte-1q32qt6"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="lucide-icon lucide lucide-mail"><!--[--><!----><rect width="20" height="16" x="2" y="4" rx="2"><!----></rect><!----><!----><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"><!----></path><!----><!--]--><!----><!----><!----><!----></svg><!----> <input id="monetize-email" value="" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com" maxlength="254" required class="svelte-1q32qt6"/></div> <button type="submit" disabled class="svelte-1q32qt6"><span class="svelte-1q32qt6">Quero ser avisado</span> <!--[--><svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="lucide-icon lucide lucide-arrow-right"><!--[--><!----><path d="M5 12h14"><!----></path><!----><!----><path d="m12 5 7 7-7 7"><!----></path><!----><!--]--><!----><!----><!----><!----></svg><!--]--></button></div> <div class="turnstile-wrap svelte-1q32qt6"><div class="turnstile-container svelte-uyhs9n"></div><!----></div> <p class="privacy-note svelte-1q32qt6"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide-icon lucide lucide-shield-check"><!--[--><!----><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"><!----></path><!----><!----><path d="m9 12 2 2 4-4"><!----></path><!----><!--]--><!----><!----><!----><!----></svg><!----> Usaremos seu e-mail somente para novidades sobre o programa.</p> <div class="form-status svelte-1q32qt6" aria-live="polite"><!--[!--><!--]--></div></form></section> <!--[!--><!--]--> <footer class="svelte-1q32qt6">© 2026 SKYNETchat</footer></main><!----><!----><!----><!--]--> <!--[!--><!--]--><!--]-->
+			
+			<script>
+(function(){
+  var BASEUSER = {"id":"demo-0000-0000-0000-000000000001","numberId":1,"email":"voce@skynetchat.net","nickname":"Voc\u00ea","isPro":true,"isAdmin":false,"isBetaTester":true,"isInfluencer":false,"hasStripeSubscription":true,"hasStripeCustomer":true,"subscriptionExpired":false,"proExpiresAt":"2030-01-01T00:00:00Z","proPurchasedAt":"2026-01-01T00:00:00Z","currentPlan":"pro","messageQuota":9999,"messagesUsed":12,"memoryEnabled":true,"canPublish":true,"shouldShowRecoveryPrompt":false,"shouldShowInitialFeedback":false,"referralPromoTestMode":false,"recoveryEmail":null};
+  var PERSONAS = {
+    pro:    {},
+    admin:  {isAdmin:true, isBetaTester:true, nickname:"Admin", email:"admin@skynetchat.net"},
+    dev:    {isAdmin:true, isPro:true, isBetaTester:true, nickname:"Dev", email:"dev@skynetchat.net", messageQuota:99999},
+    free:   {isPro:false, isAdmin:false, isBetaTester:false, hasStripeSubscription:false, hasStripeCustomer:false, currentPlan:"free", messageQuota:20, messagesUsed:7, proExpiresAt:null, proPurchasedAt:null},
+    guest:  {nickname:"Convidado", email:"convidado@demo.local", isPro:false, isAdmin:false, isBetaTester:false, hasStripeSubscription:false, hasStripeCustomer:false, currentPlan:"free", messageQuota:5, messagesUsed:2, memoryEnabled:false, canPublish:false, proExpiresAt:null, proPurchasedAt:null},
+    novo:   {nickname:"Novo usu\u00e1rio", email:"novo@demo.local", isPro:false, isAdmin:false, isBetaTester:false, hasStripeSubscription:false, hasStripeCustomer:false, currentPlan:"free", messageQuota:3, messagesUsed:0, memoryEnabled:false, canPublish:false, shouldShowRecoveryPrompt:false, proExpiresAt:null, proPurchasedAt:null},
+    anon:   {nickname:"An\u00f4nimo", email:null, isPro:false, isAdmin:false, isBetaTester:false, hasStripeSubscription:false, hasStripeCustomer:false, currentPlan:"free", messageQuota:3, messagesUsed:0, memoryEnabled:false, canPublish:false, shouldShowRecoveryPrompt:false, proExpiresAt:null, proPurchasedAt:null}
+  };
+  function current(){
+    var qs = new URLSearchParams(location.search);
+    var as = qs.get("as") || localStorage.getItem("sky_persona") || "pro";
+    if(!PERSONAS[as]) as = "pro";
+    var u = JSON.parse(JSON.stringify(BASEUSER));
+    var ov = PERSONAS[as];
+    for(var k in ov) u[k] = ov[k];
+    return {user:u, persona:as, preferredChatVersion:"V4_5", preferredTheme:"black", codeHighlightEnabled:true, preferredCodeTheme:"dark"};
+  }
+  window.__sky_persona = current;
+  window.__sky_setPersona = function(p){ localStorage.setItem("sky_persona", p); location.search = "?as=" + p; };
+  window.__sky_personaName = function(){ return current().persona; };
+  document.addEventListener("DOMContentLoaded", function(){
+    var box = document.createElement("div");
+    box.style.cssText = "position:fixed;z-index:2147483000;right:12px;bottom:12px;background:#141414;border:1px solid #2a1414;border-radius:10px;padding:6px 8px;font:11px ui-monospace,monospace;color:#bbb;display:flex;gap:6px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.6)";
+    box.innerHTML = '<span style="color:#e33">vis\u00e3o</span>';
+    var sel = document.createElement("select");
+    sel.style.cssText = "background:#0a0a0a;color:#ddd;border:1px solid #333;border-radius:6px;padding:2px 4px;font:11px ui-monospace,monospace";
+    ["pro","admin","dev","free","guest","novo","anon"].forEach(function(p){
+      var o = document.createElement("option"); o.value = p; o.textContent = p;
+      if(p === current().persona) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.onchange = function(){ window.__sky_setPersona(sel.value); };
+    box.appendChild(sel);
+    document.body.appendChild(box);
+  });
+})();
+</script><script>
+				{
+					__sveltekit_1qa0434 = {
+						base: ""
+					};
+
+					const element = document.currentScript.parentElement;
+
+					Promise.all([
+						import("/_app/immutable/entry/start.Bfslg5hg.js"),
+						import("/_app/immutable/entry/app.DYE2wR8Q.js")
+					]).then(([kit, app]) => {
+						kit.start(app, element, {
+							node_ids: [0, 14],
+							data: [{type:"data",data:{analyticsEnabled:true},uses:{}},{}],
+							form: null,
+							error: null
+						});
+					});
+				}
+			</script>
+		</div>
+		<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js" defer></script>
+		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+		<script>
+			// Desregistra service workers existentes (não precisamos de offline)
+			if ('serviceWorker' in navigator) {
+				navigator.serviceWorker.getRegistrations().then(regs => {
+					regs.forEach(reg => reg.unregister());
+				});
+				// Limpa caches do service worker
+				if ('caches' in window) {
+					caches.keys().then(keys => {
+						keys.forEach(key => caches.delete(key));
+					});
+				}
+			}
+
+			// Auto-reload em caso de chunk 404 durante deploy (com proteção anti-loop)
+			const RELOAD_KEY = 'chunk-reload-count';
+			const MAX_RELOADS = 2;
+			const RELOAD_WINDOW = 30000; // 30 segundos
+
+			function canReload() {
+				const data = sessionStorage.getItem(RELOAD_KEY);
+				if (!data) return true;
+
+				const { count, firstAttempt } = JSON.parse(data);
+				const elapsed = Date.now() - firstAttempt;
+
+				// Reset contador após 30 segundos
+				if (elapsed > RELOAD_WINDOW) {
+					sessionStorage.removeItem(RELOAD_KEY);
+					return true;
+				}
+
+				// Permite até 2 reloads em 30 segundos
+				return count < MAX_RELOADS;
+			}
+
+			async function handleChunkError() {
+				if (canReload()) {
+					const data = sessionStorage.getItem(RELOAD_KEY);
+					const count = data ? JSON.parse(data).count + 1 : 1;
+					const firstAttempt = data ? JSON.parse(data).firstAttempt : Date.now();
+
+					sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ count, firstAttempt }));
+
+					// LIMPAR TODO O CACHE antes de recarregar
+					try {
+						// 1. Desregistrar service workers
+						if ('serviceWorker' in navigator) {
+							const registrations = await navigator.serviceWorker.getRegistrations();
+							await Promise.all(registrations.map(reg => reg.unregister()));
+						}
+
+						// 2. Limpar todos os caches
+						if ('caches' in window) {
+							const cacheNames = await caches.keys();
+							await Promise.all(cacheNames.map(name => caches.delete(name)));
+						}
+					} catch (e) {
+						console.error('❌ Erro ao limpar cache:', e);
+					}
+
+					// 3. Hard reload com delay maior para PM2 estabilizar
+					// Primeira tentativa: 2s de delay
+					// Segunda tentativa: 5s de delay (PM2 reload pode demorar)
+					const delay = count === 1 ? 2000 : 5000;
+
+					setTimeout(() => {
+						// CRITICAL: Forçar bypass TOTAL do cache HTTP disk
+						// Adicionar timestamp único força navegador a ignorar cache disk
+						const url = new URL(window.location.href);
+						// Remove query params antigos de reload
+						url.searchParams.delete('_r');
+						// Adiciona novo timestamp único
+						url.searchParams.set('_r', Date.now() + '_' + Math.random().toString(36).slice(2));
+
+						// location.replace não mantém histórico e força hard reload
+						window.location.replace(url.href);
+					}, delay);
+				} else {
+					console.error('❌ Muitos erros de chunk. Recarregue manualmente a página.');
+					// Mostra mensagem ao usuário
+					document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0a;color:#fff;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:10px;">🔄 Atualização em andamento</h1><p style="opacity:0.7;">Por favor, recarregue a página manualmente (Ctrl+Shift+R ou Cmd+Shift+R)</p><button onclick="location.reload(true)" style="margin-top:20px;padding:12px 24px;background:#C41E3A;border:none;color:#fff;border-radius:8px;cursor:pointer;font-size:16px;">Recarregar agora</button></div></div>';
+				}
+			}
+
+			window.addEventListener('error', (event) => {
+				if (event.message &&
+					(event.message.includes('Failed to fetch dynamically imported module') ||
+					 event.message.includes('/_app/immutable/'))) {
+					handleChunkError();
+				}
+			}, true);
+
+			window.addEventListener('unhandledrejection', (event) => {
+				if (event.reason?.message &&
+					(event.reason.message.includes('Failed to fetch dynamically imported module') ||
+					 event.reason.message.includes('/_app/immutable/'))) {
+					handleChunkError();
+				}
+			});
+		</script>
+		<!-- Cloudflare Web Analytics -->
+		<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "e98500a2053c4a69acc7587cd93be2ee"}'></script>
+		<!-- End Cloudflare Web Analytics -->
+	</body>
+	</html>

@@ -3,6 +3,7 @@
 // histórico persistido, MEMÓRIA VETORIAL (pgvector) entre conversas,
 // detecção de FERRAMENTAS REAIS e resposta em STREAMING (SSE).
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -124,10 +125,14 @@ async function callTool(tool: DetectedTool) {
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
     const agentTok = Deno.env.get("AGENT_TOKEN");
-    const res = await fetch(`https://skynet-agent.onrender.com/tools/${tool.name}`, {
-      headers: agentTok ? { Authorization: `Bearer ${agentTok}` } : {},
+    const agentUrl = (Deno.env.get("AGENT_URL") ?? "https://skynet-agent.onrender.com").replace(/\/+$/, "");
+    const res = await fetch(`${agentUrl}/tools/${tool.name}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // BUG antigo: dois "headers" no mesmo objeto — o segundo apagava o Authorization.
+      headers: {
+        "Content-Type": "application/json",
+        ...(agentTok ? { Authorization: `Bearer ${agentTok}` } : {}),
+      },
       body: JSON.stringify(tool.payload),
       signal: ctrl.signal,
     });
@@ -259,12 +264,20 @@ Deno.serve(async (req) => {
     }, 503);
   }
   const baseUrl = (Deno.env.get("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/+$/, "");
-  const models = (Deno.env.get("SKYNET_MODELS") ?? "gpt-4o-mini,gpt-4o")
-    .split(",").map((m) => m.trim()).filter(Boolean);
-  const model = body.model && models.includes(body.model) ? body.model : models[0];
 
-  // ---- fallback no servidor: tenta o modelo pedido e, se falhar/travar, os proximos do catalogo ----
-  const fila = [model, ...models.filter((m) => m !== model)].slice(0, 4);
+  // ---- ROTEADOR AUTOMÁTICO ----
+  // O cliente pede "auto" (ou "melhor", ou um id). O servidor monta a fila com base
+  // em saúde, latência e prioridade; se o primeiro falhar ou demorar, o próximo assume.
+  const rota = await pickChain(svc, body.model);
+  if (!rota.fila.length) {
+    return json({
+      ok: false,
+      configured: false,
+      error: "Nenhum modelo disponível: configure OPENAI_API_KEY (ou SKYNET_PROVIDERS/SKYNET_CATALOG).",
+    }, 503);
+  }
+  const fila = rota.fila;
+  const model = (body.model ?? "auto").trim() || "auto";
 
   // ---- memória vetorial: embeddings da mensagem (melhor esforço) ----
   const embedModel = Deno.env.get("SKYNET_EMBEDDING_MODEL") ?? "text-embedding-3-small";
@@ -411,32 +424,55 @@ Deno.serve(async (req) => {
           llmMessages[0] = { role: "system", content: systemParts.join("\n\n") };
         }
 
+        // Abre o stream em um modelo específico, resolvendo provedor e chave.
+        const abrir = async (mid: string, provider: string, sinal: AbortSignal) => {
+          const prov = providerOf(provider);
+          if (!prov) throw new Error(`provedor ${provider} sem chave`);
+          const r = await fetch(`${prov.baseUrl}/chat/completions`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${Deno.env.get(prov.keyEnv)!}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: mid,
+              messages: llmMessages,
+              max_tokens: 1024,
+              temperature: 0.7,
+              stream: true,
+            }),
+            signal: sinal,
+          });
+          if (!r.ok || !r.body) throw new Error(`HTTP ${r.status}`);
+          return r;
+        };
+
         let res: Response | null = null;
-        let usado = model;
+        let usado = "";
         let ultimoErro = "";
-        for (const cand of fila) {
+        const tentativasFeitas: string[] = [];
+
+        // Fila sequencial com timeout curto no primeiro: modelo lento perde a vez.
+        for (let i = 0; i < fila.length; i++) {
+          const cand = fila[i];
           const ctrl = new AbortController();
-          const timer = setTimeout(() => ctrl.abort(), 25000);
+          const limite = i === 0 ? Math.min(timeoutMs(), Math.max(hedgeMs() * 2, 8000)) : timeoutMs();
+          const timer = setTimeout(() => ctrl.abort(), limite);
+          const t0 = Date.now();
           try {
-            const r = await fetch(`${baseUrl}/chat/completions`, {
-              method: "POST",
-              headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                model: cand,
-                messages: llmMessages,
-                max_tokens: 1024,
-                temperature: 0.7,
-                stream: true,
-              }),
-              signal: ctrl.signal,
-            });
+            const r = await abrir(cand.id, cand.provider, ctrl.signal);
             clearTimeout(timer);
-            if (r.ok && r.body) { res = r; usado = cand; break; }
-            ultimoErro = `HTTP ${r.status} em ${cand}`;
+            res = r;
+            usado = cand.id;
+            tentativasFeitas.push(cand.id);
+            registrar(svc, cand.id, true, Date.now() - t0);
+            break;
           } catch (e) {
             clearTimeout(timer);
-            const nome = (e as Error)?.name === "AbortError" ? "timeout" : "sem conexao";
-            ultimoErro = `${nome} em ${cand}`;
+            const nome = (e as Error)?.name === "AbortError" ? "timeout" : ((e as Error)?.message ?? "falha");
+            ultimoErro = `${nome} em ${cand.id}`;
+            tentativasFeitas.push(`${cand.id}!`);
+            registrar(svc, cand.id, false, Date.now() - t0, nome);
           }
         }
 
@@ -494,7 +530,15 @@ Deno.serve(async (req) => {
               ...(replyEmbedding ? { embedding: replyEmbedding } : {}),
             });
           }
-          controller.enqueue(sse({ done: true, conversationId: convId, model: usado, fallback: usado !== model }));
+          controller.enqueue(sse({
+            done: true,
+            conversationId: convId,
+            model: usado,
+            pedido: model,
+            auto: rota.auto,
+            fallback: !rota.auto && usado !== model,
+            tentativas: tentativasFeitas,
+          }));
         } else {
           controller.enqueue(sse({ ok: false, error: "O provedor de IA não retornou conteúdo." }));
         }

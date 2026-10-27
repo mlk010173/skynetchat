@@ -34,6 +34,8 @@ export function parseModels(value) {
 }
 
 export function labelFor(id) {
+  if (id === "auto") return "Automático";
+  if (id === "melhor") return "Máxima qualidade";
   if (INFO[id]) return INFO[id].short;
   const tail = String(id).split("/").pop() ?? String(id);
   return tail.replace(/[-_]/g, " ").slice(0, 28);

@@ -47,6 +47,11 @@ export default function Home() {
   const [plusOpen, setPlusOpen] = useState(false);
   const [limitHit, setLimitHit] = useState(false);
   const [tools, setTools] = useState([]);
+  const [modoPro, setModoPro] = useState(() => localStorage.getItem("skynet-modo") === "4.5pro");
+  const [agenteAberto, setAgenteAberto] = useState(null); // "terminal" | "ferramentas" | null
+  const [cmd, setCmd] = useState("");
+  const [saida, setSaida] = useState([]);
+  const [cmdBusy, setCmdBusy] = useState(false);
   const [imgPrompt, setImgPrompt] = useState(null);
   const [imgBusy, setImgBusy] = useState(false);
   const [editIdx, setEditIdx] = useState(-1);
@@ -131,9 +136,41 @@ export default function Home() {
 
   useEffect(() => {
     api("models").then((d) => {
-      if (d.ok && Array.isArray(d.models) && d.models.length) { setModels(d.models); setModelList(d.models); setModel(String(d.models[0])); }
+      if (d.ok && Array.isArray(d.models) && d.models.length) {
+        // o backend manda objetos {id,label,tier}; o seletor trabalha com ids.
+        const ids = ["auto", "melhor", ...d.models.map((m) => (typeof m === "string" ? m : m.id))];
+        const unicos = [...new Set(ids)];
+        setModels(unicos);
+        setModelList(unicos);
+        setModel("auto"); // o roteador do servidor escolhe o melhor modelo na hora
+      }
     }).catch(() => {});
   }, []);
+
+  const alternarModo = useCallback(() => {
+    setModoPro((v) => {
+      const novo = !v;
+      localStorage.setItem("skynet-modo", novo ? "4.5pro" : "4.0");
+      if (!novo) setAgenteAberto(null);
+      say(novo ? "Modo agente 4.5 PRO ativado: ferramentas liberadas." : "Voltou para o 4.0 (só chat).");
+      return novo;
+    });
+  }, [say]);
+
+  const rodarComando = useCallback(async (event) => {
+    event?.preventDefault();
+    const texto = cmd.trim();
+    if (!texto || cmdBusy) return;
+    setCmd("");
+    setCmdBusy(true);
+    setSaida((prev) => [...prev, { tipo: "cmd", texto }]);
+    const r = await runTool("terminal", { cmd: texto });
+    const corpo = r?.ok
+      ? [r.stdout, r.stderr].filter(Boolean).join("\n") || `(saída vazia, código ${r.codigo ?? 0})`
+      : `erro: ${r?.erro ?? r?.error ?? "falhou"}`;
+    setSaida((prev) => [...prev, { tipo: "out", texto: corpo }]);
+    setCmdBusy(false);
+  }, [cmd, cmdBusy]);
 
   useEffect(() => {
     stageRef.current?.scrollTo({ top: stageRef.current.scrollHeight });
