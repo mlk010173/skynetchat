@@ -176,13 +176,15 @@
         entrar(c ? c.value : "");
         return;
       }
-      if ((t.indexOf("CRIAR CONTA") === 0 || t.indexOf("CADASTRAR") === 0) && rota.indexOf("/sign-up") === 0) {
+      var criaConta = t.indexOf("CRIAR CONTA") === 0 || t.indexOf("CADASTRAR") === 0 ||
+        /GERAR C[OÓ]DIGO/.test(t) || /GERAR ACESSO/.test(t) || /CRIAR MINHA CONTA/.test(t);
+      if (criaConta && rota.indexOf("/sign-up") === 0) {
         ev.preventDefault();
         ev.stopPropagation();
         criarConta();
         return;
       }
-      if (/ENVIAR|RECUPERAR|SOLICITAR/.test(t) && rota.indexOf("/recovery") === 0) {
+      if (/ENVIAR|RECUPERAR|SOLICITAR|GERAR/.test(t) && rota.indexOf("/recovery") === 0) {
         var mail = campoEmail();
         if (mail) {
           ev.preventDefault();
