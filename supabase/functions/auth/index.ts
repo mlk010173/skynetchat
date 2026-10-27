@@ -8,6 +8,13 @@
 //  - e-mail sai por fila com limite diário do plano free (5/dia por conta);
 //  - respostas de recuperação são sempre neutras (não revelam se o e-mail existe).
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  firestoreAtivo,
+  firestoreContar,
+  firestoreGravar,
+  turnstileAtivo,
+  turnstileValidar,
+} from "../_shared/firebase.ts";
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -182,6 +189,10 @@ Deno.serve(async (req) => {
 
     // ---- cadastro: gera a conta e devolve o código uma única vez ----
     if (acao === "access-code") {
+      const ipCliente = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
+      const captcha = await turnstileValidar(String(corpo.turnstileToken ?? corpo.cfToken ?? ""), ipCliente);
+      if (!captcha.ok) return json({ ok: false, error: "Verificação de segurança falhou. Recarregue e tente de novo." }, 403);
+
       const codigo = novoCodigo();
       const enc = await cifrar(normaliza(codigo));
       const { data: conta, error } = await svc.from("accounts").insert({
@@ -197,8 +208,17 @@ Deno.serve(async (req) => {
         account_id: conta.id,
         ua: (req.headers.get("user-agent") ?? "").slice(0, 200),
       });
+      // espelho opcional no Firestore (silencioso se o Firebase não estiver configurado)
+      await firestoreGravar("accounts", conta.id, {
+        code_hint: normaliza(codigo).slice(-4),
+        tier: String(conta.tier ?? "free"),
+        created_at: String(conta.created_at ?? new Date().toISOString()),
+        source: "skynetchat",
+      });
+
       return json({
         ok: true,
+        firestore: firestoreAtivo(),
         code: codigo,
         account: publico(conta),
         session: sess,
@@ -234,6 +254,10 @@ Deno.serve(async (req) => {
         last_seen: new Date().toISOString(),
         visits: Number(alvo.visits ?? 0) + 1,
       }).eq("id", alvo.id);
+      await firestoreGravar("accounts", String(alvo.id), {
+        last_seen: new Date().toISOString(),
+        tier: String(alvo.tier ?? "free"),
+      });
       return json({ ok: true, user: publico(alvo), session: sess });
     }
 
@@ -344,6 +368,9 @@ Deno.serve(async (req) => {
         na_fila: fila ?? 0,
         cifra: (Deno.env.get("CODE_ENC_KEY") ?? "") ? "AES-256-GCM" : "desligada",
         email_configurado: !!(Deno.env.get("RESEND_API_KEY") ?? ""),
+        firestore: firestoreAtivo() ? "ligado" : "desligado",
+        contas_firestore: await firestoreContar("accounts"),
+        turnstile: turnstileAtivo() ? "ligado" : "desligado",
       });
     }
 
