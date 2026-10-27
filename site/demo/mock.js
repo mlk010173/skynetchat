@@ -61,12 +61,25 @@
     var body = {};
     try { body = JSON.parse((init && init.body) || "{}"); } catch (e) {}
     var msgs = body.messages || body.history || [];
+    /* o app manda no formato do AI SDK: {role, parts:[{type:"text",text}]} */
+    function textoDe(m) {
+      if (!m) return "";
+      if (typeof m.content === "string") return m.content;
+      if (Array.isArray(m.parts)) {
+        return m.parts.filter(function (pt) { return pt && pt.type === "text"; })
+          .map(function (pt) { return pt.text || ""; }).join("\n");
+      }
+      return m.text || "";
+    }
     var ultimo = "";
     for (var i = msgs.length - 1; i >= 0; i--) {
       var m = msgs[i] || {};
-      if (m.role === "user") { ultimo = m.content || m.text || ""; break; }
+      if (m.role === "user") {
+        var t = textoDe(m).trim();
+        if (t) { ultimo = t; break; }
+      }
     }
-    if (!ultimo) ultimo = body.content || body.message || body.prompt || "";
+    if (!ultimo) ultimo = textoDe(body) || body.content || body.message || body.prompt || "";
     var conv = null;
     try { conv = sessionStorage.getItem("sky_conv"); } catch (e) {}
 
