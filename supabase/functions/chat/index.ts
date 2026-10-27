@@ -99,6 +99,12 @@ function detectTools(text: string): DetectedTool[] {
     }
   }
 
+  // 7. terminal: SOMENTE com comando explicito "/terminal ..." ou "executar comando ..."
+  const termMatch = text.match(/^\s*\/terminal\s+(.+)$/i) || text.match(/\bexecut(?:e|ar)\s+(?:o\s+)?comando\s+(.+)$/i);
+  if (termMatch) {
+    tools.unshift({ name: "terminal", payload: { cmd: termMatch[1].trim() } });
+  }
+
   // Máximo 2 ferramentas por mensagem, sem duplicatas pelo nome da ferramenta
   const uniqueTools: DetectedTool[] = [];
   const seenNames = new Set<string>();
@@ -117,7 +123,9 @@ async function callTool(tool: DetectedTool) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
+    const agentTok = Deno.env.get("AGENT_TOKEN");
     const res = await fetch(`https://skynet-agent.onrender.com/tools/${tool.name}`, {
+      headers: agentTok ? { Authorization: `Bearer ${agentTok}` } : {},
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(tool.payload),
