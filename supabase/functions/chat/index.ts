@@ -284,7 +284,8 @@ Deno.serve(async (req) => {
   }
 
   // ---- visitante sem conta: limite por IP para não virar torneira de graça ----
-  if (!conta && !(await liberar("chat-anon:" + ipDe(req), 8, "hour"))) return respostaLimite();
+  // conta por codigo (x-session) OU usuario logado no Supabase nao entram no limite anonimo por IP
+  if (!conta && !userId && !(await liberar("chat-anon:" + ipDe(req), 8, "hour"))) return respostaLimite();
 
   // ---- corpo ----
   let body: { conversationId?: string; content?: string; model?: string };
@@ -475,6 +476,7 @@ Deno.serve(async (req) => {
         // Detecção e execução de ferramentas
         const toolsToRun = detectTools(content);
         const toolContexts: string[] = [];
+        let imagemEntregue = false;
 
         for (const tool of toolsToRun) {
           enviaEtapa({ ferramenta: tool.name, titulo: rotuloFerramenta(tool.name), estado: "executando" });
@@ -483,6 +485,7 @@ Deno.serve(async (req) => {
 
           if (toolResult && toolResult.ok) {
             if (tool.name === "imagem") {
+              imagemEntregue = true;
               const url = String(toolResult.url ?? toolResult.imagem ?? toolResult.data_url ?? toolResult.dataUrl ?? "");
               if (url) controller.enqueue(legado ? sse({ imagem: url }) : tDados({ tipo: "imagem", url }));
             }
@@ -507,6 +510,13 @@ Deno.serve(async (req) => {
           if (contextText) {
             toolContexts.push(contextText);
           }
+        }
+
+        if (imagemEntregue) {
+          enviaTexto("Pronto, a imagem foi gerada. Se quiser outra versão, é só pedir.");
+          enviaFim({ conversationId: convId, model: "imagem", pedido: model, auto: true, fallback: false, tentativas: [] });
+          controller.close();
+          return;
         }
 
         if (toolContexts.length > 0) {
