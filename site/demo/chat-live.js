@@ -189,7 +189,7 @@
     } catch (e) { return false; }
   }
 
-  function montarHistorico() {
+  function montarHistorico() { return;
     if (document.querySelector("[data-sky-hist-btn]")) return;
     var b = document.createElement("button");
     b.setAttribute("data-sky-hist-btn", "1");
@@ -324,7 +324,7 @@
   function iniciar() {
     interceptar();
     montarVoz();
-    montarHistorico();
+    /* painel flutuante de historico removido: o site usa o item da barra lateral */
     setTimeout(restaurarAoAbrir, 700);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);

@@ -46,20 +46,12 @@
       "destination": "/checkout/index.html"
     },
     {
-      "source": "/dev/security",
-      "destination": "/dev/security/index.html"
+      "source": "/dev-panel",
+      "destination": "/dev-panel/index.html"
     },
     {
-      "source": "/dev/security/(.*)",
-      "destination": "/dev/security/index.html"
-    },
-    {
-      "source": "/docs",
-      "destination": "/docs/index.html"
-    },
-    {
-      "source": "/docs/(.*)",
-      "destination": "/docs/index.html"
+      "source": "/dev-panel/(.*)",
+      "destination": "/dev-panel/index.html"
     },
     {
       "source": "/indique-ganhe",
@@ -140,6 +132,10 @@
     {
       "source": "/voz/(.*)",
       "destination": "/voz/index.html"
+    },
+    {
+      "source": "/dev/security",
+      "destination": "/dev/security/index.html"
     },
     {
       "source": "/(.*)",

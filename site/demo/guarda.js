@@ -50,38 +50,6 @@
     }
   }, true);
 
-  /* seletor de visoes (pro/admin/dev/free/guest/novo/anon): admin so para admin */
-  function travarVisoes() {
-    var selects = document.querySelectorAll("select");
-    for (var i = 0; i < selects.length; i++) {
-      var sel = selects[i];
-      var ops = [].slice.call(sel.options || []);
-      var temPersona = false;
-      for (var j = 0; j < ops.length; j++) {
-        if (/^(pro|admin|dev|free|guest|convidado|novo|anon)$/i.test((ops[j].textContent || "").trim())) { temPersona = true; break; }
-      }
-      if (!temPersona) continue;
-      if (!ehAdmin()) {
-        for (var k = 0; k < ops.length; k++) {
-          if (/^admin$/i.test((ops[k].textContent || "").trim())) { ops[k].disabled = true; ops[k].hidden = true; }
-        }
-      }
-      if (sel.getAttribute("data-sky-visao") === "1") continue;
-      sel.setAttribute("data-sky-visao", "1");
-      sel.addEventListener("change", function () {
-        var escolhida = (this.selectedOptions && this.selectedOptions[0] && this.selectedOptions[0].textContent || "").trim();
-        if (/^admin$/i.test(escolhida) && !ehAdmin()) {
-          var conv = null;
-          for (var m = 0; m < this.options.length; m++) {
-            if (/^(guest|convidado)$/i.test((this.options[m].textContent || "").trim())) { conv = this.options[m]; break; }
-          }
-          if (conv) this.value = conv.value;
-          aviso(role === "guest" ? "Entre na sua conta para ver a visao de administrador." : "Visao de administrador: so para administradores.");
-        }
-      });
-    }
-  }
-
   function persona(mock) {
     if (!conta) return mock;
     var c = conta;
@@ -99,7 +67,7 @@
 
   function carregar() {
     var s = sessao();
-    if (!s || !cfg.url) { role = "guest"; aplicar(); travarVisoes(); return; }
+    if (!s || !cfg.url) { role = "guest"; aplicar(); return; }
     fetch(cfg.url + "/functions/v1/auth?action=session", {
       headers: { apikey: cfg.key, Authorization: "Bearer " + cfg.key, "x-session": s }
     }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
@@ -107,8 +75,8 @@
       if (!c || !c.id) { role = "guest"; conta = null; }
       else { conta = c; role = c.role === "admin" ? "admin" : "user"; }
       if (conta) window.__sky_persona = function () { return persona(null); };
-      aplicar(); travarVisoes();
-    }).catch(function () { role = "guest"; aplicar(); travarVisoes(); });
+      aplicar();
+    }).catch(function () { role = "guest"; aplicar(); });
   }
 
   function rotaBloqueada() {
@@ -126,11 +94,10 @@
     carregar();
     setTimeout(rotaBloqueada, 700);
     try {
-      new MutationObserver(function () { if (!ehAdmin()) { aplicar(); travarVisoes(); } })
+      new MutationObserver(function () { if (!ehAdmin()) aplicar(); })
         .observe(document.body, { childList: true, subtree: true });
     } catch (e) {}
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar); else iniciar();
-  setTimeout(travarVisoes, 2500);
-  setTimeout(travarVisoes, 6000);
+
 })();
