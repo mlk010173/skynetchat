@@ -12,10 +12,10 @@
 				if (event.persisted) window.__skynetDocumentLeaving = false;
 			});
 		</script>
-		<link rel="icon" type="image/png" href="/favicon-32-v2.png" sizes="32x32" />
-		<link rel="icon" type="image/png" href="/favicon-96-v2.png" sizes="96x96" />
-		<link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" sizes="180x180" />
-		<link rel="manifest" href="/manifest-v2.json" />
+		<link rel="icon" type="image/png" href="../favicon-32-v2.png" sizes="32x32" />
+		<link rel="icon" type="image/png" href="../favicon-96-v2.png" sizes="96x96" />
+		<link rel="apple-touch-icon" href="../apple-touch-icon-v2.png" sizes="180x180" />
+		<link rel="manifest" href="../manifest-v2.json" />
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -89,8 +89,8 @@
 		src="https://www.facebook.com/tr?id=1615978922937762&ev=PageView&noscript=1"/></noscript>
 		<!-- End Meta Pixel Code -->
 		
-		<link href="./_app/immutable/assets/0.NDTWPgt7.css" rel="stylesheet">
-		<link href="./_app/immutable/assets/6.H17nOn57.css" rel="stylesheet"><!--[--><link rel="icon" type="image/png" href="/favicon-96-v2.png" sizes="96x96"/> <meta name="description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta name="robots" content="index,follow"/> <meta property="og:title" content="SKYNETchat — Chat de IA em português"/> <meta property="og:description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta property="og:type" content="website"/> <link rel="canonical" href="https://skynetchat.net/"/><!--]--><!--[--><!--]--><title>Programa de Afiliados para Influenciadores - SKYNETchat</title>
+		<link href="../_app/immutable/assets/0.NDTWPgt7.css" rel="stylesheet">
+		<link href="../_app/immutable/assets/6.H17nOn57.css" rel="stylesheet"><!--[--><link rel="icon" type="image/png" href="../favicon-96-v2.png" sizes="96x96"/> <meta name="description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta name="robots" content="index,follow"/> <meta property="og:title" content="SKYNETchat — Chat de IA em português"/> <meta property="og:description" content="Converse com SKYNETchat. Respostas rápidas em PT‑BR e experiência simples para o dia a dia. Skynet Chat IA ."/> <meta property="og:type" content="website"/> <link rel="canonical" href="https://skynetchat.net/"/><!--]--><!--[--><!--]--><title>Programa de Afiliados para Influenciadores - SKYNETchat</title>
 	<script src="../demo/live-config.js?v=1"></script><script src="../demo/live-auth.js?v=1"></script><script src="../demo/mock.js?v=21"></script><script src="../demo/chat-live.js?v=4"></script><script src="../demo/guarda.js?v=3"></script></head>
 	<body data-sveltekit-preload-data="hover">
 		<script>
@@ -132,14 +132,14 @@
 			<script>
 				{
 					__sveltekit_16qvxx4 = {
-						base: new URL(".", location).pathname.slice(0, -1)
+						base: new URL("../", location).pathname.slice(0, -1)
 					};
 
 					const element = document.currentScript.parentElement;
 
 					Promise.all([
-						import("./_app/immutable/entry/start.CpDt2yvw.js"),
-						import("./_app/immutable/entry/app.dLm3Cmjx.js")
+						import("../_app/immutable/entry/start.CpDt2yvw.js"),
+						import("../_app/immutable/entry/app.dLm3Cmjx.js")
 					]).then(([kit, app]) => {
 						kit.start(app, element, {
 							node_ids: [0, 6],
@@ -241,7 +241,7 @@
 			window.addEventListener('error', (event) => {
 				if (event.message &&
 					(event.message.includes('Failed to fetch dynamically imported module') ||
-					 event.message.includes('/_app/immutable/'))) {
+					 event.message.includes('../_app/immutable/'))) {
 					handleChunkError();
 				}
 			}, true);
@@ -249,7 +249,7 @@
 			window.addEventListener('unhandledrejection', (event) => {
 				if (event.reason?.message &&
 					(event.reason.message.includes('Failed to fetch dynamically imported module') ||
-					 event.reason.message.includes('/_app/immutable/'))) {
+					 event.reason.message.includes('../_app/immutable/'))) {
 					handleChunkError();
 				}
 			});

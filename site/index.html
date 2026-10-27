@@ -247,7 +247,7 @@
 			window.addEventListener('error', (event) => {
 				if (event.message &&
 					(event.message.includes('Failed to fetch dynamically imported module') ||
-					 event.message.includes('/_app/immutable/'))) {
+					 event.message.includes('./_app/immutable/'))) {
 					handleChunkError();
 				}
 			}, true);
@@ -255,7 +255,7 @@
 			window.addEventListener('unhandledrejection', (event) => {
 				if (event.reason?.message &&
 					(event.reason.message.includes('Failed to fetch dynamically imported module') ||
-					 event.reason.message.includes('/_app/immutable/'))) {
+					 event.reason.message.includes('./_app/immutable/'))) {
 					handleChunkError();
 				}
 			});
