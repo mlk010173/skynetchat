@@ -1,0 +1,15 @@
+/* Ajustes de interface: nada de sobreposição entre composer, mensagens e painéis. */
+html { --form-space: 104px; }
+body { overflow-x: hidden; }
+/* a lista de mensagens nunca fica debaixo do composer */
+main { scroll-padding-bottom: 140px; }
+[class*="messages"], [class*="chat-scroll"], [data-sky-mensagens] { padding-bottom: 8px; }
+/* painel de pensamento flui no texto, sem cobrir bolhas */
+[data-sky-pensar] { position: relative !important; margin: 6px 0 10px !important; }
+/* avisos e botões flutuantes não se empilham no mesmo canto do composer */
+#skynet-guarda-aviso { bottom: 128px !important; }
+/* barra lateral e cabeçalho acima do conteúdo, nunca por cima do composer */
+aside, header, nav { z-index: 30; }
+/* imagens e markdown longos não estouram a largura da bolha */
+[class*="message"] img, [class*="bubble"] img, .prose img { max-width: 100%; height: auto; }
+[class*="message"] pre, .prose pre { overflow-x: auto; max-width: 100%; }
