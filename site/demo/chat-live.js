@@ -16,6 +16,17 @@
   function slugAtual() { var m = location.pathname.replace(BASE_PAGINAS, "").match(/^\/chat\/([^/?#]+)/); return m ? m[1] : convDaUrl(); }
   function mapa() { try { return JSON.parse(localStorage.getItem("sky_conv_map") || "{}"); } catch (e) { return {}; } }
   function guardarMapa(slug, id) { try { if (!slug || !id) return; var m = mapa(); m[slug] = id; localStorage.setItem("sky_conv_map", JSON.stringify(m)); } catch (e) {} }
+  /* No GitHub Pages nao existe rewrite: /chat/<slug> num reload vira 404.
+     Depois que o app navega para o slug, troca a URL pela forma estatica. */
+  function normalizarUrl() {
+    var m = location.pathname.replace(BASE_PAGINAS, "").match(/^\/chat\/([^/?#]+)/);
+    if (!m) return;
+    var slug = m[1];
+    var extra = conv() && conv() === slug ? "" : "";
+    try {
+      history.replaceState(null, "", BASE_PAGINAS + "/chat/?conv=" + encodeURIComponent(slug) + extra);
+    } catch (e) {}
+  }
   function apiBase() { return cfg.url + "/functions/v1/"; }
   function cabecalhos() {
     var h = { "Content-Type": "application/json", "apikey": cfg.key, "Authorization": "Bearer " + cfg.key };
@@ -433,4 +444,6 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", iniciar);
   else iniciar();
+  normalizarUrl();
+  window.addEventListener("popstate", normalizarUrl);
 })();
