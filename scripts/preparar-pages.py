@@ -37,6 +37,10 @@ for pasta, _, nomes in os.walk(RAIZ):
         # js inline: import() de entrada e base do SvelteKit
         s = s.replace('import("/_app/', 'import(' + MARCA + '+"/_app/')
         s = s.replace('base: ""', 'base: ' + MARCA)
+        # ponte de envio: assume o composer (o app compilado nao dispara sozinho)
+        if "chat-live.js" not in s and re.search(r'src="[\w./]*demo/mock\.js', s):
+            s = re.sub(r'(<script src="([\w./]*)demo/mock\.js[^"]*"></script>)',
+                       r'\1<script src="\2demo/chat-live.js?v=2"></script>', s, count=1)
         if s != antes:
             with open(caminho, "w", encoding="utf-8") as f:
                 f.write(s)

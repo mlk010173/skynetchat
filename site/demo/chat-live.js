@@ -4,9 +4,10 @@
   var cfg = window.__SKY_LIVE || {};
   if (!cfg.url || !cfg.key) return;
   var enviando = false;
+  var BASE_PAGINAS = location.pathname.indexOf("/skynetchat") === 0 ? "/skynetchat" : "";
 
   function sessao() { try { return localStorage.getItem("sky_session") || ""; } catch (e) { return ""; } }
-  function slugAtual() { var m = location.pathname.match(/^\/chat\/([^/?#]+)/); return m ? m[1] : ""; }
+  function slugAtual() { var m = location.pathname.replace(BASE_PAGINAS, "").match(/^\/chat\/([^/?#]+)/); return m ? m[1] : ""; }
   function mapa() { try { return JSON.parse(localStorage.getItem("sky_conv_map") || "{}"); } catch (e) { return {}; } }
   function guardarMapa(slug, id) { try { if (!slug || !id) return; var m = mapa(); m[slug] = id; localStorage.setItem("sky_conv_map", JSON.stringify(m)); } catch (e) {} }
   function apiBase() { return cfg.url + "/functions/v1/"; }
