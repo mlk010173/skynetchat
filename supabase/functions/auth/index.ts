@@ -123,7 +123,7 @@ async function enviarEmail(
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: Deno.env.get("MAIL_FROM") ?? "SKYNETchat <suporte@skynetchat.net>",
+        from: Deno.env.get("MAIL_FROM") ?? Deno.env.get("RESEND_FROM") ?? "SKYNETchat <suporte@skynetchat.net>",
         to: [opts.to],
         subject: opts.subject,
         text: opts.body,
