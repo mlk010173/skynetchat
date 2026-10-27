@@ -157,20 +157,6 @@ export default function Home() {
     });
   }, [say]);
 
-  const rodarComando = useCallback(async (event) => {
-    event?.preventDefault();
-    const texto = cmd.trim();
-    if (!texto || cmdBusy) return;
-    setCmd("");
-    setCmdBusy(true);
-    setSaida((prev) => [...prev, { tipo: "cmd", texto }]);
-    const r = await runTool("terminal", { cmd: texto });
-    const corpo = r?.ok
-      ? [r.stdout, r.stderr].filter(Boolean).join("\n") || `(saída vazia, código ${r.codigo ?? 0})`
-      : `erro: ${r?.erro ?? r?.error ?? "falhou"}`;
-    setSaida((prev) => [...prev, { tipo: "out", texto: corpo }]);
-    setCmdBusy(false);
-  }, [cmd, cmdBusy]);
 
   useEffect(() => {
     stageRef.current?.scrollTo({ top: stageRef.current.scrollHeight });

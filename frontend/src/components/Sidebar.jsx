@@ -5,6 +5,7 @@ import {
   IconGift, IconHistory, IconImage, IconInstagram, IconLife, IconMoney,
   IconTheme, IconUser, IconUsers,
 } from "./Icons.jsx";
+import { api, getSession } from "../lib.js";
 
 const items = [
   { label: "Novo chat", desc: "Inicie uma conversa do zero", icon: IconEdit },
@@ -13,7 +14,7 @@ const items = [
   { label: "Atualizações", desc: "Veja as novidades e melhorias recentes", icon: IconBell },
   { label: "Imagens", tag: "BETA", desc: "Gere e explore imagens com IA", icon: IconImage },
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
-  { label: "Codex", tag: "NOVO", desc: "Código, scripts e automação", icon: IconCode },
+  { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
   { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
   { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
   { label: "Conheça o SKYNETchat", desc: "Descubra como funciona o projeto", icon: IconBook },
@@ -26,9 +27,14 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   const [view, setView] = useState("menu");
   const [convs, setConvs] = useState([]);
 
+  // Estados do Terminal
+  const [termCmd, setTermCmd] = useState("ls");
+  const [termStatus, setTermStatus] = useState("idle"); // idle, executando, concluido, erro
+  const [termOutput, setTermOutput] = useState("");
+  const [termMs, setTermMs] = useState(null);
+
   const loadConvs = useCallback(async () => {
     if (!logged) { setConvs([]); return; }
-    const { getSession } = await import("../lib.js");
     const session = await getSession();
     if (!session) return;
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/conversations`, {
@@ -41,8 +47,38 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   useEffect(() => { if (view === "history") loadConvs(); }, [view, loadConvs]);
 
   const soon = (label) => {
-    say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações e Codex.`);
+    say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações e Terminal Codex.`);
     onClose();
+  };
+
+  const executarComando = async (e) => {
+    if (e) e.preventDefault();
+    const cmd = termCmd.trim();
+    if (!cmd || termStatus === "executando") return;
+
+    setTermStatus("executando");
+    setTermOutput("");
+    setTermMs(null);
+
+    try {
+      const data = await api("agent-exec", {
+        method: "POST",
+        body: { command: cmd },
+      });
+
+      if (data.ok) {
+        setTermStatus("concluido");
+        setTermOutput(data.stdout || data.stderr || "(comando executado sem saída)");
+        setTermMs(data.ms ?? null);
+      } else {
+        setTermStatus("erro");
+        setTermOutput(data.error || data.stderr || "Erro ao executar o comando.");
+        setTermMs(data.ms ?? null);
+      }
+    } catch (err) {
+      setTermStatus("erro");
+      setTermOutput(String(err?.message || err));
+    }
   };
 
   return (
@@ -74,7 +110,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                   else if (label === "Prompts") { setView("prompts"); }
                   else if (label === "Suporte") { setView("support"); }
                   else if (label === "Conheça o SKYNETchat") { setView("about"); }
-                  else if (label === "Codex") { draftFill("Você é um engenheiro de software sênior. Escreva o código para: "); }
+                  else if (label === "Codex") { setView("terminal"); }
                   else if (label !== "Fazer login") soon(label);
                 }}
               >
@@ -89,6 +125,105 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               </button>
             ))}
           </nav>
+        )}
+
+        {view === "terminal" && (
+          <div className="drawer-list panel">
+            <button type="button" className="drawer-item" onClick={() => setView("menu")}>
+              <IconClose className="di-icon" />
+              <span className="di-text"><span className="di-title">Voltar ao menu</span></span>
+            </button>
+            <p className="panel-title">TERMINAL REAL</p>
+
+            {!logged ? (
+              <div className="panel-card">
+                <p style={{ color: "#a3a3a3", fontSize: "13px", margin: 0 }}>
+                  Requer login para acessar o Terminal Real. Por favor, entre na sua conta para executar comandos.
+                </p>
+              </div>
+            ) : (
+              <div className="panel-card">
+                <form onSubmit={executarComando}>
+                  <div style={{ marginBottom: "10px" }}>
+                    <label style={{ fontSize: "11px", color: "#8d8d8d", display: "block", marginBottom: "4px" }}>Comando:</label>
+                    <input
+                      type="text"
+                      value={termCmd}
+                      onChange={(e) => setTermCmd(e.target.value)}
+                      placeholder="Ex: ls, cat README.md, python3 --version..."
+                      disabled={termStatus === "executando"}
+                      style={{
+                        width: "100%",
+                        background: "#050505",
+                        border: "1px solid #282828",
+                        borderRadius: "6px",
+                        padding: "8px 10px",
+                        color: "#fff",
+                        fontFamily: "var(--mono)",
+                        fontSize: "13px",
+                        boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={termStatus === "executando" || !termCmd.trim()}
+                    style={{
+                      width: "100%",
+                      background: termStatus === "executando" ? "#444" : "var(--red)",
+                      color: "#000",
+                      fontWeight: "bold",
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "8px 12px",
+                      cursor: termStatus === "executando" ? "not-allowed" : "pointer",
+                      fontFamily: "var(--mono)",
+                      fontSize: "12px",
+                      marginBottom: "12px"
+                    }}
+                  >
+                    {termStatus === "executando" ? "Executando..." : "Executar"}
+                  </button>
+                </form>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontSize: "12px" }}>
+                  <span style={{ color: "#8d8d8d" }}>Estado:</span>
+                  {termStatus === "idle" && <span style={{ color: "#666" }}>Aguardando</span>}
+                  {termStatus === "executando" && <span style={{ color: "#eab308", fontWeight: "bold" }}>● Executando...</span>}
+                  {termStatus === "concluido" && <span style={{ color: "#22c55e", fontWeight: "bold" }}>✓ Concluído {termMs !== null ? `(${termMs}ms)` : ""}</span>}
+                  {termStatus === "erro" && <span style={{ color: "#ef4444", fontWeight: "bold" }}>✕ Erro</span>}
+                </div>
+
+                {termOutput !== "" && (
+                  <div>
+                    <span style={{ fontSize: "11px", color: "#8d8d8d", display: "block", marginBottom: "4px" }}>Saída:</span>
+                    <pre
+                      style={{
+                        background: "#050505",
+                        border: "1px solid #1f1f1f",
+                        borderRadius: "6px",
+                        padding: "10px",
+                        color: termStatus === "erro" ? "#f87171" : "#a3e635",
+                        fontFamily: "var(--mono)",
+                        fontSize: "11px",
+                        maxHeight: "220px",
+                        overflowY: "auto",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                        margin: 0
+                      }}
+                    >
+                      {termOutput}
+                    </pre>
+                  </div>
+                )}
+
+                <p style={{ color: "#666", fontSize: "10px", marginTop: "10px", marginBottom: 0 }}>
+                  Binários permitidos: ls, cat, grep, find, head, tail, wc, echo, node, python3, git, npm, df, du.
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {view === "history" && (
@@ -181,35 +316,18 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
         <div className="drawer-foot">
           {logged ? (
             <>
-            <p className="account-line">Conta ativa · acesso por código</p>
-            <button type="button" className="drawer-item plain" onClick={() => { onClose(); onLogout(); }}>
-              <IconUser className="di-icon" />
-              <span className="di-title">Sair da conta</span>
-            </button>
+              <p className="account-line">Conta ativa · acesso por código</p>
+              <button type="button" className="drawer-item plain" onClick={() => { onClose(); onLogout(); }}>
+                <IconUser className="di-icon" />
+                <span className="di-title">Sair da conta</span>
+              </button>
             </>
           ) : (
             <Link to="/login" className="drawer-item plain" onClick={onClose}>
               <IconUser className="di-icon" />
-              <span className="di-title">Fazer login</span>
+              <span className="di-title">Fazer login / Criar conta</span>
             </Link>
           )}
-          <button type="button" className="theme-row" onClick={() => {
-            const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
-            document.documentElement.dataset.theme = next;
-            localStorage.setItem("skynet-theme-bg", next);
-          }}>
-            <IconTheme className="di-icon accent" />
-            <span>Tema de fundo</span>
-            <em className="pill" data-theme-pill>BLACK</em>
-          </button>
-          <a className="insta" href="https://instagram.com/skynetchat.ai" target="_blank" rel="noopener noreferrer">
-            <IconInstagram />
-            <span>
-              <strong>Nos siga no Instagram</strong>
-              <small>@skynetchat.ai</small>
-            </span>
-          </a>
-          <Link to="/terms" className="terms" onClick={onClose}>Termos de Serviço</Link>
         </div>
       </aside>
     </>
