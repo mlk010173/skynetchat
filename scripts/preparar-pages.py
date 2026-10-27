@@ -1,42 +1,42 @@
 #!/usr/bin/env python3
-"""Ajusta a pasta site/ para ser servida em /skynetchat/ (GitHub Pages de projeto).
+"""Deixa o espelho (site/) funcionar tanto na raiz (Vercel) quanto em /skynetchat/ (GitHub Pages).
 
-O espelho do SKYNETchat foi compilado assumindo a raiz do dominio, entao todo
-caminho absoluto ("/_app/...", "/demo/...") precisa ganhar o prefixo do projeto.
-Idempotente: rodar duas vezes nao duplica o prefixo.
+O SvelteKit foi compilado com base "" (raiz do dominio). Aqui cada pagina passa a
+calcular a base pelo caminho: /skynetchat quando servida no GitHub Pages, "" na Vercel.
+Idsempotente: rodar de novo nao duplica nada.
 """
 import os
 import re
 import sys
 
 RAIZ = sys.argv[1] if len(sys.argv) > 1 else "site"
-PREFIXO = "/skynetchat"
-EXTENSOES = (".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".map")
+MARCA = "window.__SKY_BASE"
+INJECAO = '<script>window.__SKY_BASE=location.pathname.indexOf("/skynetchat")===0?"/skynetchat":"";</script>'
 
-# 1) caminhos de modulo do SvelteKit e do demo, em qualquer contexto (aspas, template, import)
-MODULO = re.compile(r"(?<!skynetchat)/_app/")
-DEMO = re.compile(r"(?<!skynetchat)/demo/")
-# 2) atributos src/href que apontam para arquivos na raiz (favicon, manifest...)
-ATRIBUTO = re.compile(r'(\s(?:src|href)=")/(?!skynetchat/|/)')
-
-total = arquivos = 0
+total = 0
 for pasta, _, nomes in os.walk(RAIZ):
     for nome in nomes:
-        if not nome.endswith(EXTENSOES):
+        if not nome.endswith(".html"):
             continue
         caminho = os.path.join(pasta, nome)
-        try:
-            with open(caminho, encoding="utf-8") as f:
-                antes = f.read()
-        except (UnicodeDecodeError, OSError):
-            continue
-        depois = MODULO.sub(PREFIXO + "/_app/", antes)
-        depois = DEMO.sub(PREFIXO + "/demo/", depois)
-        if nome.endswith(".html"):
-            depois = ATRIBUTO.sub(r"\g<1>" + PREFIXO + "/", depois)
-        if depois != antes:
+        rel = os.path.relpath(pasta, RAIZ)
+        nivel = 0 if rel == "." else len(rel.split(os.sep))
+        sobe = "../" * nivel
+        with open(caminho, encoding="utf-8") as f:
+            s = f.read()
+        antes = s
+        if MARCA not in s:
+            s = re.sub(r"(<head[^>]*>)", r"\1" + INJECAO, s, count=1)
+        # atributos absolutos viram relativos (mesmo resultado nos dois hosts)
+        for atributo in ('href="/_app/', 'src="/_app/', 'href="/demo/', 'src="/demo/'):
+            s = s.replace(atributo, atributo.replace('="/', '="' + sobe))
+        for estatico in ("favicon-32-v2.png", "favicon-96-v2.png", "apple-touch-icon-v2.png", "manifest-v2.json"):
+            s = s.replace('="/' + estatico, '="' + sobe + estatico)
+        # js inline: import() de entrada e base do SvelteKit
+        s = s.replace('import("/_app/', 'import(' + MARCA + '+"/_app/')
+        s = s.replace('base: ""', 'base: ' + MARCA)
+        if s != antes:
             with open(caminho, "w", encoding="utf-8") as f:
-                f.write(depois)
-            arquivos += 1
-            total += len(antes) - len(depois) and 1
-print(f"preparar-pages: {arquivos} arquivos ajustados para {PREFIXO}/")
+                f.write(s)
+            total += 1
+print(f"preparar-pages: {total} paginas ajustadas (base dupla Pages/Vercel)")

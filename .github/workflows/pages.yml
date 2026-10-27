@@ -23,8 +23,6 @@ jobs:
         run: |
           npm install
           npm test
-      - name: Ajustar caminhos para /skynetchat (Pages de projeto)
-        run: python3 scripts/preparar-pages.py site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
