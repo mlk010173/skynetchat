@@ -32,6 +32,18 @@
 
   var ROTAS = {};
 
+  /* sessao: normaliza o codigo de 12 digitos antes de entregar ao mock/backend */
+  ROTAS["/api/session"] = function (u, init) {
+    var metodo = (init && init.method || "GET").toUpperCase();
+    if (metodo !== "POST") return undefined;
+    var d = ler(init);
+    var bruto = d.numberId || d.code || d.codigo || d.accessCode || d.numero || "";
+    var codigo = String(bruto).replace(/\D/g, "").slice(0, 12);
+    if (codigo.length < 12) return j({ ok: false, error: "Informe os 12 digitos do codigo." }, 400);
+    var corpo = JSON.stringify({ code: codigo, numberId: codigo });
+    return anterior("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: corpo });
+  };
+
   /* conversas */
   ROTAS["/api/conversations"] = function (u, init) {
     var m = (init && init.method || "GET").toUpperCase();
