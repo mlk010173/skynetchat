@@ -16,8 +16,9 @@
         buf = linhas.pop() || "";
         for (var j = 0; j < linhas.length; j++) {
           var l = linhas[j].trim();
-          if (!l || l.indexOf("data:") !== 0) continue;
-          var corpo = l.slice(5).trim();
+          if (!l) continue;
+          /* AI SDK manda o quadro cru (0:, 2:, d:); o formato antigo manda "data: {...}" */
+          var corpo = l.indexOf("data:") === 0 ? l.slice(5).trim() : l;
           if (!corpo || corpo === "[DONE]") continue;
           var frame = /^([0-9a-d]):([\s\S]*)$/.exec(corpo);
           if (frame) {
