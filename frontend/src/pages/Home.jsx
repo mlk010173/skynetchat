@@ -94,9 +94,9 @@ export default function Home() {
     setPlusOpen(false);
     try {
       // nunca chamar o Render direto (ele exige AGENT_TOKEN); usa o backend, que tem fila de provedores
-      let d = await api("imagem", { prompt: imgPrompt.trim() }).catch(() => null);
+      let d = await api("imagem", { method: "POST", body: { prompt: imgPrompt.trim() } }).catch(() => null);
       if (!d || !d.ok) {
-        const ponte = await api("agent", { tool: "imagem", payload: { prompt: imgPrompt.trim() } }).catch(() => null);
+        const ponte = await api("agent", { method: "POST", body: { tool: "imagem", payload: { prompt: imgPrompt.trim() } } }).catch(() => null);
         if (ponte && ponte.ok) d = ponte;
       }
       setMessages((prev) => {
