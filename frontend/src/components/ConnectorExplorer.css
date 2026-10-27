@@ -1,0 +1,29 @@
+.skynet-connector-explorer{color:var(--text,#f4f4f5);font:inherit;width:100%;min-width:0}
+.skynet-connector-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:22px}
+.skynet-connector-eyebrow{margin:0 0 7px;color:#fb7185;font-size:.72rem;font-weight:800;letter-spacing:.16em}
+.skynet-connector-header h2{font-size:clamp(1.35rem,2.5vw,2rem);line-height:1.15;margin:0;font-weight:800}
+.skynet-connector-subtitle{color:var(--muted,#a1a1aa);font-size:.91rem;line-height:1.6;max-width:760px;margin:10px 0 0}
+.skynet-connector-close{border:1px solid var(--border,#333);background:transparent;color:inherit;border-radius:12px;width:40px;height:40px;font-size:1.65rem;cursor:pointer}
+.skynet-connector-filters{display:grid;grid-template-columns:minmax(160px,1fr) minmax(180px,.65fr) auto;gap:10px;margin-bottom:15px}
+.skynet-connector-search input,.skynet-connector-filters select{box-sizing:border-box;width:100%;min-height:44px;background:var(--panel,#161619);border:1px solid var(--border,#333);border-radius:11px;color:inherit;padding:10px 12px;font:inherit}
+.skynet-connector-check{display:flex;gap:8px;align-items:center;padding:0 9px;color:var(--muted,#a1a1aa);font-size:.85rem;white-space:nowrap}
+.skynet-connector-check input{accent-color:#fb7185}
+.skynet-connector-resultline{display:flex;justify-content:space-between;align-items:center;gap:10px;color:var(--muted,#a1a1aa);font-size:.8rem;margin:8px 0 12px}
+.skynet-connector-count{display:inline-flex;align-items:center;gap:6px}.skynet-connector-count i{width:7px;height:7px;border-radius:50%;background:#a1a1aa}
+.skynet-connector-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,240px),1fr));gap:12px}
+.skynet-connector-card{min-width:0;border:1px solid var(--border,#303036);background:var(--panel,#151518);border-radius:15px;padding:15px;display:flex;flex-direction:column;gap:8px;transition:border-color .16s ease,transform .16s ease}
+.skynet-connector-card:hover{border-color:#fb7185;transform:translateY(-2px)}
+.skynet-connector-cardtop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.skynet-connector-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,#fb7185 15%,transparent);border:1px solid color-mix(in srgb,#fb7185 25%,transparent);font-weight:800;color:#fda4af}
+.skynet-connector-status{font-size:.62rem;font-weight:800;letter-spacing:.08em;border:1px solid var(--border,#34343a);border-radius:999px;padding:5px 7px;color:var(--muted,#a1a1aa)}
+.skynet-connector-card h3{font-size:1rem;margin:3px 0 0;overflow-wrap:anywhere}
+.skynet-connector-category{font-size:.77rem;color:var(--muted,#a1a1aa);margin:0;line-height:1.35}
+.skynet-connector-mode{font-size:.78rem;margin:0;color:var(--text,#f4f4f5)}
+.skynet-connector-cardbottom{margin-top:auto;padding-top:12px;border-top:1px solid var(--border,#2b2b30);display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.71rem;color:var(--muted,#a1a1aa)}
+.skynet-connector-cardbottom a{color:#fda4af;text-decoration:none;font-weight:700;white-space:nowrap}.skynet-connector-cardbottom a:hover{text-decoration:underline}
+.skynet-connector-no-docs{font-size:.68rem}
+.skynet-connector-empty{grid-column:1/-1;padding:28px 14px;text-align:center;color:var(--muted,#a1a1aa);border:1px dashed var(--border,#333);border-radius:14px}
+.skynet-connector-disclaimer{font-size:.78rem;line-height:1.6;color:var(--muted,#a1a1aa);margin:18px 0 0;padding:12px 14px;border-left:2px solid #fb7185;background:color-mix(in srgb,#fb7185 5%,transparent)}
+.skynet-connector-explorer .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:700px){.skynet-connector-filters{grid-template-columns:1fr}.skynet-connector-check{min-height:30px;padding-left:2px}.skynet-connector-resultline{align-items:flex-start;flex-direction:column}.skynet-connector-header{gap:8px}}
+@media(prefers-reduced-motion:reduce){.skynet-connector-card{transition:none}.skynet-connector-card:hover{transform:none}}
