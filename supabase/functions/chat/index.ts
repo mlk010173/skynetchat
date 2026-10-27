@@ -285,7 +285,7 @@ Deno.serve(async (req) => {
 
   // ---- visitante sem conta: limite por IP para não virar torneira de graça ----
   // conta por codigo (x-session) OU usuario logado no Supabase nao entram no limite anonimo por IP
-  if (!conta && !userId && !(await liberar("chat-anon:" + ipDe(req), 8, "hour"))) return respostaLimite();
+  if (!conta && !userId && !(await liberar("chat-anon:" + ipDe(req), ANON_LIMIT, "hour"))) return respostaLimite();
 
   // ---- corpo ----
   let body: { conversationId?: string; content?: string; model?: string };
