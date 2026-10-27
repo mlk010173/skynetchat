@@ -4,10 +4,11 @@
 // detecção de FERRAMENTAS REAIS e resposta em STREAMING (SSE).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
+import { contaDaSessao, consumirMensagem, memoriasDaConta } from "../_shared/sessao.ts";
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -215,6 +216,7 @@ Deno.serve(async (req) => {
 
   // ---- autenticação (opcional: modo anônimo) ----
   let userId: string | null = null;
+  let contaId: string | null = null;
   let nickname: string | null = null;
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ") && authHeader.length > 30) {
@@ -222,6 +224,22 @@ Deno.serve(async (req) => {
     userId = data?.user?.id ?? null;
     const nick = data?.user?.user_metadata?.nickname;
     if (typeof nick === "string" && nick.trim()) nickname = nick.trim().slice(0, 40);
+  }
+
+  // ---- sessão do login por código secreto ----
+  const conta = await contaDaSessao(req);
+  if (conta) {
+    contaId = conta.id;
+    userId = conta.id;
+    if (conta.nickname) nickname = conta.nickname;
+    const uso = await consumirMensagem(conta.id, conta.role === "admin" ? "admin" : conta.tier);
+    if (!uso.pode) {
+      return json({
+        ok: false,
+        error: `Você usou as ${uso.limite} mensagens de hoje do plano ${conta.tier}. Amanhã libera de novo` +
+          (conta.tier === "free" ? " ou ative o PRO para conversar sem esperar." : "."),
+      }, 429);
+    }
   }
 
   // ---- corpo ----
@@ -296,7 +314,7 @@ Deno.serve(async (req) => {
 
   // ---- memórias relevantes de OUTRAS conversas (pgvector) ----
   let memories: string[] = [];
-  if (userId && userEmbedding) {
+  if (userId && !contaId && userEmbedding) {
     try {
       const { data: mem } = await svc.rpc("match_memories", {
         p_user: userId,
@@ -313,7 +331,21 @@ Deno.serve(async (req) => {
 
   // ---- conversa (persistência apenas para usuários logados) ----
   let convId: string | null = body.conversationId ?? null;
-  if (userId && convId) {
+  if (contaId && convId) {
+    const { data: conv } = await svc
+      .from("conversations")
+      .select("id")
+      .eq("id", convId)
+      .eq("account_id", contaId)
+      .maybeSingle();
+    if (!conv) return json({ ok: false, error: "Conversa não encontrada." }, 404);
+  } else if (contaId) {
+    convId = crypto.randomUUID();
+    const { error: cErr } = await svc
+      .from("conversations")
+      .insert({ id: convId, account_id: contaId, title: content.slice(0, 80) });
+    if (cErr) return json({ ok: false, error: "Falha ao criar conversa." }, 500);
+  } else if (userId && convId) {
     const { data: conv } = await svc
       .from("conversations")
       .select("id")
@@ -331,7 +363,7 @@ Deno.serve(async (req) => {
 
   // ---- contexto das últimas 30 mensagens + memórias ----
   const messages: { role: string; content: string }[] = [];
-  if (userId && convId) {
+  if (convId && (userId || contaId)) {
     const { data: history } = await svc
       .from("messages")
       .select("role, content")
@@ -349,6 +381,10 @@ Deno.serve(async (req) => {
     "Formato: texto direto, sem JSON de ferramenta e sem inventar nome de ferramenta.",
   ];
   if (nickname) systemParts.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
+  if (userId) {
+    const minhas = await memoriasDaConta(userId);
+    if (minhas.length) memories = [...minhas, ...memories];
+  }
   if (memories.length) {
     systemParts.push(
       `Memórias relevantes de conversas anteriores deste usuário (use se forem úteis):\n- ${memories.join("\n- ")}`,

@@ -96,7 +96,12 @@
         try {
           var r = await orig(cfg.url + "/functions/v1/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "apikey": cfg.key, "Authorization": "Bearer " + cfg.key },
+            headers: (function () {
+              var h = { "Content-Type": "application/json", "apikey": cfg.key, "Authorization": "Bearer " + cfg.key };
+              var sess = authToken();
+              if (sess) h["x-session"] = sess;
+              return h;
+            })(),
             body: JSON.stringify({ content: ultimo, model: "auto", conversationId: conv })
           });
           if (!r.ok || !r.body) {

@@ -83,6 +83,8 @@ async function contaPorToken(svc: ReturnType<typeof db>, token: string | null) {
 const publico = (c: Record<string, unknown>) => ({
   id: c.id,
   tier: c.tier,
+  role: (c.role as string) ?? "user",
+  nickname: (c.nickname as string) ?? null,
   recoveryEmail: c.recovery_email ?? null,
   codeHint: c.code_hint ?? null,
   createdAt: c.created_at,
@@ -258,7 +260,15 @@ Deno.serve(async (req) => {
         last_seen: new Date().toISOString(),
         tier: String(alvo.tier ?? "free"),
       });
-      return json({ ok: true, user: publico(alvo), session: sess });
+      let final = alvo;
+      const emailsAdmin = (Deno.env.get("ADMIN_EMAILS") ?? "")
+        .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+      const emailDaConta = String(alvo.recovery_email ?? "").toLowerCase();
+      if (emailsAdmin.includes(emailDaConta) && alvo.role !== "admin") {
+        await svc.from("accounts").update({ role: "admin" }).eq("id", alvo.id);
+        final = { ...alvo, role: "admin" };
+      }
+      return json({ ok: true, user: publico(final), session: sess });
     }
 
     // ---- recuperação: pede o código por e-mail ----
@@ -352,6 +362,110 @@ Deno.serve(async (req) => {
     }
 
     // ---- painel de saúde (monitoramento) ----
+
+    // ---- memória por conta ----
+    if (acao === "memory-save") {
+      const conta = await contaPorToken(svc, token);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      const chave = String(corpo.chave ?? corpo.key ?? "").trim().slice(0, 80);
+      const valor = String(corpo.valor ?? corpo.value ?? "").trim().slice(0, 2000);
+      if (!chave || !valor) return json({ ok: false, error: "Informe o que guardar." }, 400);
+      await svc.from("acc_memory").upsert({
+        account_id: conta.id,
+        chave,
+        valor,
+        tipo: String(corpo.tipo ?? corpo.kind ?? "fato").slice(0, 20),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "account_id,chave" });
+      return json({ ok: true });
+    }
+
+    if (acao === "memory-list" && req.method === "GET") {
+      const conta = await contaPorToken(svc, token);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      const { data } = await svc.from("acc_memory")
+        .select("id, chave, valor, tipo, updated_at")
+        .eq("account_id", conta.id)
+        .order("updated_at", { ascending: false })
+        .limit(200);
+      return json({ ok: true, memorias: data ?? [] });
+    }
+
+    if (acao === "memory-forget") {
+      const conta = await contaPorToken(svc, token);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      const id = String(corpo.id ?? "");
+      if (id) await svc.from("acc_memory").delete().eq("id", id).eq("account_id", conta.id);
+      else if (corpo.chave) await svc.from("acc_memory").delete().eq("chave", String(corpo.chave)).eq("account_id", conta.id);
+      return json({ ok: true });
+    }
+
+    // ---- painel admin (só role=admin) ----
+    if (acao.startsWith("admin-")) {
+      const conta = await contaPorToken(svc, token);
+      if (!conta || conta.role !== "admin") return json({ ok: false, error: "Sem permissão de admin." }, 403);
+
+      if (acao === "admin-contas" && req.method === "GET") {
+        const { data: contas } = await svc.from("accounts")
+          .select("id, tier, role, nickname, recovery_email, created_at, last_seen, visits, code_hint")
+          .order("created_at", { ascending: false }).limit(200);
+        const dia = new Date().toISOString().slice(0, 10);
+        const { data: uso } = await svc.from("acc_uso").select("account_id, mensagens").eq("dia", dia);
+        const { count: emailsHoje } = await svc.from("email_outbox")
+          .select("id", { count: "exact", head: true })
+          .gte("created_at", new Date(new Date().setUTCHours(0, 0, 0, 0)).toISOString());
+        const mapa = new Map((uso ?? []).map((u: { account_id: string; mensagens: number }) => [u.account_id, u.mensagens]));
+        return json({
+          ok: true,
+          hoje: dia,
+          emails_hoje: emailsHoje ?? 0,
+          contas: (contas ?? []).map((c: Record<string, unknown>) => ({
+            ...publico(c),
+            visits: c.visits ?? 0,
+            lastSeen: c.last_seen ?? null,
+            mensagensHoje: mapa.get(String(c.id)) ?? 0,
+          })),
+        });
+      }
+
+      if (acao === "admin-set-tier") {
+        const id = String(corpo.accountId ?? corpo.id ?? "");
+        const tier = String(corpo.tier ?? "").toLowerCase();
+        if (!id || !["free", "pro"].includes(tier)) return json({ ok: false, error: "Informe conta e plano (free ou pro)." }, 400);
+        await svc.from("accounts").update({ tier }).eq("id", id);
+        return json({ ok: true, id, tier });
+      }
+
+      if (acao === "admin-set-role") {
+        const id = String(corpo.accountId ?? corpo.id ?? "");
+        const role = String(corpo.role ?? "").toLowerCase();
+        if (!id || !["user", "admin", "dev"].includes(role)) return json({ ok: false, error: "Papel inválido." }, 400);
+        await svc.from("accounts").update({ role }).eq("id", id);
+        return json({ ok: true, id, role });
+      }
+
+      if (acao === "admin-novo-codigo") {
+        const id = String(corpo.accountId ?? corpo.id ?? "");
+        const { data: alvo } = await svc.from("accounts").select("*").eq("id", id).maybeSingle();
+        if (!alvo) return json({ ok: false, error: "Conta não encontrada." }, 404);
+        const codigo = novoCodigo();
+        await svc.from("accounts").update({
+          code_enc: await cifrar(normaliza(codigo)),
+          code_hint: normaliza(codigo).slice(-4),
+          updated_at: new Date().toISOString(),
+        }).eq("id", id);
+        await svc.from("acc_sessions").update({ revoked: true }).eq("account_id", id);
+        return json({ ok: true, codigo });
+      }
+
+      if (acao === "admin-fila" && req.method === "GET") {
+        const { data } = await svc.from("email_outbox")
+          .select("id, to_email, subject, kind, status, created_at")
+          .order("created_at", { ascending: false }).limit(50);
+        return json({ ok: true, fila: data ?? [] });
+      }
+    }
+
     if (acao === "health") {
       const dia = new Date();
       dia.setUTCHours(0, 0, 0, 0);
