@@ -212,6 +212,27 @@
     true,
   );
 
+
+  /* O site original só libera os botões depois do Cloudflare Turnstile.
+     No espelho estático não existe challenge, então liberamos os botões de acesso. */
+  function liberarBotoes() {
+    var bs = [].slice.call(document.querySelectorAll("button"));
+    for (var i = 0; i < bs.length; i++) {
+      var b = bs[i];
+      var t = texto(b);
+      var alvo = /GERAR C[OÓ]DIGO/.test(t) || /^ENTRAR/.test(t) || /^RECUPERAR/.test(t) ||
+        /^ENVIAR/.test(t) || /^CRIAR/.test(t);
+      if (!alvo) continue;
+      if (b.disabled) { b.disabled = false; b.removeAttribute("disabled"); }
+      if (b.getAttribute("aria-disabled") === "true") b.setAttribute("aria-disabled", "false");
+      b.style.pointerEvents = "auto";
+      b.style.opacity = "1";
+    }
+  }
+  liberarBotoes();
+  setInterval(liberarBotoes, 600);
+  document.addEventListener("DOMContentLoaded", liberarBotoes);
+
   /* máscara 0000-0000-0000 enquanto digita */
   document.addEventListener(
     "input",
