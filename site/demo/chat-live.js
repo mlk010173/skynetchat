@@ -329,13 +329,14 @@
         var det = raciocinio.detalhe.querySelector("div");
         if (!det) { det = document.createElement("div"); det.style.cssText = "color:#8a8a8a;white-space:pre-wrap"; raciocinio.detalhe.appendChild(det); }
         det.textContent = raciocinio.texto.length > 400 ? "\u2026" + raciocinio.texto.slice(-400) : raciocinio.texto;
+        contador.textContent = "\u00B7 " + (etapas.length + (modelo ? 1 : 0) + 1) + " etapas";
         rolar();
       },
       finalizar: function (ms, erro) {
         aberto = false;
         corpo.style.display = "none";
         ponto.style.color = erro ? "#f85149" : "#2ea043";
-        var qtd = etapas.length + (modelo ? 1 : 0);
+        var qtd = etapas.length + (modelo ? 1 : 0) + (raciocinio ? 1 : 0);
         rotulo.textContent = "Pensou por " + (ms / 1000).toFixed(1).replace(".", ",") + "s";
         contador.textContent = "\u00B7 " + qtd + " etapa" + (qtd === 1 ? "" : "s");
         if (erro) { linha("\u2715", "#f85149", "Falhou", erro); corpo.style.display = "none"; }
