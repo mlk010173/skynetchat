@@ -28,6 +28,37 @@ function formatHora(isoStr) {
 }
 
 /** Tela inicial: interface do skynetchat.net com backend real (Supabase). */
+const ICONES_PASSO = {
+  pensando: "◆",
+  web_pesquisar: "◎",
+  abrir: "↗",
+  vendo: "◉",
+  imagem: "▣",
+  calculadora: "∑",
+  calcular: "∑",
+  clima: "☁",
+  moeda: "¤",
+  hora: "◔",
+  conferindo: "✔",
+};
+
+function rotuloDoPasso(ferramenta) {
+  const mapa = {
+    pensando: "Entendendo o pedido",
+    web_pesquisar: "Pesquisando na web",
+    abrir: "Abrindo o link",
+    vendo: "Lendo a fonte",
+    imagem: "Gerando imagem",
+    calcular: "Calculando",
+    calculadora: "Calculando",
+    clima: "Consultando o clima",
+    moeda: "Consultando a cotação",
+    hora: "Conferindo o horário",
+    conferindo: "Conferindo a resposta",
+  };
+  return mapa[ferramenta] || "Trabalhando";
+}
+
 export default function Home() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("Novo chat");
@@ -54,6 +85,7 @@ export default function Home() {
   const [cmdBusy, setCmdBusy] = useState(false);
   const [imgPrompt, setImgPrompt] = useState(null);
   const [imgBusy, setImgBusy] = useState(false);
+  const [traceAberto, setTraceAberto] = useState({});
   const [editIdx, setEditIdx] = useState(-1);
   const [editText, setEditText] = useState("");
   const [micSecs, setMicSecs] = useState(0);
@@ -179,6 +211,25 @@ export default function Home() {
         const last = copy[copy.length - 1];
         if (!last || last.role !== "assistant") return prev;
 
+        // trilha do agente: cada ferramenta vira um passo que muda de estado ao vivo
+        const passos = [...(last.passos || [])];
+        const chave = `${toolEv.tool || ""}|${toolEv.detalhe || ""}`;
+        const idx = passos.findIndex((p) => p.chave === chave && p.estado === "executando");
+        const passo = {
+          chave,
+          ferramenta: toolEv.tool || "",
+          titulo: toolEv.titulo || rotuloDoPasso(toolEv.tool),
+          detalhe: toolEv.detalhe || "",
+          estado: toolEv.status || "executando",
+          ms: toolEv.ms || 0,
+          erro: toolEv.erro || "",
+          fontes: Array.isArray(toolEv.fontes) ? toolEv.fontes : [],
+        };
+        const anterior = passos.findIndex((p) => p.ferramenta === passo.ferramenta && p.estado === "executando");
+        if (anterior >= 0 && passo.estado !== "executando") passos[anterior] = { ...passos[anterior], ...passo };
+        else if (idx >= 0) passos[idx] = { ...passos[idx], ...passo };
+        else passos.push(passo);
+
         const existingFontes = last.fontes || [];
         const incomingFontes = Array.isArray(toolEv.fontes) ? toolEv.fontes : [];
         const merged = [...existingFontes, ...incomingFontes];
@@ -193,6 +244,8 @@ export default function Home() {
 
         copy[copy.length - 1] = {
           ...last,
+          passos,
+          toolTitulo: toolEv.titulo,
           toolStatus: toolEv.status,
           toolName: toolEv.tool,
           fontes: uniqueFontes,
@@ -419,17 +472,45 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    {message.role === "assistant" && message.toolStatus === "executando" && (
-                      <div className="tool-status executando">
-                        <IconGlobe className="tool-icon spin" width={14} height={14} />
-                        <span>Pesquisando...</span>
-                      </div>
-                    )}
-                    {message.role === "assistant" && message.toolStatus === "falhou" && (!message.fontes || message.fontes.length === 0) && (
-                      <div className="tool-status falhou">
-                        <span>pesquisa indisponível agora</span>
-                      </div>
-                    )}
+                    {message.role === "assistant" && message.passos && message.passos.length > 0 && (() => {
+                      const viva = message.passos.some((p) => p.estado === "executando");
+                      const aberto = traceAberto[index] ?? viva;
+                      return (
+                        <div className={`trace${viva ? " viva" : ""}`}>
+                          <button type="button" className="trace-head" aria-expanded={aberto} onClick={() => setTraceAberto((v) => ({ ...v, [index]: !aberto }))}>
+                            <span className="trace-titulo">
+                              {viva ? "Trabalhando" : `Passo a passo · ${message.passos.length} etapa${message.passos.length > 1 ? "s" : ""}`}
+                            </span>
+                            <span className="trace-chev">{aberto ? "▾" : "▸"}</span>
+                          </button>
+                          {aberto && (
+                            <ol className="trace-list">
+                              {message.passos.map((p, i) => (
+                                <li key={i} className={`trace-step ${p.estado}`}>
+                                  <span className="trace-icone">{ICONES_PASSO[p.ferramenta] || "•"}</span>
+                                  <span className="trace-texto">
+                                    <b>{p.titulo}</b>
+                                    {p.detalhe ? <span className="trace-detalhe">{p.detalhe}</span> : null}
+                                    {p.estado === "falhou" && p.erro ? <span className="trace-erro">{p.erro}</span> : null}
+                                    {p.fontes && p.fontes.length > 0 && (
+                                      <span className="fontes-chips">
+                                        {p.fontes.map((f, j) => (
+                                          <a key={j} href={f.url} target="_blank" rel="noopener noreferrer" className="fonte-chip" title={f.url}>
+                                            <IconGlobe width={12} height={12} />
+                                            <span>{f.titulo || f.url}</span>
+                                          </a>
+                                        ))}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="trace-ms">{p.ms ? `${(p.ms / 1000).toFixed(1)}s` : ""}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
                     {message.image && !message.text ? null : message.text}
                     {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (

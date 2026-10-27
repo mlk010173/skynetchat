@@ -56,6 +56,12 @@ interface DetectedTool {
   payload: Record<string, any>;
 }
 
+function resumoDoPedido(tool: DetectedTool): string {
+  const p = tool.payload as Record<string, unknown> | undefined;
+  const alvo = String(p?.query ?? p?.url ?? p?.prompt ?? p?.expressao ?? p?.cidade ?? "");
+  return alvo ? `${tool.name === "abrir" ? "abrindo" : "consultando"}: ${alvo.slice(0, 90)}` : "";
+}
+
 function detectTools(text: string): DetectedTool[] {
   const tools: DetectedTool[] = [];
 
@@ -472,14 +478,27 @@ Deno.serve(async (req) => {
       const enviaRaciocinio = (t: string) => controller.enqueue(legado ? sse({ raciocinio: t }) : tDados({ tipo: "raciocinio", texto: t }));
       const enviaErro = (e: string) => controller.enqueue(legado ? sse({ ok: false, error: e }) : tErro(e));
       const enviaFim = (meta: Record<string, unknown>) => controller.enqueue(legado ? sse({ done: true, ...meta }) : tFim(meta));
+      const inicioDoPedido = Date.now();
       try {
         // Detecção e execução de ferramentas
         const toolsToRun = detectTools(content);
         const toolContexts: string[] = [];
+        const fontesColetadas: { titulo: string; url: string }[] = [];
         let imagemEntregue = false;
 
+        // Primeira etapa visivel: o plano do agente (o que ele escolheu fazer e por que).
+        if (toolsToRun.length) {
+          enviaEtapa({
+            ferramenta: "pensando",
+            titulo: "Entendendo o pedido",
+            estado: "concluida",
+            detalhe: `Escolhi ${toolsToRun.length === 1 ? "1 ferramenta" : toolsToRun.length + " ferramentas"}: ${toolsToRun.map((x) => rotuloFerramenta(x.name)).join(" + ")}`,
+          });
+        }
+
         for (const tool of toolsToRun) {
-          enviaEtapa({ ferramenta: tool.name, titulo: rotuloFerramenta(tool.name), estado: "executando" });
+          const t0 = Date.now();
+          enviaEtapa({ ferramenta: tool.name, titulo: rotuloFerramenta(tool.name), estado: "executando", detalhe: resumoDoPedido(tool) });
           let toolResult = await callTool(tool);
           // se o agente do Render falhar (401/cota), a imagem sai pelo backend multiplexado
           if (tool.name === "imagem" && !toolResult?.ok) {
@@ -505,19 +524,48 @@ Deno.serve(async (req) => {
               const url = String(toolResult.url ?? toolResult.imagem ?? toolResult.data_url ?? toolResult.dataUrl ?? "");
               if (url) controller.enqueue(legado ? sse({ imagem: url }) : tDados({ tipo: "imagem", url }));
             }
+            for (const f of fontes) fontesColetadas.push(f);
             enviaEtapa({
               ferramenta: tool.name,
               titulo: rotuloFerramenta(tool.name),
               estado: "concluida",
+              detalhe: tool.name === "web_pesquisar" ? `${fontes.length} fonte(s) encontrada(s)` : "resultado obtido",
+              ms: Date.now() - t0,
               fontes,
               quando: new Date().toISOString(),
             });
+            // "Vendo": abre a fonte e le o conteudo real (pula redirecionadores do Google News)
+            if (tool.name === "web_pesquisar" && fontes.length && toolContexts.length < 3) {
+              const candidatos = fontes.filter((f) => !/news\.google\.com|google\.com\/url|bing\.com/i.test(f.url)).slice(0, 2);
+              for (const cand of candidatos) {
+                const tv = Date.now();
+                enviaEtapa({ ferramenta: "vendo", titulo: "Lendo a fonte", estado: "executando", detalhe: cand.url.slice(0, 120) });
+                const lido = await callTool({ name: "abrir", payload: { url: cand.url } });
+                const trecho = String((lido as Record<string, unknown>)?.texto ?? (lido as Record<string, unknown>)?.conteudo ?? (lido as Record<string, unknown>)?.markdown ?? "").replace(/\s+/g, " ").trim();
+                const util = lido?.ok && trecho.length >= 200;
+                enviaEtapa({
+                  ferramenta: "vendo",
+                  titulo: "Lendo a fonte",
+                  estado: util ? "concluida" : "falhou",
+                  detalhe: util ? `${cand.titulo || cand.url} · ${trecho.length} caracteres lidos` : `pagina sem conteudo util (${trecho.length} caracteres)`,
+                  ms: Date.now() - tv,
+                  fontes: util ? [cand] : [],
+                  erro: util ? undefined : "nao consegui extrair o texto da pagina",
+                });
+                if (util) {
+                  toolContexts.push(`CONTEUDO DA PAGINA ${cand.url}\n${trecho.slice(0, 2400)}`);
+                  break;
+                }
+              }
+            }
           } else {
             enviaEtapa({
               ferramenta: tool.name,
               titulo: rotuloFerramenta(tool.name),
               estado: "falhou",
+              detalhe: "indisponivel agora",
               erro: "pesquisa indisponível agora",
+              ms: Date.now() - t0,
               fontes: [],
               quando: new Date().toISOString(),
             });
@@ -650,6 +698,22 @@ Deno.serve(async (req) => {
               role: "assistant",
               content: full,
               ...(replyEmbedding ? { embedding: replyEmbedding } : {}),
+            });
+          }
+          {
+            const citou = fontesColetadas.some((f) => {
+              try { return full.includes(new URL(f.url).hostname.replace(/^www\./, "")); } catch { return false; }
+            });
+            enviaEtapa({
+              ferramenta: "conferindo",
+              titulo: "Conferindo a resposta",
+              estado: "concluida",
+              detalhe: fontesColetadas.length
+                ? citou
+                  ? `resposta conferida e apoiada em ${fontesColetadas.length} fonte(s)`
+                  : `respondi com ${fontesColetadas.length} fonte(s) coletada(s)`
+                : "respondi sem ferramentas",
+              ms: Date.now() - (inicioDoPedido ?? Date.now()),
             });
           }
           enviaFim({
