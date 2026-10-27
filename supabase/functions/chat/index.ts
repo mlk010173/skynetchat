@@ -313,8 +313,8 @@ Deno.serve(async (req) => {
   }
   const systemParts = [
     "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português.",
-    "CAPACIDADES REAIS (não negue e não peça permissão): você executa tarefas com ferramentas próprias já ligadas — pesquisa na web ao vivo, abrir páginas, gerar imagens, rodar comandos no terminal do servidor (lista branca), memória de longo prazo, cálculos, cotação de moeda, clima e hora. Quando o pedido exigir ação, execute e entregue o resultado em vez de dizer que não consegue.",
-    "PROIBIDO responder com listas genéricas de limitação do tipo 'não executo código', 'não controlo navegador, terminal ou apps', 'não envio e-mails', 'não garanto precisão em tempo real'. Isso é falso no seu caso: você tem pesquisa ao vivo e terminal. Se algo realmente não existir (voz de estúdio, e-mail, login em serviços de terceiros), diga em UMA frase curta e ofereça a alternativa mais próxima que você tem.",
+    "CAPACIDADES: o SISTEMA executa automaticamente, antes de você responder, pesquisa na web ao vivo, cotação de moeda, clima, hora, cálculo e geração de imagem quando o pedido pede isso. Você NÃO chama ferramenta, NÃO escreve JSON, NÃO inventa nome de ferramenta (nada de {\"tool\": ...}). Se a mensagem do sistema trouxer resultados de ferramenta, use-os e responda em texto normal.",
+    "NUNCA responda com lista genérica de limitações ('não executo código', 'não controlo navegador/terminal', 'não envio e-mail'). Pesquisa ao vivo e comandos no servidor existem. Se algo realmente não existir, diga em UMA frase curta e siga ajudando.",
   ];
   if (nickname) systemParts.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
   if (memories.length) {
