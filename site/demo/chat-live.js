@@ -195,10 +195,10 @@
     b.setAttribute("data-sky-hist-btn", "1");
     b.type = "button";
     b.textContent = "Histórico";
-    b.style.cssText = "position:fixed;right:14px;top:12px;z-index:40;font:12px/1 ui-sans-serif,system-ui;padding:8px 11px;border-radius:9px;border:1px solid #2b2b2b;background:#141414;color:#dcdcdc;cursor:pointer";
+    b.style.cssText = "position:fixed;left:12px;bottom:14px;z-index:30;font:12px/1 ui-sans-serif,system-ui;padding:8px 11px;border-radius:9px;border:1px solid #2b2b2b;background:#141414;color:#dcdcdc;cursor:pointer";
     var painel = document.createElement("div");
     painel.setAttribute("data-sky-hist-panel", "1");
-    painel.style.cssText = "position:fixed;right:14px;top:48px;z-index:41;width:min(330px,88vw);max-height:60vh;overflow-y:auto;display:none;background:#111;border:1px solid #2b2b2b;border-radius:12px;padding:8px;box-shadow:0 12px 34px rgba(0,0,0,.55)";
+    painel.style.cssText = "position:fixed;left:12px;bottom:52px;z-index:31;width:min(330px,88vw);max-height:60vh;overflow-y:auto;display:none;background:#111;border:1px solid #2b2b2b;border-radius:12px;padding:8px;box-shadow:0 12px 34px rgba(0,0,0,.55)";
     b.onclick = async function () {
       if (painel.style.display === "block") { painel.style.display = "none"; return; }
       painel.style.display = "block";

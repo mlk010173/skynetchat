@@ -41,6 +41,9 @@ for pasta, _, nomes in os.walk(RAIZ):
         if "chat-live.js" not in s and re.search(r'src="[\w./]*demo/mock\.js', s):
             s = re.sub(r'(<script src="([\w./]*)demo/mock\.js[^"]*"></script>)',
                        r'\1<script src="\2demo/chat-live.js?v=2"></script>', s, count=1)
+        if "guarda.js" not in s:
+            s = re.sub(r'(<script src="([\w./]*)demo/chat-live\.js[^"]*"></script>)',
+                       r'\1<script src="\2demo/guarda.js?v=1"></script>', s, count=1)
         if s != antes:
             with open(caminho, "w", encoding="utf-8") as f:
                 f.write(s)
