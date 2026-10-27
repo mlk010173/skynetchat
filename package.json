@@ -1,8 +1,11 @@
 {
   "name": "skynet",
   "private": true,
-  "description": "SKYNETchat \u2014 frontend oficial em frontend/ (Vite), backend Supabase (Edge Functions) + server/ (agente). Auth unica: codigo de 12 digitos.",
+  "description": "SKYNETchat — frontend oficial em frontend/ (Vite), backend Supabase (Edge Functions) + server/ (agente). Auth unica: codigo de 12 digitos.",
   "scripts": {
-    "anon": "node tests/anon.mjs"
+    "anon": "node tests/anon.mjs",
+    "mcp": "node server/mcp-server.mjs",
+    "mcp:http": "node server/mcp-server.mjs --http",
+    "test:mcp": "node --test tests/mcp-server.test.mjs"
   }
 }
