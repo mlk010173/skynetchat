@@ -30,8 +30,10 @@ for pasta, _, nomes in os.walk(RAIZ):
         # atributos absolutos viram relativos (mesmo resultado nos dois hosts)
         for atributo in ('href="/_app/', 'src="/_app/', 'href="/demo/', 'src="/demo/'):
             s = s.replace(atributo, atributo.replace('="/', '="' + sobe))
-        for estatico in ("favicon-32-v2.png", "favicon-96-v2.png", "apple-touch-icon-v2.png", "manifest-v2.json"):
+        for estatico in ("favicon-32-v2.png", "favicon-96-v2.png", "apple-touch-icon-v2.png",
+                         "manifest-v2.json", "skynet-logo-vermelha.png", "pwa-icon-any-192-v2.png"):
             s = s.replace('="/' + estatico, '="' + sobe + estatico)
+            s = s.replace('": "/' + estatico, '": "' + sobe + estatico)
         # js inline: import() de entrada e base do SvelteKit
         s = s.replace('import("/_app/', 'import(' + MARCA + '+"/_app/')
         s = s.replace('base: ""', 'base: ' + MARCA)
