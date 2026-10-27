@@ -3,11 +3,17 @@
   window.__TURNSTILE_DEMO = true;
   function token() { return "demo-sem-turnstile"; }
   window.turnstile = {
-    render: function () { return "ts-demo"; },
+    render: function (el, opcoes) {
+      if (opcoes && typeof opcoes.callback === "function") setTimeout(function () { try { opcoes.callback(token()); } catch (e) {} }, 50);
+      return "ts-demo";
+    },
     reset: function () {},
     remove: function () {},
     getResponse: token,
-    execute: function () { return Promise.resolve(token()); },
+    execute: function (el, opcoes) {
+      if (opcoes && typeof opcoes.callback === "function") setTimeout(function () { try { opcoes.callback(token()); } catch (e) {} }, 50);
+      return Promise.resolve(token());
+    },
     isExpired: function () { return false; },
     ready: function (cb) { try { cb(); } catch (e) {} }
   };
