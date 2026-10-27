@@ -100,8 +100,18 @@
       estado.falando = true;
       if (window.__skyVozBars) window.__skyVozBars(true);
       await new Promise(function (resolve) {
-        src.onended = function () { estado.falando = false; if (window.__skyVozBars) window.__skyVozBars(false); resolve(); };
-        src.start();
+        var terminou = false;
+        var fim = function () {
+          if (terminou) return;
+          terminou = true;
+          estado.falando = false;
+          if (window.__skyVozBars) window.__skyVozBars(false);
+          resolve();
+        };
+        src.onended = fim;
+        try { src.start(); } catch (e) { fim(); return; }
+        var segundos = (buf.duration || arr.length / taxa) / (opts.velocidade || 1);
+        setTimeout(fim, Math.max(600, segundos * 1000 + 500));
       });
       return true;
     } catch (e) {
