@@ -65,6 +65,20 @@ function detectTools(text: string): DetectedTool[] {
     tools.push({ name: "abrir", payload: { url: urlMatch[1] } });
   }
 
+  // 1b. pedido de imagem -> imagem (gera de verdade, nao devolve JSON do modelo)
+  const pedeImagem =
+    /\b(gere|gerar|gera|crie|criar|cria|desenhe|desenhar|desenha|ilustre|ilustrar|fa[cç]a)\b[\s\S]{0,24}?\b(imagem|imagens|foto|figura|desenho|ilustra[cç][aã]o|logo|arte)\b/i.test(text) ||
+    /\b(imagem|foto|desenho|figura)\s+(de|do|da|sobre|com)\b/i.test(text);
+  if (pedeImagem) {
+    const prompt = text
+      .replace(/^[\s\S]{0,30}?\b(gere|gerar|gera|crie|criar|cria|desenhe|desenhar|desenha|ilustre|ilustrar|fa[cç]a)\b\s*/i, "")
+      .replace(/^(uma|um|a|o)\s+/i, "")
+      .replace(/^(imagem|imagens|foto|figura|desenho|ilustra[cç][aã]o)\s*(de|do|da|com|sobre)?\s*/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    tools.unshift({ name: "imagem", payload: { prompt: (prompt || text).slice(0, 400) } });
+  }
+
   // 2. 'hoje/agora/atual/notíc.../pesquis.../quem é X atualmente' -> web_pesquisar
   if (
     /\b(hoje|agora|atual|atualmente|notíc|noticia|noticias|pesquis|pesquisa|pesquise|busca|buscar)\b/i.test(text) ||
@@ -214,6 +228,12 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
     case "hora": {
       fontes.push({ titulo: "Horário Oficial (Time.is)", url: "https://time.is" });
       contextText = `Data e Hora Atual: ${data.sao_paulo || ""} (Horário de Brasília) / UTC: ${data.iso_utc || ""}`;
+      break;
+    }
+    case "imagem": {
+      const url = String(data.url ?? data.imagem ?? data.data_url ?? data.dataUrl ?? "");
+      if (url && !url.startsWith("data:")) fontes.push({ titulo: "Imagem gerada pelo SKYNET", url });
+      contextText = `A imagem pedida ("${payload.prompt ?? ""}") foi gerada com sucesso e ja apareceu na tela do usuario. Responda em UMA frase curta, em portugues, dizendo o que foi gerado. Nunca cole URL, base64 nem JSON na resposta.`;
       break;
     }
     case "calcular": {
@@ -462,6 +482,10 @@ Deno.serve(async (req) => {
           const { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
 
           if (toolResult && toolResult.ok) {
+            if (tool.name === "imagem") {
+              const url = String(toolResult.url ?? toolResult.imagem ?? toolResult.data_url ?? toolResult.dataUrl ?? "");
+              if (url) controller.enqueue(legado ? sse({ imagem: url }) : tDados({ tipo: "imagem", url }));
+            }
             enviaEtapa({
               ferramenta: tool.name,
               titulo: rotuloFerramenta(tool.name),

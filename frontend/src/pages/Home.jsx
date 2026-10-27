@@ -7,7 +7,7 @@ const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá alé
 import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
-import { labelFor } from "../models.js";
+import { chatModels, labelFor } from "../models.js";
 
 const actions = [
   { label: "Pesquisar", icon: IconGlobe, color: "#3b82f6" },
@@ -138,7 +138,7 @@ export default function Home() {
     api("models").then((d) => {
       if (d.ok && Array.isArray(d.models) && d.models.length) {
         // o backend manda objetos {id,label,tier}; o seletor trabalha com ids.
-        const ids = ["auto", "melhor", ...d.models.map((m) => (typeof m === "string" ? m : m.id))];
+        const ids = chatModels(["auto", "melhor", ...d.models.map((m) => (typeof m === "string" ? m : m.id))]);
         const unicos = [...new Set(ids)];
         setModels(unicos);
         setModelList(unicos);
@@ -195,6 +195,13 @@ export default function Home() {
           toolQuando: toolEv.quando || last.toolQuando,
           toolErro: toolEv.status === "falhou" ? (toolEv.erro || "pesquisa indisponível agora") : last.toolErro,
         };
+        return copy;
+      }),
+      onImage: (url) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant" || !url) return prev;
+        copy[copy.length - 1] = { ...last, image: url };
         return copy;
       }),
       onDelta: (delta) => setMessages((prev) => {
@@ -281,7 +288,6 @@ export default function Home() {
       const r = await askOnce({ conversationId: convIdRef.current, content: contexto, model });
       if (!r.ok) { setMessages((m) => [...m, { role: "assistant", text: r.erro }]); return; }
       if (r.conversationId) convIdRef.current = r.conversationId;
-      if (r.model && r.model !== model) setModel(r.model);
       setMessages((m) => [...m, { role: "assistant", text: r.texto || "(sem texto)" }]);
     };
     if (comando.nome === "ferramentas") {

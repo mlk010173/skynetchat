@@ -58,27 +58,60 @@ export async function streamChat({ conversationId, content, model }, handlers) {
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let recebeu = false;
+  let terminou = false;
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() ?? "";
-    for (const part of parts) {
-      const lines = part.split("\n");
-      for (const lineRaw of lines) {
-        const line = lineRaw.trim();
-        if (!line.startsWith("data:")) continue;
+    // os quadros do AI SDK terminam em "\n" simples; o formato antigo usa "\n\n"
+    const linhas = buffer.split("\n");
+    buffer = linhas.pop() ?? "";
+    for (const bruta of linhas) {
+      const linha = bruta.trim();
+      if (!linha) continue;
+      if (linha.startsWith("data:")) {
         try {
-          const ev = JSON.parse(line.slice(5).trim());
+          const ev = JSON.parse(linha.slice(5).trim());
           if (ev.tool && handlers.onTool) handlers.onTool(ev);
-          if (ev.delta) handlers.onDelta(String(ev.delta));
-          if (ev.done) handlers.onDone({ conversationId: ev.conversationId ?? null, model: ev.model });
+          if (ev.imagem && handlers.onImage) handlers.onImage(String(ev.imagem));
+          if (ev.delta) { recebeu = true; handlers.onDelta(String(ev.delta)); }
+          if (ev.done) { terminou = true; handlers.onDone({ conversationId: ev.conversationId ?? null, model: ev.model }); }
           if (ev.error) handlers.onError(String(ev.error));
-        } catch { /* linha parcial */ }
+        } catch { /* quadro parcial */ }
+        continue;
       }
+      const sep = linha.indexOf(":");
+      if (sep <= 0) continue;
+      const tipo = linha.slice(0, sep);
+      const corpo = linha.slice(sep + 1);
+      try {
+        if (tipo === "0") { recebeu = true; handlers.onDelta(JSON.parse(corpo)); }
+        else if (tipo === "2") {
+          const itens = JSON.parse(corpo);
+          for (const it of (Array.isArray(itens) ? itens : [itens])) {
+            if (!it) continue;
+            if (it.tipo === "etapa" && handlers.onTool) {
+              handlers.onTool({ tool: it.ferramenta, status: it.estado, fontes: it.fontes, erro: it.erro, quando: it.quando });
+            } else if (it.tipo === "imagem" && handlers.onImage) {
+              handlers.onImage(String(it.url ?? it.imagem ?? ""));
+            } else if (it.tipo === "raciocinio" && handlers.onReason) {
+              handlers.onReason(String(it.texto ?? ""));
+            } else if (it.tipo === "modelo" && handlers.onModelo) {
+              handlers.onModelo(it);
+            }
+          }
+        }
+        else if (tipo === "3") handlers.onError(String(JSON.parse(corpo)));
+        else if (tipo === "d") {
+          const meta = JSON.parse(corpo) || {};
+          terminou = true;
+          handlers.onDone(meta.messageMetadata ?? meta);
+        }
+      } catch { /* quadro parcial */ }
     }
   }
+  if (!recebeu && !terminou) handlers.onError("Nao foi possivel responder agora.");
 }
 
 /** Auth por código de 12 dígitos (modelo do site real). */
@@ -108,7 +141,10 @@ export async function streamChatAuto({ conversationId, content, model }, handler
   if (!MODEL_LIST.length) {
     try { const d = await api("models"); if (d?.ok && Array.isArray(d.models) && d.models.length) MODEL_LIST = d.models; } catch { /* segue com o escolhido */ }
   }
-  const chain = fallbackChain(model, MODEL_LIST.length ? MODEL_LIST : [model]);
+  const automatico = !model || model === "auto" || model === "melhor";
+  // no modo automatico quem faz failover e o roteador do servidor; insistir no cliente
+  // trocava o "auto" por modelos inadequados (llama-guard, ising-calibration).
+  const chain = automatico ? [model || "auto"] : fallbackChain(model, MODEL_LIST.length ? MODEL_LIST : [model]);
   let ultimoErro = "Nao foi possivel responder agora.";
   for (const tentativa of chain) {
     let recebeuTexto = false;

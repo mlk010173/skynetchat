@@ -67,7 +67,16 @@ export function nextModel(current, all) {
   return i + 1 < list.length ? list[i + 1] : null;
 }
 
-/** Fila de tentativas: o escolhido primeiro, o resto como reserva. */
+/** Modelos que existem no catalogo mas nao conversam (guardas/calibracao). */
+export const SEM_CHAT = new Set(["meta/llama-guard-4-12b", "nvidia/ising-calibration-1.5-31b"]);
+
+/** Remove modelos que nao servem para conversa. */
+export function chatModels(all) {
+  return (all ?? []).filter((m) => typeof m === "string" && m && !SEM_CHAT.has(m));
+}
+
+/** Fila de tentativas: o escolhido primeiro, o resto como reserva (so modelos de chat). */
 export function fallbackChain(current, all) {
-  return orderModels(current, all);
+  const fila = orderModels(current, all).filter((m) => !SEM_CHAT.has(m));
+  return fila.length ? fila : ["auto"];
 }
