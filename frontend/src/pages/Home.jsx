@@ -59,6 +59,15 @@ function rotuloDoPasso(ferramenta) {
   return mapa[ferramenta] || "Trabalhando";
 }
 
+function alvoDeNavegacao(texto) {
+  const url = texto.match(/https?:\/\/[^\s,)]+/i);
+  if (url) return url[0];
+  const quer = /\b(naveg\w*|entr\w+ (?:no|na|em)|abr\w+ (?:o|a|esse|esta) ?(?:site|p[aá]gina|link)|ver (?:o|esse|este) site|chromium|renderiz\w+)\b/i.test(texto);
+  const dominio = texto.match(/\b((?:[a-z0-9-]+\.)+(?:com|com\.br|net|org|io|dev|app|br)(?:\/[^\s,]*)?)\b/i);
+  if (quer && dominio) return `https://${dominio[1]}`;
+  return quer && !dominio ? "" : null;
+}
+
 export default function Home() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("Novo chat");
@@ -203,9 +212,64 @@ export default function Home() {
     const text = draft.trim();
     if (!text || busy) return;
     setDraft("");
-    setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "", started: Date.now() }]);
+    setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "", started: Date.now(), passos: [] }]);
     setBusy(true);
-    await streamChatAuto({ conversationId: convIdRef.current, content: text, model }, {
+
+    // Passo de navegacao real: abre o site pedido e mostra o comando na trilha.
+    let conteudo = text;
+    const alvo = alvoDeNavegacao(text);
+    if (alvo !== null) {
+      const passoBase = {
+        chave: "navegar|" + (alvo || text.slice(0, 40)),
+        ferramenta: "navegar",
+        titulo: "Navegando no site",
+        detalhe: alvo || "procurando o site",
+        entrada: JSON.stringify(alvo ? { url: alvo } : { consulta: text.slice(0, 120) }),
+        estado: "executando",
+        fontes: [],
+        ms: 0,
+      };
+      setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last?.role === "assistant") copy[copy.length - 1] = { ...last, passos: [passoBase] };
+        return copy;
+      });
+      const t0 = Date.now();
+      let alvoFinal = alvo;
+      let lido = null;
+      try {
+        if (!alvoFinal) {
+          const busca = await api("agent", { method: "POST", body: { tool: "web_pesquisar", payload: { consulta: text.slice(0, 120) } } });
+          const primeiro = (busca?.resultados || [])[0];
+          if (primeiro?.url) alvoFinal = primeiro.url;
+        }
+        if (alvoFinal) {
+          lido = await api("agent", { method: "POST", body: { tool: "abrir", payload: { url: alvoFinal } } });
+        }
+      } catch { /* segue sem navegacao */ }
+      const trecho = String(lido?.texto ?? lido?.conteudo ?? "").replace(/\s+/g, " ").trim();
+      const util = !!lido?.ok && trecho.length > 200;
+      setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last?.role !== "assistant") return prev;
+        const passos = [...(last.passos || [])];
+        passos[0] = {
+          ...passos[0],
+          detalhe: alvoFinal || passoBase.detalhe,
+          estado: util ? "concluida" : "falhou",
+          saida: util ? `${lido?.titulo ? lido.titulo + " · " : ""}${trecho.length} caracteres lidos` : "nao consegui extrair o texto da pagina",
+          ms: Date.now() - t0,
+          fontes: alvoFinal ? [{ titulo: lido?.titulo || alvoFinal, url: alvoFinal }] : [],
+        };
+        copy[copy.length - 1] = { ...last, passos };
+        return copy;
+      });
+      if (util) conteudo = `${text}\n\nConteudo lido agora de ${alvoFinal}:\n${trecho.slice(0, 2400)}`;
+    }
+
+    await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model }, {
       onTool: (toolEv) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
