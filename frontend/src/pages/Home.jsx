@@ -249,8 +249,9 @@ export default function Home() {
           lido = await api("agent", { method: "POST", body: { tool: "abrir", payload: { url: alvoFinal } } });
         }
       } catch { /* segue sem navegacao */ }
-      const trecho = String(lido?.texto ?? lido?.conteudo ?? "").replace(/\s+/g, " ").trim();
-      const util = !!lido?.ok && trecho.length >= 60;
+      const pag = lido?.resultado ?? lido ?? {};
+      const trecho = String(pag?.texto ?? pag?.conteudo ?? pag?.markdown ?? "").replace(/\s+/g, " ").trim();
+      const util = !!pag?.ok && trecho.length >= 60;
       setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -260,9 +261,9 @@ export default function Home() {
           ...passos[0],
           detalhe: alvoFinal || passoBase.detalhe,
           estado: util ? "concluida" : "falhou",
-          saida: util ? `${lido?.titulo ? lido.titulo + " · " : ""}${trecho.length} caracteres: ${trecho.slice(0, 120)}` : (lido?.erro || lido?.error || "nao consegui extrair o texto da pagina"),
+          saida: util ? `${pag?.titulo ? pag.titulo + " · " : ""}${trecho.length} caracteres: ${trecho.slice(0, 140)}` : (pag?.erro || lido?.error || "nao consegui extrair o texto da pagina"),
           ms: Date.now() - t0,
-          fontes: alvoFinal ? [{ titulo: lido?.titulo || alvoFinal, url: alvoFinal }] : [],
+          fontes: alvoFinal ? [{ titulo: pag?.titulo || alvoFinal, url: alvoFinal }] : [],
         };
         copy[copy.length - 1] = { ...last, passos };
         return copy;
