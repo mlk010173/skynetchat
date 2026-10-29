@@ -33,6 +33,7 @@ const ICONES_PASSO = {
   web_pesquisar: "◎",
   abrir: "↗",
   vendo: "◉",
+  navegar: "↗",
   imagem: "▣",
   calculadora: "∑",
   calcular: "∑",
@@ -249,7 +250,7 @@ export default function Home() {
         }
       } catch { /* segue sem navegacao */ }
       const trecho = String(lido?.texto ?? lido?.conteudo ?? "").replace(/\s+/g, " ").trim();
-      const util = !!lido?.ok && trecho.length > 200;
+      const util = !!lido?.ok && trecho.length >= 60;
       setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -259,7 +260,7 @@ export default function Home() {
           ...passos[0],
           detalhe: alvoFinal || passoBase.detalhe,
           estado: util ? "concluida" : "falhou",
-          saida: util ? `${lido?.titulo ? lido.titulo + " · " : ""}${trecho.length} caracteres lidos` : "nao consegui extrair o texto da pagina",
+          saida: util ? `${lido?.titulo ? lido.titulo + " · " : ""}${trecho.length} caracteres: ${trecho.slice(0, 120)}` : (lido?.erro || lido?.error || "nao consegui extrair o texto da pagina"),
           ms: Date.now() - t0,
           fontes: alvoFinal ? [{ titulo: lido?.titulo || alvoFinal, url: alvoFinal }] : [],
         };
