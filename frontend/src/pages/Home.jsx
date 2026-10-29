@@ -220,6 +220,8 @@ export default function Home() {
           ferramenta: toolEv.tool || "",
           titulo: toolEv.titulo || rotuloDoPasso(toolEv.tool),
           detalhe: toolEv.detalhe || "",
+          entrada: toolEv.entrada || last.entrada || "",
+          saida: toolEv.saida || "",
           estado: toolEv.status || "executando",
           ms: toolEv.ms || 0,
           erro: toolEv.erro || "",
@@ -491,6 +493,8 @@ export default function Home() {
                                   <span className="trace-texto">
                                     <b>{p.titulo}</b>
                                     {p.detalhe ? <span className="trace-detalhe">{p.detalhe}</span> : null}
+              {p.entrada ? <code className="trace-cmd">{p.entrada}</code> : null}
+              {p.saida ? <span className="trace-saida">↳ {p.saida}</span> : null}
                                     {p.estado === "falhou" && p.erro ? <span className="trace-erro">{p.erro}</span> : null}
                                     {p.fontes && p.fontes.length > 0 && (
                                       <span className="fontes-chips">

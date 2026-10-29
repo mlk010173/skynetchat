@@ -37,6 +37,7 @@ const ROTULOS: Record<string, string> = {
   clima: "Consultar clima",
   hora: "Ver hora",
   imagem: "Gerar imagem",
+  navegar: "Navegar no site",
   politicos: "Abrir painel de políticos",
   memoria: "Consultar memória",
 };
@@ -62,6 +63,19 @@ function resumoDoPedido(tool: DetectedTool): string {
   return alvo ? `${tool.name === "abrir" ? "abrindo" : "consultando"}: ${alvo.slice(0, 90)}` : "";
 }
 
+function resumirResultado(nome: string, r: unknown): string {
+  const d = (r ?? {}) as Record<string, any>;
+  if (!d.ok) return String(d.erro ?? d.error ?? "sem resultado").slice(0, 160);
+  if (nome === "web_pesquisar") return `${(d.resultados ?? []).length} resultado(s)`;
+  if (nome === "abrir" || nome === "navegar") return `${String(d.texto ?? "").replace(/\s+/g, " ").slice(0, 150)}`;
+  if (nome === "calcular") return `${d.expressao ?? ""} = ${d.resultado ?? ""}`.slice(0, 80);
+  if (nome === "moeda") return `1 ${d.de ?? ""} = ${d.resultado ?? d.taxa ?? ""} ${d.para ?? ""}`.slice(0, 80);
+  if (nome === "clima") return `${d.cidade ?? ""}: ${d.temperatura_c ?? "?"}°C, ${d.descricao ?? ""}`.slice(0, 100);
+  if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
+  if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
+  return JSON.stringify(d).slice(0, 150);
+}
+
 function detectTools(text: string): DetectedTool[] {
   const tools: DetectedTool[] = [];
 
@@ -69,6 +83,16 @@ function detectTools(text: string): DetectedTool[] {
   const urlMatch = text.match(/(https?:\/\/[^\s]+)/i);
   if (urlMatch) {
     tools.push({ name: "abrir", payload: { url: urlMatch[1] } });
+  }
+
+  // 1a. "entra no site", "abre a página X", "navega em example.com" -> navegar
+  const pedeNavegar =
+    /\b(naveg\w*|entr\w+ (?:no|na|em)|abr\w+ (?:o|a|esse|esta) ?(?:site|p[aá]gina|link|url)|ver (?:o|esse|este) site|renderiz\w+)\b/i.test(text) ||
+    /\bchromium\b/i.test(text);
+  const siteNoTexto = text.match(/\b((?:[a-z0-9-]+\.)+(?:com|com\.br|net|org|io|dev|app|br)(?:\/[^\s,]*)?)\b/i);
+  if (pedeNavegar) {
+    const alvoUrl = urlMatch ? urlMatch[1] : siteNoTexto ? `https://${siteNoTexto[1]}` : "";
+    tools.push({ name: "navegar", payload: alvoUrl ? { url: alvoUrl } : { consulta: text.slice(0, 120) } });
   }
 
   // 1b. pedido de imagem -> imagem (gera de verdade, nao devolve JSON do modelo)
@@ -163,6 +187,16 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool) {
+  if (tool.name === "navegar") {
+    const alvo = String((tool.payload as Record<string, unknown>)?.url ?? "");
+    if (alvo) return callTool({ name: "abrir", payload: { url: alvo } });
+    const consulta = String((tool.payload as Record<string, unknown>)?.consulta ?? "");
+    const busca = await callTool({ name: "web_pesquisar", payload: { consulta } });
+    const primeira = Array.isArray((busca as Record<string, any>)?.resultados) ? (busca as Record<string, any>).resultados[0] : null;
+    if (!primeira?.url) return { ok: false, erro: "nao achei site para abrir" };
+    const pagina = await callTool({ name: "abrir", payload: { url: primeira.url } });
+    return { ...(pagina as Record<string, unknown>), url: primeira.url, titulo: primeira.titulo ?? (pagina as any)?.titulo };
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
@@ -487,6 +521,14 @@ Deno.serve(async (req) => {
         let imagemEntregue = false;
 
         // Primeira etapa visivel: o plano do agente (o que ele escolheu fazer e por que).
+        if (!toolsToRun.length) {
+          enviaEtapa({
+            ferramenta: "pensando",
+            titulo: "Respondendo sem ferramentas",
+            estado: "concluida",
+            detalhe: "nenhuma ferramenta era necessaria para este pedido",
+          });
+        }
         if (toolsToRun.length) {
           enviaEtapa({
             ferramenta: "pensando",
@@ -498,7 +540,13 @@ Deno.serve(async (req) => {
 
         for (const tool of toolsToRun) {
           const t0 = Date.now();
-          enviaEtapa({ ferramenta: tool.name, titulo: rotuloFerramenta(tool.name), estado: "executando", detalhe: resumoDoPedido(tool) });
+          enviaEtapa({
+            ferramenta: tool.name,
+            titulo: rotuloFerramenta(tool.name),
+            estado: "executando",
+            detalhe: resumoDoPedido(tool),
+            entrada: JSON.stringify(tool.payload).slice(0, 240),
+          });
           let toolResult = await callTool(tool);
           // se o agente do Render falhar (401/cota), a imagem sai pelo backend multiplexado
           if (tool.name === "imagem" && !toolResult?.ok) {
@@ -530,6 +578,8 @@ Deno.serve(async (req) => {
               titulo: rotuloFerramenta(tool.name),
               estado: "concluida",
               detalhe: tool.name === "web_pesquisar" ? `${fontes.length} fonte(s) encontrada(s)` : "resultado obtido",
+              entrada: JSON.stringify(tool.payload).slice(0, 240),
+              saida: resumirResultado(tool.name, toolResult),
               ms: Date.now() - t0,
               fontes,
               quando: new Date().toISOString(),
@@ -564,6 +614,8 @@ Deno.serve(async (req) => {
               titulo: rotuloFerramenta(tool.name),
               estado: "falhou",
               detalhe: "indisponivel agora",
+              entrada: JSON.stringify(tool.payload).slice(0, 240),
+              saida: String((toolResult as Record<string, unknown>)?.erro ?? (toolResult as Record<string, unknown>)?.error ?? "").slice(0, 160),
               erro: "pesquisa indisponível agora",
               ms: Date.now() - t0,
               fontes: [],

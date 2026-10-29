@@ -361,3 +361,6 @@ button { font-family: inherit; color: inherit; }
 .trace-ms { opacity: .4; font-size: 11px; white-space: nowrap; }
 .trace .fontes-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 @keyframes tracePulso { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+
+.trace-cmd { display: block; margin-top: 3px; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,.04); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; opacity: .8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+.trace-saida { display: block; margin-top: 2px; font-size: 11px; opacity: .55; word-break: break-word; }
