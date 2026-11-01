@@ -33,7 +33,7 @@ try {
   await page.goto(BASE_URL, { waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
 
-  // 2. Signup ou Login via /functions/v1/auth-code
+  // 2. Signup ou Login via /functions/v1/auth-code + setSession
   console.log("Obtendo sessão autenticada...");
   const authRes = await page.evaluate(async () => {
     const supaUrl = "https://rkgwhhtenfozdwzpvxjj.supabase.co";
@@ -45,7 +45,6 @@ try {
     });
     let data = await r.json();
     if (!data.ok) {
-      // Fallback para login com código existente
       r = await fetch(`${supaUrl}/functions/v1/auth-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: anonKey },
@@ -54,7 +53,14 @@ try {
       data = await r.json();
     }
     if (data.ok && data.session) {
-      localStorage.setItem("skynet-session", JSON.stringify(data.session));
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const client = createClient(supaUrl, anonKey, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: "skynet-session" }
+      });
+      await client.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      });
     }
     return data;
   });
@@ -64,7 +70,7 @@ try {
   }
   console.log("✔ Autenticação obtida com sucesso!");
 
-  // Recarregar para restaurar a sessão na UI
+  // Recarregar para garantir a sessão ativa
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
 
@@ -134,7 +140,7 @@ try {
   await execBtn.click();
 
   console.log("Aguardando conclusão da execução...");
-  await page.waitForTimeout(8000);
+  await page.waitForTimeout(10000);
 
   // 7. Verificar histórico de runs
   console.log("Verificando histórico de execuções...");
