@@ -93,7 +93,8 @@ Deno.serve(async (req: Request) => {
     body = {};
   }
 
-  const automation_id = body.automation_id || new URL(req.url).searchParams.get("automation_id");
+  const urlObj = new URL(req.url);
+  const automation_id = body.automation_id || body.automationId || urlObj.searchParams.get("automation_id") || urlObj.searchParams.get("automationId");
   if (!automation_id) {
     return new Response(JSON.stringify({ ok: false, error: "automation_id é obrigatório" }), {
       status: 400,
