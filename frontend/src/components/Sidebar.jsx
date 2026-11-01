@@ -7,6 +7,7 @@ import {
 } from "./Icons.jsx";
 import { api, getSession } from "../lib.js";
 import AutomationsPanel from "./AutomationsPanel.jsx";
+import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const items = [
   { label: "Novo chat", desc: "Inicie uma conversa do zero", icon: IconEdit },
@@ -19,6 +20,7 @@ const items = [
   { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
   { label: "Automações", tag: "REAL", desc: "Central de automações e agendamentos", icon: IconZap },
   { label: "E-mail", tag: "REAL", desc: "Painel de E-mail via Gmail API", icon: IconMail },
+  { label: "Memória", tag: "REAL", desc: "Painel de Memória de Longo Prazo", icon: IconBook },
 
   { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
   { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
@@ -268,6 +270,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                   else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
                   else if (label === "Automações") { setView("automations"); }
                   else if (label === "E-mail") { setView("email"); }
+                  else if (label === "Memória") { setView("memoria"); }
                   else if (label !== "Fazer login") soon(label);
                 }}
               >
@@ -282,6 +285,17 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               </button>
             ))}
           </nav>
+        )}
+
+                {view === "memoria" && (
+          <div className="drawer-list panel">
+            <button type="button" className="drawer-item" onClick={() => setView("menu")}>
+              <IconClose className="di-icon" />
+              <span className="di-text"><span className="di-title">Voltar ao menu</span></span>
+            </button>
+            <p className="panel-title">PAINEL DE MEMÓRIA</p>
+            <MemoriaPanel logged={logged} />
+          </div>
         )}
 
         {view === "automations" && (

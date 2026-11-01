@@ -7,6 +7,12 @@ const browser = await chromium.launch();
 const ctx = await browser.newContext({ viewport: { width: 412, height: 915 } });
 const page = await ctx.newPage();
 
+page.on("response", (res) => {
+  if (res.status() === 401) {
+    console.error(`[401 HTTP] ${res.request().method()} ${res.url()}`);
+  }
+});
+
 const consoleErrs = [];
 page.on("pageerror", (e) => {
   console.error("PageError:", e.message);
@@ -33,11 +39,11 @@ try {
   await page.goto(BASE_URL, { waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
 
-  // 2. Signup ou Login via /functions/v1/auth-code + setSession
+  // 2. Signup ou Login via /functions/v1/auth-code + setSession completo
   console.log("Obtendo sessão autenticada...");
   const authRes = await page.evaluate(async () => {
     const supaUrl = "https://rkgwhhtenfozdwzpvxjj.supabase.co";
-    const anonKey = "0a22d59e6939c7a459b75993c379b2a3044962163173842aa92b31ce0f02f96d";
+    const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3doaHRlbmZvemR3enB2eGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTY2OTQsImV4cCI6MjEwODUzMjY5NH0.FRwfO66wi1ADFmSboCCwH1NWuz-212dDrIcuuiZ-0HA";
     let r = await fetch(`${supaUrl}/functions/v1/auth-code`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: anonKey },
@@ -52,25 +58,30 @@ try {
       });
       data = await r.json();
     }
-    if (data.ok && data.session) {
-      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-      const client = createClient(supaUrl, anonKey, {
-        auth: { persistSession: true, autoRefreshToken: true, storageKey: "skynet-session" }
-      });
-      await client.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token
-      });
-    }
     return data;
   });
 
   if (!authRes.ok || !authRes.session) {
     throw new Error(`Falha na autenticação: ${JSON.stringify(authRes)}`);
   }
+
+  // Set session via client on the page
+  await page.evaluate(async (sess) => {
+    const supaUrl = "https://rkgwhhtenfozdwzpvxjj.supabase.co";
+    const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3doaHRlbmZvemR3enB2eGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTY2OTQsImV4cCI6MjEwODUzMjY5NH0.FRwfO66wi1ADFmSboCCwH1NWuz-212dDrIcuuiZ-0HA";
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const client = createClient(supaUrl, anonKey, {
+      auth: { persistSession: true, autoRefreshToken: true, storageKey: "skynet-session" }
+    });
+    await client.auth.setSession({
+      access_token: sess.access_token,
+      refresh_token: sess.refresh_token
+    });
+  }, authRes.session);
+
   console.log("✔ Autenticação obtida com sucesso!");
 
-  // Recarregar para garantir a sessão ativa
+  // Recarregar para a UI atualizar o estado de logged
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForTimeout(2000);
 
@@ -90,32 +101,12 @@ try {
   const panelTitle = await page.locator(".panel-title").textContent().catch(() => "");
   console.log("Título do painel exibido:", panelTitle.trim());
 
-  // 5. Verificar se está logado e formulário está visível
-  const isLoggedCard = await page.locator('text="Requer login para acessar as Automações"').count();
-  if (isLoggedCard > 0) {
-    console.warn("Usuário ainda não apareceu como logado, forçando setSession...");
-    await page.evaluate(async (sessionData) => {
-      const supaUrl = "https://rkgwhhtenfozdwzpvxjj.supabase.co";
-      const anonKey = "0a22d59e6939c7a459b75993c379b2a3044962163173842aa92b31ce0f02f96d";
-      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-      const client = createClient(supaUrl, anonKey, {
-        auth: { persistSession: true, autoRefreshToken: true, storageKey: "skynet-session" }
-      });
-      await client.auth.setSession({
-        access_token: sessionData.access_token,
-        refresh_token: sessionData.refresh_token
-      });
-    }, authRes.session);
-    await page.waitForTimeout(2000);
-  }
-
-  // Criar automação 'Teste UI <hora>'
+  // Criar automação 'Teste E2E Automacao <hora>'
   const nowStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const testAutoName = `Teste UI ${nowStr}`;
+  const testAutoName = `Teste E2E Automacao ${nowStr}`;
   const testPrompt = "Diga a palavra SUCESSO em maiúsculas";
 
   console.log(`Preenchendo formulário para "${testAutoName}"...`);
-
   const nameInput = page.locator('input[placeholder*="Resumo de notícias"]');
   await nameInput.waitFor({ state: "visible", timeout: 10000 });
   await nameInput.fill(testAutoName);
@@ -140,7 +131,7 @@ try {
   await execBtn.click();
 
   console.log("Aguardando conclusão da execução...");
-  await page.waitForTimeout(10000);
+  await page.waitForTimeout(12000);
 
   // 7. Verificar histórico de runs
   console.log("Verificando histórico de execuções...");
