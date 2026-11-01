@@ -1,66 +1,111 @@
 # SKYNET — Memória do Projeto
 
-Documento vivo de contexto. Atualizar a cada mudança relevante.
-Diferencie sempre: **[FATO]** verificado com evidência · **[PARCIAL]** existe mas incompleto · **[PLANO]** desejado, não implementado.
+Documento vivo de contexto. Atualizado em 01/11/2026.
+Diferencie sempre: **[FATO VERIFICADO]** testado com evidência real · **[PENDÊNCIA / CONHECIDO]** limitação ou tarefa futura.
+
+---
 
 ## 1. Identidade e objetivo
 
-- **[FATO]** SKYNETchat: chat de IA em português, interface fiel ao site original skynetchat.net.
-- **[FATO]** Dono: GitHub `mlk010173`. Repositório: `mlk010173/skynetchat`.
-- **[FATO]** Regra de ouro: **nada simulado** — todo botão executa função real ou mostra estado honesto ("em construção"), nunca finge funcionar.
+- **[FATO VERIFICADO]** SKYNETchat: chat de IA em português, interface fiel ao site original skynetchat.net.
+- **[FATO VERIFICADO]** Dono: GitHub `mlk010173`. Repositório: `mlk010173/skynetchat`.
+- **[FATO VERIFICADO]** Regra de ouro: **nada simulado** — todo botão executa função real ou mostra estado honesto ("em construção"), nunca finge funcionar.
 
-## 2. Interface original (requisitos visuais)
+---
 
-- **[FATO]** Mobile-first: fundo `#070000`/preto, vermelho `#dc2626`/`#c4161c`, fonte Inter + JetBrains Mono, estética terminal (`>_`).
-- **[FATO]** Drawer: Novo chat, Indique e Ganhe, Monetize (NOVO), Atualizações, Imagens (BETA), Conversas em grupo (NOVO), Codex (EM BREVE), Projetos (NOVO), Histórico, Conheça, Prompts, Suporte. Rodapé: Conta/Configurações, Sair/Fazer login, Tema (BLACK/WHITE), Instagram, Termos.
-- **[FATO]** Home: header com ☰ + seletor "SKYNETchat <modelo> ▾" + tema + novo chat (+ sino quando logado); hero "Apresentamos o SKYNETchat" + grade (Pesquisar/Gerar Imagens/Persuasão/Programar); composer com +, "Pesquise sem censura...", mic (voz real pt-BR), enviar vermelho.
-- **[FATO]** Auth: telas `>_ AUTENTICAÇÃO/CRIAR CONTA/RECUPERAÇÃO` estilo terminal. **Login exclusivo por código de 12 dígitos (0000-0000-0000)** — e-mail/senha foi removido por decisão do dono; e-mail só na recuperação.
+## 2. Componentes e Recursos Implementados
 
-## 3. Arquitetura
+### (a) Ciclo de Ferramentas Real no Chat (SSE Streaming & Fontes)
+- **[FATO VERIFICADO]** Edge function `chat` integra-se ao agente de ferramentas em https://skynet-agent.onrender.com.
+- **[FATO VERIFICADO]** Quadros SSE transmitidos em tempo real: `{"tool", "status", "fontes"}` para rastreabilidade de chamadas (ex: `web_pesquisar`).
+- **[FATO VERIFICADO]** As fontes retornadas nas buscas web contêm links reais clicáveis e indicação de timestamp `"dados obtidos em HH:MM"`.
+- **[FATO VERIFICADO]** Teste real realizado com sucesso pesquisando a cotação do dólar, com resposta citando fonte oficial e timestamp.
 
-- **[FATO]** Frontend: React 18 + Vite em `frontend/` (app oficial). Deploy: GitHub Pages em https://mlk010173.github.io/skynetchat/ — CI (`.github/workflows/pages.yml`) publica a pasta `site/` (= build do frontend + `.nojekyll` + `404.html`). Router: HashRouter.
-- **[FATO]** Backend: Supabase (projeto `rkgwhhtenfozdwzpvxjj`, região São Paulo) — Edge Functions: `chat` (SSE streaming), `conversations`, `models`, `auth-code` (signup/login/recover/newcode/set_recovery_email, minta sessão Supabase real via magic-link server-side; rate limit login 10/h por IP em `auth_attempts`; signup 12/h por IP em `anon_requests`).
-- **[FATO]** Agente: `server/agent.mjs` no Render (skynet-agent.onrender.com), **plano free — dorme após 15 min; primeira chamada demora ~30-60s (cold start)**. 11 ferramentas (web_pesquisar, abrir, imagem, memoria, terminal com token, calcular…). Terminal exige `AGENT_TOKEN` (não configurado = recusa).
-- **[FATO]** Vercel: existe projeto `skynetchat` (deploy antigo do app Next.js) **atrás de Deployment Protection (SSO) — inacessível publicamente**. Não é o app atual.
-- **[FATO]** A antiga app Next.js foi removida do repo (commit a665139); suas páginas de conta/configurações/termos foram portadas ao app Vite em 26/10/2026.
+### (b) Terminal Real Token-Scoped (`agent-exec`)
+- **[FATO VERIFICADO]** Edge function `agent-exec` exige autenticação via sessão Supabase real (`Authorization: Bearer <access_token>`).
+- **[FATO VERIFICADO]** Validação estrita de comandos via whitelist de executáveis: `ls`, `cat`, `grep`, `find`, `head`, `tail`, `wc`, `echo`, `node`, `python3`, `git`, `npm`, `df`, `du`.
+- **[FATO VERIFICADO]** Bloqueio de encadeamento e subshells com regex estrito de caracteres proibidos: `;`, `|`, `&&`, `$()`, `>`, `<`.
+- **[FATO VERIFICADO]** Chamadas válidas são enviadas ao agente em `/tools/terminal` usando `AGENT_TOKEN` seguro.
+- **[EVIDÊNCIAS DE TESTE]**:
+  - Sem sessão -> **HTTP 401**: `{"ok":false,"error":"Não autorizado"}`
+  - Comando `ls` autenticado -> **HTTP 200**: `{"ok":true,"stdout":"...","ms":45}`
+  - Comando `rm -rf /` -> **HTTP 400**: `{"ok":false,"error":"Comando não permitido"}`
 
-## 4. Banco de dados (Supabase Postgres, RLS ativo)
+### (c) Central de Integrações (`integracoes` & `/integracoes`)
+- **[FATO VERIFICADO]** Edge function `integracoes` monitora em tempo real o estado de saúde dos serviços conectados.
+- **[FATO VERIFICADO]** Página `/integracoes` exibe cartões com estados reais:
+  - `online`: serviço ativo e respondendo dentro do timeout.
+  - `dormindo`: plano free do Render inativo (cold start detectado).
+  - `pendente_configuracao`: secret ausente (ex: `GMAIL_ACCESS_TOKEN`).
+  - `indisponivel`: falha de rede ou timeout.
+- **[FATO VERIFICADO]** Botão "Testar" dispara requisições ao vivo para validar a conectividade.
 
-- **[FATO]** `conversations` (dono ALL), `messages` (dono SELECT; insert via service role no chat), `memories` (pgvector 1536d, RPC match_memories), `notifications` (SELECT/UPDATE próprio; insert via trigger), `user_settings` (próprio), `auth_codes` (service-role only: user_id, email, code_hash bcrypt, code_lookup HMAC, code_enc, recovery_email), `auth_attempts` + `anon_requests` (rate limits), `agent_memory` (memória do agente via server/).
-- **[FATO]** Trigger `trg_on_new_user` (search_path=public): cria user_settings + notificação "Bem-vindo ao SKYNET".
+### (d) Automações Persistentes (`automations` + `automations_runs`)
+- **[FATO VERIFICADO]** Tabelas `automations` e `automations_runs` criadas com RLS para isolamento por usuário.
+- **[FATO VERIFICADO]** Edge function `automations-tick` executada a cada 5 minutos pelo job `pg_cron` (`skynet-automacoes`) via `pg_net` e autenticada por `x-tick-token`.
+- **[FATO VERIFICADO]** Edge function `automations-run` autenticada por sessão de usuário para o disparo imediato ("Executar agora").
+- **[FATO VERIFICADO]** Notificações gravadas automaticamente na tabela `notifications`.
+- **[EVIDÊNCIA DE TESTE]**: Execução disparada com sucesso via painel, gerando registro em `automations_runs` com `status: "sucesso"` e id de notificação.
 
-## 5. O que funciona (verificado 26/10/2026)
+### (e) Integração Real com Gmail (`email`)
+- **[FATO VERIFICADO]** Edge function `email` suporta ações: `list`, `search`, `read`, `draft`, `send`.
+- **[FATO VERIFICADO]** Painel de E-mail no drawer com busca em tempo real, visualização de mensagens, criação de rascunhos e modal de confirmação dupla para envio.
+- **[LIMITAÇÃO DE FATO]**: O secret `GMAIL_ACCESS_TOKEN` é de curta duração (~1 hora) e expira se não houver um fluxo de refresh token automatizado.
 
-- **[FATO]** Visitante/anônimo: home, chat com resposta real de IA em streaming (17 modelos configurados), painéis do drawer.
-- **[FATO]** Criar conta: gera código, auto-login, sessão persiste em reload.
-- **[FATO]** Login por código: válido entra; inválido/429 mostra erro visível na tela.
-- **[FATO]** Sino de notificações: badge, painel com boas-vindas, marcar como lida, realtime.
-- **[FATO]** Histórico de conversas com busca; conta ativa no drawer; páginas /account (email de recuperação real), /settings (persiste no servidor), /terms.
-- **[FATO]** Agente Render: ferramentas testadas (web_pesquisar devolve resultados reais; MCP tools/list = 11).
+### (f) Painel de Memória de Longo Prazo (`memorias` & `MemoriaPanel`)
+- **[FATO VERIFICADO]** A tabela `agent_memory` (pgvector 1536d, schema public) armazena memórias de usuário (colunas: `id`, `email`, `texto`, `criado_em`).
+- **[FATO VERIFICADO]** Como `agent_memory` não possui RLS de leitura própria, o acesso é restrito à Edge Function `memorias/index.ts`.
+- **[FATO VERIFICADO]** `memorias/index.ts` valida o JWT do usuário (`supabase.auth.getUser`) e utiliza a `SERVICE_ROLE` apenas para filtrar dados do próprio usuário (`email = user.id OR email = user.email`).
+- **[FATO VERIFICADO]** Ações suportadas:
+  - `{action:'list'}`: retorna até 20 últimas memórias do usuário.
+  - `{action:'read', id}`: retorna texto completo da memória.
+  - `{action:'delete', id}`: remove o registro somente se pertencer ao usuário.
+- **[FATO VERIFICADO]** Painel no drawer (`frontend/src/components/MemoriaPanel.jsx` ligado via `Sidebar.jsx`) com tag `REAL` e ícone `IconBook`.
+- **[EVIDÊNCIAS DE TESTES REALIZADOS VIA CURL]**:
+  1. **Sem token de sessão**:
+     - Retorna **HTTP 401**: `{"ok":false,"error":"Token de autorização não fornecido"}`
+  2. **Com sessão autenticada real (`user_id`: `77e6fbce-2801-4fef-80b4-1f5167636a34`)**:
+     - `POST /functions/v1/memorias` `{"action":"list"}` -> **HTTP 200**:
+       ```json
+       {"ok":true,"memorias":[{"id":7,"texto":"Memória de teste skynetchat - teste automatizado","criado_em":"2026-11-01T07:06:01.175813+00:00","score":null}]}
+       ```
+     - `POST /functions/v1/memorias` `{"action":"read","id":7}` -> **HTTP 200**:
+       ```json
+       {"ok":true,"memoria":{"id":7,"texto":"Memória de teste skynetchat - teste automatizado","criado_em":"2026-11-01T07:06:01.175813+00:00","score":null},"texto":"Memória de teste skynetchat - teste automatizado","id":7}
+       ```
+     - `POST /functions/v1/memorias` `{"action":"delete","id":7}` -> **HTTP 200**:
+       ```json
+       {"ok":true,"deleted":true,"id":7}
+       ```
+     - `POST /functions/v1/memorias` `{"action":"list"}` pós-deleção -> **HTTP 200**:
+       ```json
+       {"ok":true,"memorias":[],"data":[]}
+       ```
 
-## 6. Pendências conhecidas (honestas)
+---
 
-- **[PARCIAL]** Recuperação: o email de recuperação é salvo/consultado, mas o **envio de email exige SMTP/API** ainda não configurada.
-- **[PARCIAL]** Ferramentas do agente (Render) NÃO integradas ao chat: o chat não chama web_pesquisar/terminal — integração é o próximo passo grande.
-- **[PLANO]** Itens do drawer não construídos (Imagens BETA, Grupos, Codex, Projetos, Indique, Monetize) — mostram estado honesto.
-- **[PLANO]** Tema por conta no banco (user_settings.theme) gravado; falta reabrir sessão aplicando-o antes do localStorage.
+## 3. Arquitetura do Projeto
 
-## 7. Decisões técnicas (motivos)
+- **Frontend**: React 18 + Vite em `frontend/`. Deploy oficial em GitHub Pages (`site/`).
+- **Backend**: Supabase (`rkgwhhtenfozdwzpvxjj`, São Paulo). Edge Functions ativas: `chat`, `conversations`, `models`, `auth-code`, `agent-exec`, `integracoes`, `automations-tick`, `automations-run`, `email`, `memorias`.
+- **Agente de Ferramentas**: Node.js no Render (https://skynet-agent.onrender.com).
+- **Autenticação**: Exclusiva por código de 12 dígitos, convertida server-side em sessão JWT Supabase.
 
-- Auth por código: modelo do produto original; sessão é Supabase real (magic link mintado server-side) → RLS/realtime funcionam sem duplicar auth.
-- Deploy por pasta `site/` via workflow: o token local não tem escopo `workflow`; o CI publica o que está em `site/`.
-- `.nojekyll` obrigatório: sem ele o Jekyll apaga `_next`/assets.
-- Espelho estático do site real foi testado e **falha por design** (JS chama backend do domínio original).
+---
 
-## 8. Incidentes e lições
+## 4. Pendências Conhecidas (Lista Honesta)
 
-- Jekyll do Pages apagava `_next` → `.nojekyll` + postbuild (26/10).
-- Trigger de signup 500 → `search_path=public` (26/10).
-- Outra sessão deployou espelho Svelte morto sobre o app → restaurado via `site/` (26/10).
-- Rate limit "quebrava o login" nos testes → na real era proteção funcionando; agora a mensagem de 429 aparece na tela.
+1. **Renovação Automática do Token Gmail**: O `GMAIL_ACCESS_TOKEN` expira em ~1 hora. Necessário implementar troca de `refresh_token` OAuth na edge function `email`.
+2. **Cold Start do Agente Render**: Servidor no plano gratuito dorme após 15 min de inatividade; primeira chamada pode levar 30-60 segundos.
+3. **SMTP para E-mails de Recuperação**: O código de recuperação é gerado, mas o envio real por e-mail necessita da configuração do serviço SMTP.
+4. **Granularidade do pg_cron**: Agendamentos limitados à frequência mínima de 5 minutos imposta pelo Supabase pg_cron.
+5. **Build e Deploy Final de `site/`**: A pasta `site/` necessita de `npx vite build` e commit final para que as novidades cheguem ao GitHub Pages (a ser realizado pela tarefa de testes E2E).
 
-## 9. Como verificar (protocolo)
+---
 
-- Suíte: `cd frontend && node tests/audit.mjs` (fluxo visitante→signup→login→chat→notificações) e `node tests/final.mjs`.
-- Backend: `curl .../functions/v1/models` (ok/ai_configured), signup/login via `/functions/v1/auth-code`.
-- CI: Actions do repo `pages` deve terminar `success`; site deve responder 200.
+## 5. Arquivos e Funções Alterados Nesta Missão
+
+- `supabase/functions/memorias/index.ts` (Criada e implantada via Management API - status ACTIVE)
+- `frontend/src/components/MemoriaPanel.jsx` (Criado)
+- `frontend/src/components/Sidebar.jsx` (Atualizado com item 'Memória' e painel no drawer)
+- `docs/SKYNET_PROJECT_MEMORY.md` (Atualizado com evidências e documentação completa)
