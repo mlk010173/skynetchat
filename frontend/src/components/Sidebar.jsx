@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   IconBell, IconBook, IconChat, IconClose, IconCode, IconEdit, IconFolder,
-  IconGift, IconHistory, IconImage, IconInstagram, IconLife, IconMoney,
+  IconGift, IconHistory, IconImage, IconInstagram, IconLife, IconMail, IconMoney,
   IconPlug, IconTheme, IconUser, IconUsers,
 } from "./Icons.jsx";
 import { api, getSession } from "../lib.js";
@@ -16,6 +16,8 @@ const items = [
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
   { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
   { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
+  { label: "E-mail", tag: "REAL", desc: "Painel de E-mail via Gmail API", icon: IconMail },
+
   { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
   { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
   { label: "Conheça o SKYNETchat", desc: "Descubra como funciona o projeto", icon: IconBook },
@@ -28,6 +30,155 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   const navigate = useNavigate();
   const [view, setView] = useState("menu");
   const [convs, setConvs] = useState([]);
+
+
+  // Estados do E-mail
+  const [emailSubView, setEmailSubView] = useState("list"); // list, read, draft
+  const [emailList, setEmailList] = useState([]);
+  const [emailSearch, setEmailSearch] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailStateMsg, setEmailStateMsg] = useState("");
+  const [selectedEmail, setSelectedEmail] = useState(null);
+
+  const [draftTo, setDraftTo] = useState("");
+  const [draftSubject, setDraftSubject] = useState("");
+  const [draftBody, setDraftBody] = useState("");
+  const [draftId, setDraftId] = useState(null);
+  const [draftStatus, setDraftStatus] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const loadEmails = useCallback(async (query = "") => {
+    if (!logged) return;
+    setEmailLoading(true);
+    setEmailStateMsg("");
+    try {
+      const data = await api("email", {
+        method: "POST",
+        body: { action: query ? "search" : "list", q: query }
+      });
+      if (data.estado === "token_expirado") {
+        setEmailStateMsg("token_expirado");
+        setEmailList([]);
+      } else if (data.estado === "pendente_configuracao") {
+        setEmailStateMsg("pendente_configuracao");
+        setEmailList([]);
+      } else if (data.ok && Array.isArray(data.messages)) {
+        setEmailList(data.messages);
+      } else {
+        setEmailStateMsg(data.error || "Erro ao carregar e-mails.");
+      }
+    } catch (err) {
+      setEmailStateMsg(String(err?.message || err));
+    } finally {
+      setEmailLoading(false);
+    }
+  }, [logged]);
+
+  useEffect(() => {
+    if (view === "email" && emailSubView === "list") {
+      loadEmails(emailSearch);
+    }
+  }, [view, emailSubView, loadEmails]);
+
+  const readEmail = async (msgId) => {
+    setEmailLoading(true);
+    try {
+      const data = await api("email", {
+        method: "POST",
+        body: { action: "read", id: msgId }
+      });
+      if (data.estado === "token_expirado") {
+        setEmailStateMsg("token_expirado");
+      } else if (data.ok) {
+        setSelectedEmail(data);
+        setEmailSubView("read");
+      } else {
+        alert(data.error || "Erro ao ler e-mail.");
+      }
+    } catch (err) {
+      alert(String(err?.message || err));
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleCreateDraft = async (e) => {
+    if (e) e.preventDefault();
+    if (!draftTo.trim()) return;
+    setDraftStatus("Criando rascunho...");
+    try {
+      const data = await api("email", {
+        method: "POST",
+        body: { action: "draft", to: draftTo, subject: draftSubject, body: draftBody }
+      });
+      if (data.estado === "token_expirado") {
+        setDraftStatus("Token expirado.");
+        setEmailStateMsg("token_expirado");
+      } else if (data.ok) {
+        setDraftId(data.id);
+        setDraftStatus("Rascunho criado com sucesso! ID: " + data.id);
+      } else {
+        setDraftStatus("Erro: " + (data.error || "Falha ao criar rascunho"));
+      }
+    } catch (err) {
+      setDraftStatus("Erro: " + String(err?.message || err));
+    }
+  };
+
+  const handleSendDraftClick = async () => {
+    if (!draftTo.trim()) {
+      alert("Informe o destinatário para enviar o e-mail.");
+      return;
+    }
+    if (!draftId) {
+      setDraftStatus("Salvando rascunho antes de enviar...");
+      try {
+        const data = await api("email", {
+          method: "POST",
+          body: { action: "draft", to: draftTo, subject: draftSubject, body: draftBody }
+        });
+        if (data.ok) {
+          setDraftId(data.id);
+          setShowConfirmModal(true);
+        } else {
+          alert(data.error || "Falha ao salvar rascunho.");
+        }
+      } catch (err) {
+        alert(String(err?.message || err));
+      }
+    } else {
+      setShowConfirmModal(true);
+    }
+  };
+
+  const confirmSend = async () => {
+    if (!draftId) return;
+    setSending(true);
+    try {
+      const data = await api("email", {
+        method: "POST",
+        body: { action: "send", id: draftId }
+      });
+      if (data.ok) {
+        alert("E-mail enviado com sucesso!");
+        setShowConfirmModal(false);
+        setDraftTo("");
+        setDraftSubject("");
+        setDraftBody("");
+        setDraftId(null);
+        setDraftStatus("");
+        setEmailSubView("list");
+        loadEmails(emailSearch);
+      } else {
+        alert(data.error || "Erro ao enviar e-mail.");
+      }
+    } catch (err) {
+      alert(String(err?.message || err));
+    } finally {
+      setSending(false);
+    }
+  };
 
   // Estados do Terminal
   const [termCmd, setTermCmd] = useState("ls");
@@ -114,6 +265,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                   else if (label === "Conheça o SKYNETchat") { setView("about"); }
                   else if (label === "Codex") { setView("terminal"); }
                   else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
+                  else if (label === "E-mail") { setView("email"); }
                   else if (label !== "Fazer login") soon(label);
                 }}
               >
@@ -128,6 +280,243 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               </button>
             ))}
           </nav>
+        )}
+
+        
+        {view === "email" && (
+          <div className="drawer-list panel">
+            <button type="button" className="drawer-item" onClick={() => { setView("menu"); setEmailSubView("list"); }}>
+              <IconClose className="di-icon" />
+              <span className="di-text"><span className="di-title">Voltar ao menu</span></span>
+            </button>
+            <p className="panel-title">E-MAIL REAL (GMAIL API)</p>
+
+            {!logged ? (
+              <div className="panel-card">
+                <p style={{ color: "#a3a3a3", fontSize: "13px", margin: 0 }}>
+                  Faça login para acessar o painel de E-mail real via Gmail API.
+                </p>
+              </div>
+            ) : emailStateMsg === "token_expirado" ? (
+              <div className="panel-card" style={{ borderLeft: "3px solid #ef4444" }}>
+                <p style={{ color: "#f87171", fontWeight: "bold", fontSize: "13px", margin: "0 0 4px 0" }}>
+                  Token do Gmail Expirado
+                </p>
+                <p style={{ color: "#a3a3a3", fontSize: "12px", margin: 0 }}>
+                  O token de acesso OAuth possui validade de ~1h e expirou. Por favor, atualize o secret <code>GMAIL_ACCESS_TOKEN</code> no Supabase.
+                </p>
+              </div>
+            ) : emailStateMsg === "pendente_configuracao" ? (
+              <div className="panel-card" style={{ borderLeft: "3px solid #f59e0b" }}>
+                <p style={{ color: "#fbbf24", fontWeight: "bold", fontSize: "13px", margin: "0 0 4px 0" }}>
+                  Pendente Configuração
+                </p>
+                <p style={{ color: "#a3a3a3", fontSize: "12px", margin: 0 }}>
+                  A integração aguarda o secret <code>GMAIL_ACCESS_TOKEN</code> no Supabase.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setEmailSubView("list")}
+                    style={{
+                      flex: 1, padding: "6px", borderRadius: "4px", border: "1px solid #333",
+                      background: emailSubView === "list" ? "#222" : "transparent", color: "#fff", fontSize: "12px"
+                    }}
+                  >
+                    Caixa de Entrada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEmailSubView("draft"); setDraftStatus(""); }}
+                    style={{
+                      flex: 1, padding: "6px", borderRadius: "4px", border: "1px solid #333",
+                      background: emailSubView === "draft" ? "#222" : "transparent", color: "#fff", fontSize: "12px"
+                    }}
+                  >
+                    + Novo Rascunho
+                  </button>
+                </div>
+
+                {emailSubView === "list" && (
+                  <div>
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); loadEmails(emailSearch); }}
+                      style={{ display: "flex", gap: "6px", marginBottom: "12px" }}
+                    >
+                      <input
+                        type="text"
+                        value={emailSearch}
+                        onChange={(e) => setEmailSearch(e.target.value)}
+                        placeholder="Buscar e-mails (ex: github)..."
+                        style={{
+                          flex: 1, background: "#050505", border: "1px solid #282828",
+                          borderRadius: "4px", padding: "6px 8px", color: "#fff", fontSize: "12px"
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={emailLoading}
+                        style={{
+                          background: "#333", color: "#fff", border: "none",
+                          borderRadius: "4px", padding: "6px 10px", fontSize: "12px", cursor: "pointer"
+                        }}
+                      >
+                        Buscar
+                      </button>
+                    </form>
+
+                    {emailLoading ? (
+                      <p style={{ color: "#8d8d8d", fontSize: "12px" }}>Carregando e-mails...</p>
+                    ) : emailList.length === 0 ? (
+                      <p style={{ color: "#8d8d8d", fontSize: "12px" }}>Nenhum e-mail encontrado.</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {emailList.map((msg) => (
+                          <div
+                            key={msg.id}
+                            onClick={() => readEmail(msg.id)}
+                            style={{
+                              background: "#080808", border: "1px solid #222", borderRadius: "6px",
+                              padding: "8px 10px", cursor: "pointer", transition: "background 0.2s"
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                              <strong style={{ color: "#e5e5e5", fontSize: "12px" }}>{msg.from || "Desconhecido"}</strong>
+                              <small style={{ color: "#666", fontSize: "10px" }}>{msg.date ? new Date(msg.date).toLocaleDateString("pt-BR") : ""}</small>
+                            </div>
+                            <div style={{ color: "#60a5fa", fontSize: "12px", fontWeight: "bold", marginBottom: "4px" }}>
+                              {msg.subject || "(sem assunto)"}
+                            </div>
+                            <div style={{ color: "#a3a3a3", fontSize: "11px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {msg.snippet}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {emailSubView === "read" && selectedEmail && (
+                  <div className="panel-card" style={{ background: "#050505", border: "1px solid #222" }}>
+                    <button
+                      type="button"
+                      onClick={() => setEmailSubView("list")}
+                      style={{ background: "#222", color: "#ccc", border: "none", borderRadius: "4px", padding: "4px 8px", fontSize: "11px", marginBottom: "8px", cursor: "pointer" }}
+                    >
+                      ← Voltar à lista
+                    </button>
+                    <div style={{ marginBottom: "6px" }}>
+                      <small style={{ color: "#8d8d8d", display: "block" }}>De: {selectedEmail.from}</small>
+                      <small style={{ color: "#8d8d8d", display: "block" }}>Data: {selectedEmail.date}</small>
+                    </div>
+                    <h4 style={{ color: "#fff", margin: "8px 0", fontSize: "14px" }}>{selectedEmail.subject}</h4>
+                    <hr style={{ borderColor: "#222", margin: "8px 0" }} />
+                    <pre style={{
+                      color: "#d4d4d4", fontSize: "12px", fontFamily: "sans-serif",
+                      whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: "250px", overflowY: "auto"
+                    }}>
+                      {selectedEmail.body || selectedEmail.snippet}
+                    </pre>
+                  </div>
+                )}
+
+                {emailSubView === "draft" && (
+                  <div className="panel-card">
+                    <form onSubmit={handleCreateDraft}>
+                      <div style={{ marginBottom: "8px" }}>
+                        <label style={{ fontSize: "11px", color: "#8d8d8d", display: "block", marginBottom: "2px" }}>Para:</label>
+                        <input
+                          type="email"
+                          required
+                          value={draftTo}
+                          onChange={(e) => setDraftTo(e.target.value)}
+                          placeholder="destinatario@exemplo.com"
+                          style={{ width: "100%", background: "#050505", border: "1px solid #282828", borderRadius: "4px", padding: "6px", color: "#fff", fontSize: "12px" }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: "8px" }}>
+                        <label style={{ fontSize: "11px", color: "#8d8d8d", display: "block", marginBottom: "2px" }}>Assunto:</label>
+                        <input
+                          type="text"
+                          required
+                          value={draftSubject}
+                          onChange={(e) => setDraftSubject(e.target.value)}
+                          placeholder="Assunto do e-mail"
+                          style={{ width: "100%", background: "#050505", border: "1px solid #282828", borderRadius: "4px", padding: "6px", color: "#fff", fontSize: "12px" }}
+                        />
+                      </div>
+                      <div style={{ marginBottom: "10px" }}>
+                        <label style={{ fontSize: "11px", color: "#8d8d8d", display: "block", marginBottom: "2px" }}>Mensagem:</label>
+                        <textarea
+                          rows={4}
+                          required
+                          value={draftBody}
+                          onChange={(e) => setDraftBody(e.target.value)}
+                          placeholder="Digite a mensagem..."
+                          style={{ width: "100%", background: "#050505", border: "1px solid #282828", borderRadius: "4px", padding: "6px", color: "#fff", fontSize: "12px", resize: "vertical" }}
+                        />
+                      </div>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          type="submit"
+                          style={{ flex: 1, background: "#333", color: "#fff", border: "none", borderRadius: "4px", padding: "8px", fontSize: "12px", cursor: "pointer" }}
+                        >
+                          Salvar Rascunho
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSendDraftClick}
+                          style={{ flex: 1, background: "var(--red)", color: "#000", fontWeight: "bold", border: "none", borderRadius: "4px", padding: "8px", fontSize: "12px", cursor: "pointer" }}
+                        >
+                          Enviar E-mail (2 cliques)
+                        </button>
+                      </div>
+                    </form>
+                    {draftStatus && (
+                      <p style={{ marginTop: "8px", fontSize: "11px", color: "#60a5fa" }}>{draftStatus}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showConfirmModal && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+          }}>
+            <div style={{ background: "#111", border: "1px solid #333", borderRadius: "8px", padding: "16px", maxWidth: "320px", width: "90%" }}>
+              <h4 style={{ margin: "0 0 8px 0", color: "#fff", fontSize: "14px" }}>Confirmar envio para {draftTo}?</h4>
+              <p style={{ color: "#a3a3a3", fontSize: "12px", margin: "0 0 16px 0" }}>
+                Assunto: {draftSubject || "(sem assunto)"}<br />
+                Esta ação enviará o e-mail imediatamente via Gmail API.
+              </p>
+              <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmModal(false)}
+                  disabled={sending}
+                  style={{ background: "#222", color: "#ccc", border: "none", borderRadius: "4px", padding: "6px 12px", fontSize: "12px", cursor: "pointer" }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSend}
+                  disabled={sending}
+                  style={{ background: "var(--red)", color: "#000", fontWeight: "bold", border: "none", borderRadius: "4px", padding: "6px 12px", fontSize: "12px", cursor: "pointer" }}
+                >
+                  {sending ? "Enviando..." : "Confirmar Envio"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {view === "terminal" && (

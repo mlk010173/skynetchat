@@ -27,7 +27,10 @@ interface AutomationRun {
   resultado: string;
 }
 
-async function executePrompt(chatUrl: string, anonKey: string, prompt: string): Promise<string> {
+async function executePrompt(prompt: string): Promise<string> {
+  const chatUrl = "https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1/chat";
+  const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3doaHRlbmZvemR3enB2eGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5NTY2OTQsImV4cCI6MjEwODUzMjY5NH0.FRwfO66wi1ADFmSboCCwH1NWuz-212dDrIcuuiZ-0HA";
+
   const res = await fetch(chatUrl, {
     method: "POST",
     headers: {
@@ -43,51 +46,41 @@ async function executePrompt(chatUrl: string, anonKey: string, prompt: string): 
     throw new Error(`Chat API HTTP ${res.status}: ${errText}`);
   }
 
-  if (!res.body) {
-    throw new Error("Chat response body is null");
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
+  const rawText = await res.text();
   let fullText = "";
-  let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  const lines = rawText.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("data:")) {
-        const jsonStr = trimmed.slice(5).trim();
-        if (!jsonStr) continue;
-        try {
-          const parsed = JSON.parse(jsonStr);
-          if (parsed.delta) {
-            fullText += parsed.delta;
-          }
-        } catch (_) {
-          // ignore non-JSON stream lines
-        }
-      }
+    if (trimmed.startsWith("0:")) {
+      try {
+        const str = JSON.parse(trimmed.slice(2));
+        if (typeof str === "string") fullText += str;
+      } catch (_) {}
+      continue;
     }
-  }
 
-  if (buffer.trim().startsWith("data:")) {
-    const jsonStr = buffer.trim().slice(5).trim();
-    if (jsonStr) {
+    if (trimmed.startsWith("data:")) {
+      const jsonStr = trimmed.slice(5).trim();
+      if (!jsonStr || jsonStr === "[DONE]") continue;
       try {
         const parsed = JSON.parse(jsonStr);
-        if (parsed.delta) fullText += parsed.delta;
+        if (typeof parsed === "string") {
+          fullText += parsed;
+        } else if (parsed && typeof parsed.delta === "string") {
+          fullText += parsed.delta;
+        }
       } catch (_) {}
     }
   }
 
-  return fullText.trim() || "Sem resposta do chat";
+  if (!fullText.trim()) {
+    return `[RAW: status=${res.status}, len=${rawText.length}, sample=${JSON.stringify(rawText.slice(0, 300))}]`;
+  }
+
+  return fullText.trim();
 }
 
 Deno.serve(async (req: Request) => {
@@ -109,7 +102,6 @@ Deno.serve(async (req: Request) => {
   const dbApiKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
 
   try {
-    // 1. Fetch active automations
     const autoRes = await fetch(`${SUPABASE_URL}/rest/v1/automations?ativo=eq.true&select=*`, {
       method: "GET",
       headers: {
@@ -131,7 +123,6 @@ Deno.serve(async (req: Request) => {
     const executedRuns: any[] = [];
 
     for (const auto of automations) {
-      // 2. Check latest run
       const runRes = await fetch(
         `${SUPABASE_URL}/rest/v1/automations_runs?automation_id=eq.${auto.id}&order=iniciado_em.desc&limit=1`,
         {
@@ -156,7 +147,6 @@ Deno.serve(async (req: Request) => {
           }
         }
       } else {
-        // If error fetching runs, run by default
         shouldRun = true;
       }
 
@@ -164,19 +154,17 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // 3. Execute prompt
       const startTime = new Date().toISOString();
       let status = "sucesso";
       let resultado = "";
 
       try {
-        resultado = await executePrompt(`${SUPABASE_URL}/functions/v1/chat`, SUPABASE_ANON_KEY, auto.prompt);
+        resultado = await executePrompt(auto.prompt);
       } catch (err: any) {
         status = "erro";
         resultado = `Erro na execução: ${err.message || String(err)}`;
       }
 
-      // 4. Save run in automations_runs
       const saveRunRes = await fetch(`${SUPABASE_URL}/rest/v1/automations_runs`, {
         method: "POST",
         headers: {
@@ -199,7 +187,6 @@ Deno.serve(async (req: Request) => {
         runRecord = Array.isArray(savedData) ? savedData[0] : savedData;
       }
 
-      // 5. Create notification for the user
       const notifBody = resultado.length > 250 ? resultado.slice(0, 250) + "..." : resultado;
       const saveNotifRes = await fetch(`${SUPABASE_URL}/rest/v1/notifications`, {
         method: "POST",
@@ -231,7 +218,7 @@ Deno.serve(async (req: Request) => {
         status,
         run_id: runRecord?.id,
         notification_id: notifRecord?.id,
-        resultado_preview: notifBody,
+        resultado,
       });
     }
 
