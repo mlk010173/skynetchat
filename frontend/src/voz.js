@@ -179,8 +179,14 @@ export async function falar(texto, { onProgress, velocidade = 1 } = {}) {
     const url = URL.createObjectURL(blob);
     audioAtual = new Audio(url);
     audioAtual.playbackRate = velocidade;
-    await audioAtual.play();
-    return { ok: true, motor: "mms-tts-por", url, wav: blob };
+    let tocado = true;
+    try {
+      await audioAtual.play();
+    } catch {
+      // navegador bloqueia audio sem gesto do usuario; a voz foi gerada mesmo assim
+      tocado = false;
+    }
+    return { ok: true, motor: "mms-tts-por", url, wav: blob, tocado };
   } catch (e) {
     if ("speechSynthesis" in window) {
       const u = new SpeechSynthesisUtterance(limpo);
