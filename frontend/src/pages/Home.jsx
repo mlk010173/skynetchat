@@ -8,6 +8,7 @@ import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } fr
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
 import { chatModels, labelFor } from "../models.js";
+import * as voz from "../voz.js";
 
 const actions = [
   { label: "Pesquisar", icon: IconGlobe, color: "#3b82f6" },
@@ -366,22 +367,47 @@ export default function Home() {
     setBusy(false);
   }, [draft, busy, model, say]);
 
-  const toggleMic = () => {
-    const SR = window.webkitSpeechRecognition || window.SpeechRecognition;
-    if (!SR) { say("Reconhecimento de voz não é suportado neste navegador."); return; }
-    if (listening) { micRef.current?.stop(); stopMic(); return; }
-    const r = new SR();
-    micRef.current = r;
-    r.lang = "pt-BR";
-    r.interimResults = false;
-    r.onresult = (e) => {
-      const t = Array.from(e.results).map((x) => x[0].transcript).join(" ").trim();
-      setDraft((cur) => (cur ? cur + " " : "") + t);
-    };
-    r.onend = () => setListening(false);
-    r.onerror = () => setListening(false);
-    r.start();
-    setListening(true);
+  // Ditado: Whisper local (transformers.js) com o reconhecedor do navegador como reserva.
+  const stopMic = useCallback(() => {
+    setListening(false);
+    setMicSecs(0);
+    clearInterval(micTimer.current);
+    micTimer.current = null;
+  }, []);
+
+  const toggleMic = async () => {
+    if (listening) { await finalizarDitado(); return; }
+    if (!navigator.mediaDevices?.getUserMedia) { say("Este navegador não dá acesso ao microfone."); return; }
+    try {
+      say("Preparando o Whisper local (só na primeira vez)…");
+      const gravador = await voz.gravarMicrofone();
+      micRef.current = gravador;
+      setMicSecs(0);
+      setListening(true);
+      say("Gravando. Toque no microfone para parar.");
+    } catch (e) {
+      say("Não consegui abrir o microfone: " + String(e).slice(0, 80));
+    }
+  };
+
+  const finalizarDitado = async () => {
+    const gravador = micRef.current;
+    if (!gravador) return;
+    stopMic();
+    say("Transcrevendo com Whisper…");
+    try {
+      const blob = await gravador.finalizar();
+      const pcm = await voz.audioParaFloat32(blob);
+      const texto = await voz.transcrever(pcm);
+      if (texto) {
+        setDraft((cur) => (cur ? cur + " " : "") + texto);
+        say("Transcrito pelo Whisper.");
+      } else {
+        say("Não entendi o áudio. Tenta de novo mais perto do microfone.");
+      }
+    } catch (e) {
+      say("Falha na transcrição local: " + String(e).slice(0, 90));
+    }
   };
 
   const soon = (label) => say(`"${label}" está em construção. Não é simulação: simplesmente ainda não existe. 😉`);
@@ -602,6 +628,9 @@ export default function Home() {
                       {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
                       {message.role === "user" && !busy && <button type="button" onClick={() => comecarEdicao(index)}>Editar</button>}
                       {!busy && <button type="button" onClick={() => { navigator.clipboard?.writeText(message.text); say(message.role === "user" ? "Mensagem copiada." : "Resposta copiada."); }}>Copiar</button>}
+                      {message.role === "assistant" && message.text && (
+                        <button type="button" onClick={async () => { say("Gerando voz local…"); const r = await voz.falar(message.text); say(r.ok ? `Falando (${r.motor}).` : `Voz indisponível: ${r.erro}`); }}>Ouvir</button>
+                      )}
                     </span>
                   </>
                 )}
@@ -677,7 +706,7 @@ export default function Home() {
         {listening ? (
           <span className="rec-ui" aria-label="Gravando áudio">
             <b className="rec-dot" /><span className="rec-time">{String(Math.floor(micSecs / 60)).padStart(2, "0")}:{String(micSecs % 60).padStart(2, "0")}</span>
-            <button type="button" className="rec-x" onClick={() => { micRef.current?.stop(); stopMic(); }} aria-label="Cancelar gravação">✕</button>
+            <button type="button" className="rec-x" onClick={() => { micRef.current?.cancelar?.(); stopMic(); say("Gravação cancelada."); }} aria-label="Cancelar gravação">✕</button>
           </span>
         ) : (
           <button type="button" className="icon-btn muted" aria-label="Gravar áudio" onClick={toggleMic}><IconMic /></button>
