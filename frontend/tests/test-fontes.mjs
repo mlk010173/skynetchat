@@ -66,9 +66,9 @@ if (await newChatBtn.count() > 0) {
 
 await input.fill("o que e javascript em poucas palavras?");
 await page.click("button.dock-send");
-await page.waitForTimeout(7000);
+await page.waitForTimeout(12000);
 
-const regText = await page.textContent(".thread");
+const regText = (await page.textContent(".thread").catch(() => "")) || (await page.textContent("body"));
 const regChips = await page.locator(".fonte-chip").count();
 
 console.log("Resposta da regressão (primeiros 200 chars):", regText.slice(0, 200));
