@@ -217,7 +217,7 @@ function detectTools(text: string): DetectedTool[] {
       let c = String(s || "").replace(/\.\s*$/, "").trim();
       const lixo = /^(hoje|agora|amanh[aã]|esta|est[aá]|faz|o|a|os|as|em|de|do|da|para|no|na|tempo|clima)\s+/i;
       for (let i = 0; i < 6 && lixo.test(c); i++) c = c.replace(lixo, "").trim();
-      return c.split(/\s+(?:em|de|para|hoje|agora|amanh[aã])\s+/i)[0].trim();
+      return c.replace(/\s+(?:hoje|agora)\s*$/i, "").trim();
     };
     tools.push({ name: "clima", payload: { cidade: limparCidade(cidade) || "São Paulo" } });
   }

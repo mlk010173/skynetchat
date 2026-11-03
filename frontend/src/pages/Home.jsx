@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import MediaPlayer from "../media.jsx";
+import ClimaCard from "../clima.jsx";
+import { criarWidget, carregarWidgets, salvarWidgets } from "../widgets/registry.js";
 import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 
