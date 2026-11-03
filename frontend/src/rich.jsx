@@ -161,20 +161,21 @@ export default function RichText({ texto = "", vivo = false }) {
             </Tag>
           );
         }
-        // parágrafo: link de vídeo sozinho vira player
+        // parágrafo: vídeo do YouTube/Vimeo vira player, mesmo citado no meio do texto
         const urls = b.valor.match(RE_URL) || [];
-        const soVideo = urls.length === 1 && b.valor.replace(RE_URL, "").trim().length < 4 && embedDe(urls[0]);
-        if (soVideo) {
-          return (
-            <div key={b.chave} className="rich-embed">
-              <iframe src={embedDe(urls[0])} title="vídeo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
-            </div>
-          );
-        }
+        const players = [...new Set(urls.map(embedDe).filter(Boolean))];
+        const soVideo = players.length === 1 && b.valor.replace(RE_URL, "").trim().length < 4;
         return (
-          <p key={b.chave} className="rich-p">
-            {linhaComLinks(b.valor, `p${b.chave}`)}
-          </p>
+          <div key={b.chave} className="rich-bloco">
+            {!soVideo && (
+              <p className="rich-p">{linhaComLinks(b.valor, `p${b.chave}`)}</p>
+            )}
+            {players.map((src, i) => (
+              <div key={`emb${i}`} className="rich-embed">
+                <iframe src={src} title="vídeo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
+              </div>
+            ))}
+          </div>
         );
       })}
       {vivo && <span className="caret" aria-hidden="true" />}
