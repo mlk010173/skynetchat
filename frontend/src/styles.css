@@ -587,3 +587,45 @@ button { font-family: inherit; color: inherit; }
   .wg-card, .wg-galeria-item, .trace-step, .wg-config { animation: none !important; }
   .wg-card:hover { transform: none; }
 }
+
+/* ---------- cartão de clima com gráfico ---------- */
+.clima-card { margin-top: 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 14px; background: linear-gradient(160deg, rgba(255,87,87,.07), rgba(255,255,255,.02) 45%); animation: wgEntra .42s ease both; }
+.clima-topo { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.clima-cidade { margin: 0; font-size: 11px; letter-spacing: .14em; color: #9a9a9a; text-transform: uppercase; }
+.clima-temp { margin: 2px 0 0; font: 600 30px/1 var(--mono, monospace); color: #fff; }
+.clima-temp span { font: 400 12px/1.4 system-ui, sans-serif; color: #b4b4b4; display: block; margin-top: 4px; }
+.clima-nums { display: grid; grid-template-columns: repeat(2, auto); gap: 2px 14px; font-size: 11px; color: #9d9d9d; }
+.clima-nums b { color: #eee; font-weight: 600; }
+.clima-abas { display: flex; align-items: center; gap: 6px; margin: 12px 0 6px; flex-wrap: wrap; }
+.clima-abas button { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: #cfcfcf; font-size: 11px; padding: 5px 10px; border-radius: 999px; cursor: pointer; transition: all .18s ease; }
+.clima-abas button:hover { transform: translateY(-1px); border-color: rgba(255,87,87,.5); }
+.clima-abas button.ativo { background: rgba(255,87,87,.16); border-color: rgba(255,87,87,.6); color: #fff; }
+.clima-resumo { margin-left: auto; font-size: 11px; color: #8b8b8b; font-variant-numeric: tabular-nums; }
+.clima-grafico { position: relative; margin-top: 4px; }
+.clima-grafico svg { width: 100%; height: 120px; display: block; overflow: visible; cursor: crosshair; }
+.clima-grade { stroke: rgba(255,255,255,.07); stroke-width: 1; }
+.clima-linha { animation: climaDesenha 1s ease both; }
+.clima-area { animation: climaSurge .9s ease both; }
+.clima-guia { stroke: rgba(255,255,255,.28); stroke-width: 1; stroke-dasharray: 3 3; }
+.clima-ponto { transition: cx .08s linear, cy .08s linear; }
+.clima-horas { display: flex; justify-content: space-between; font-size: 10px; color: #7d7d7d; margin-top: -4px; }
+.clima-dias { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; }
+.clima-dia { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 10px; background: rgba(255,255,255,.04); font-size: 10px; color: #9b9b9b; }
+.clima-dia b { color: #fff; font-size: 12px; }
+.clima-dia i { color: #8f8f8f; font-style: normal; }
+.clima-dia em { color: #38bdf8; font-style: normal; }
+.clima-fonte { margin: 10px 0 0; font-size: 10px; color: #6f6f6f; }
+@keyframes climaDesenha { from { stroke-dasharray: 900; stroke-dashoffset: 900; } to { stroke-dasharray: 900; stroke-dashoffset: 0; } }
+@keyframes climaSurge { from { opacity: 0; } to { opacity: 1; } }
+/* widget criado e arquivo */
+.criado-card, .arq-card { margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); font-size: 12px; color: #ddd; text-decoration: none; animation: wgEntra .38s ease both; }
+.criado-card { justify-content: space-between; flex-wrap: wrap; }
+.criado-card b { color: #fff; }
+.criado-card span { color: #a9a9a9; }
+.criado-card em { color: #ff6b6b; font-style: normal; }
+.criado-card:hover { border-color: rgba(255,87,87,.55); transform: translateY(-1px); }
+.arq-card div { display: flex; flex-direction: column; }
+.arq-card b { color: #fff; }
+.arq-card span { color: #9a9a9a; font-size: 11px; }
+.arq-card button { margin-left: auto; background: rgba(255,87,87,.18); border: 1px solid rgba(255,87,87,.5); color: #fff; border-radius: 9px; padding: 6px 12px; font-size: 11px; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .clima-linha, .clima-area, .criado-card, .arq-card { animation: none; } }

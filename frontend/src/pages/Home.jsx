@@ -348,6 +348,31 @@ export default function Home() {
         copy[copy.length - 1] = { ...last, midia };
         return copy;
       }),
+      onClima: (dados) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", clima: dados }); return copy; }
+        copy[copy.length - 1] = { ...last, clima: dados };
+        return copy;
+      }),
+      onWidget: (spec) => setMessages((prev) => {
+        const novo = criarWidget(spec?.tipo || "texto", {});
+        const atual = carregarWidgets();
+        salvarWidgets([...atual, novo]);
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        const marca = { tipo: spec?.tipo, titulo: spec?.titulo || novo.titulo };
+        if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", widgetCriado: marca }); return copy; }
+        copy[copy.length - 1] = { ...last, widgetCriado: marca };
+        return copy;
+      }),
+      onArquivo: (arq) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", arquivo: arq }); return copy; }
+        copy[copy.length - 1] = { ...last, arquivo: arq };
+        return copy;
+      }),
       onDelta: (delta) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -626,6 +651,30 @@ export default function Home() {
                       );
                     })()}
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
+                    {message.clima && <ClimaCard dados={message.clima} />}
+                    {message.widgetCriado && (
+                      <a className="criado-card" href="#/widgets">
+                        <b>Widget criado</b>
+                        <span>{message.widgetCriado.titulo}</span>
+                        <em>Abrir painel →</em>
+                      </a>
+                    )}
+                    {message.arquivo && (
+                      <div className="arq-card">
+                        <div>
+                          <b>{message.arquivo.nome}</b>
+                          <span>{new Blob([message.arquivo.conteudo ?? ""]).size} bytes · {message.arquivo.mime}</span>
+                        </div>
+                        <button type="button" onClick={() => {
+                          const blob = new Blob([message.arquivo.conteudo ?? ""], { type: message.arquivo.mime || "text/plain" });
+                          const a = document.createElement("a");
+                          a.href = URL.createObjectURL(blob);
+                          a.download = message.arquivo.nome;
+                          a.click();
+                          URL.revokeObjectURL(a.href);
+                        }}>Baixar</button>
+                      </div>
+                    )}
                     {message.midia && message.midia.embed && (
                       <MediaPlayer
                         compacto

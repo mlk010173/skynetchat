@@ -31,6 +31,7 @@ const tFim = (meta: unknown) => enc.encode(`d:${JSON.stringify({ finishReason: "
 
 import { resolverMidia } from "../_shared/midia.ts";
 import { capturarTela } from "../_shared/print.ts";
+import { buscarClima } from "../_shared/clima.ts";
 
 const ROTULOS: Record<string, string> = {
   web_pesquisar: "Pesquisar na web",
@@ -43,6 +44,9 @@ const ROTULOS: Record<string, string> = {
   navegar: "Navegar no site",
   sistema: "Checar o sistema",
   midia: "Tocar mídia",
+  widget: "Criar widget",
+  arquivo: "Gerar arquivo",
+  github: "Consultar GitHub",
   print: "Capturar a tela do site",
   politicos: "Abrir painel de políticos",
   memoria: "Consultar memória",
@@ -82,6 +86,10 @@ function resumirResultado(nome: string, r: unknown): string {
     return partes.join(" · ").slice(0, 180);
   }
   if (nome === "print") return d.ok ? `captura de ${String(d.alvo ?? "").slice(0, 80)} (${d.provedor})` : String(d.erro ?? "falha na captura");
+  if (nome === "clima") return d.ok ? `${d.cidade}: ${d.agora?.temp ?? "?"}°C, ${d.agora?.descricao ?? ""}`.slice(0, 100) : String(d.erro ?? "sem clima");
+  if (nome === "widget") return `widget de ${d.tipo} pronto`;
+  if (nome === "arquivo") return `${d.nome} (${d.bytes} bytes)`;
+  if (nome === "github") return d.ok ? `${d.repo}: ${d.commits?.length ?? 0} commits, ${d.estrelas} estrelas` : String(d.erro ?? "sem dados");
   if (nome === "midia") return d.ok ? `tocando ${d.provedor}: ${String(d.titulo ?? "").slice(0, 60)}` : String(d.mensagem ?? "mídia não encontrada").slice(0, 120);
   if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
   if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
@@ -182,6 +190,22 @@ function detectTools(text: string): DetectedTool[] {
     tools.push({ name: "moeda", payload: { de, para } });
   }
 
+  // 3f. widget: "cria um widget/painel de X"
+  if (/\b(cria|criar|monta|montar|adiciona|coloca|gera)\b[\s\S]{0,24}\b(widget|painel|card)\b/i.test(text)) {
+    tools.push({ name: "widget", payload: { pedido: text.slice(0, 200) } });
+  }
+
+  // 3g. arquivo: "escreve um arquivo .txt/.md/.csv com ..."
+  if (/\b(escreve|escrever|cria|criar|gera|gerar|salva|salvar|manda|exporta|exportar)\b[\s\S]{0,30}\b(arquivo|file|\.txt|\.md|\.csv|\.json|\.html)\b/i.test(text)) {
+    tools.push({ name: "arquivo", payload: { pedido: text.slice(0, 400) } });
+  }
+
+  // 3h. github: repositório, commits, issues
+  const repo = text.match(/\b([a-z0-9][a-z0-9-]{1,38})\/([a-z0-9._-]{1,80})\b/i);
+  if (/\b(github|reposit[oó]rio|repo|commits?|issues?|pull request|branch)\b/i.test(text)) {
+    tools.push({ name: "github", payload: { repo: repo ? `${repo[1]}/${repo[2]}` : "", pedido: text.slice(0, 200) } });
+  }
+
   // 4. 'clima/tempo em CIDADE' -> clima
   if (/\b(clima|tempo|temperatura|calor|frio|chuva)\b/i.test(text)) {
     let cidade = "São Paulo";
@@ -189,7 +213,13 @@ function detectTools(text: string): DetectedTool[] {
     if (cityMatch && cityMatch[1].trim()) {
       cidade = cityMatch[1].trim().replace(/[?!.,]+$/, "");
     }
-    tools.push({ name: "clima", payload: { cidade } });
+    const limparCidade = (s: string) => {
+      let c = String(s || "").replace(/\.\s*$/, "").trim();
+      const lixo = /^(hoje|agora|amanh[aã]|esta|est[aá]|faz|o|a|os|as|em|de|do|da|para|no|na|tempo|clima)\s+/i;
+      for (let i = 0; i < 6 && lixo.test(c); i++) c = c.replace(lixo, "").trim();
+      return c.split(/\s+(?:em|de|para|hoje|agora|amanh[aã])\s+/i)[0].trim();
+    };
+    tools.push({ name: "clima", payload: { cidade: limparCidade(cidade) || "São Paulo" } });
   }
 
   // 5. 'que horas/data' -> hora
@@ -233,6 +263,62 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool) {
+  if (tool.name === "widget") {
+    const pedido = String((tool.payload as any)?.pedido ?? "").toLowerCase();
+    const tipo = /clima|temperatura|chuva/.test(pedido) ? "clima"
+      : /not[ií]cia|manchete|jornal/.test(pedido) ? "noticias"
+      : /github|reposit[oó]rio|repo/.test(pedido) ? "github"
+      : /m[uú]sica|v[ií]deo|player|som/.test(pedido) ? "midia"
+      : /status|servidor|sistema|monitor/.test(pedido) ? "status"
+      : /gr[aá]fico|m[eé]trica|lat[eê]ncia/.test(pedido) ? "metricas"
+      : "texto";
+    return { ok: true, tipo, titulo: `Widget de ${tipo}`, pedido };
+  }
+
+  if (tool.name === "arquivo") {
+    const pedido = String((tool.payload as any)?.pedido ?? "");
+    const ext = (pedido.match(/\.(txt|md|csv|json|html)\b/i)?.[1] ?? "txt").toLowerCase();
+    const nome = (pedido.match(/\b(?:arquivo|file)\s+([\w.-]+\.(?:txt|md|csv|json|html))/i)?.[1])
+      ?? (pedido.match(/\b([\w-]+\.(?:txt|md|csv|json|html))\b/i)?.[1])
+      ?? `skynet-${Date.now()}.${ext}`;
+    const conteudo = pedido.replace(/^[\s\S]{0,60}?\bcom\b/i, "").trim() || pedido.trim();
+    const mime = ext === "json" ? "application/json" : ext === "csv" ? "text/csv" : ext === "html" ? "text/html" : ext === "md" ? "text/markdown" : "text/plain";
+    return { ok: true, nome, mime, conteudo: conteudo.slice(0, 20000), bytes: conteudo.length };
+  }
+
+  if (tool.name === "github") {
+    const repo = String((tool.payload as any)?.repo ?? "").trim();
+    if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return { ok: false, erro: "não identifiquei dono/repositório no pedido" };
+    const cab = { "user-agent": "SKYNETbot", accept: "application/vnd.github+json" };
+    const [info, commits] = await Promise.all([
+      fetch(`https://api.github.com/repos/${repo}`, { headers: cab, signal: AbortSignal.timeout(15000) }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(`https://api.github.com/repos/${repo}/commits?per_page=8`, { headers: cab, signal: AbortSignal.timeout(15000) }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]);
+    if (!info) return { ok: false, erro: `não consegui ler o repositório ${repo} (privado ou inexistente)` };
+    return {
+      ok: true,
+      repo,
+      descricao: info.description ?? "",
+      estrelas: info.stargazers_count ?? 0,
+      linguagem: info.language ?? "",
+      atualizado: info.pushed_at ?? "",
+      branch: info.default_branch ?? "main",
+      commits: Array.isArray(commits) ? commits.map((c: any) => ({
+        sha: String(c.sha ?? "").slice(0, 7),
+        mensagem: String(c.commit?.message ?? "").split("\n")[0].slice(0, 110),
+        autor: c.commit?.author?.name ?? "",
+        quando: c.commit?.author?.date ?? "",
+      })) : [],
+    };
+  }
+
+  if (tool.name === "clima") {
+    const cidade = String((tool.payload as any)?.cidade ?? "São Paulo");
+    const r = await buscarClima(cidade);
+    if (r.ok) return { ...r, cidade: r.cidade ?? cidade };
+    // sem Open-Meteo, cai para o agente do Render (wttr.in)
+  }
+
   if (tool.name === "print") {
     const r = await capturarTela(String(tool.payload?.url ?? "https://skynetchat-xi.vercel.app"));
     return { ...r, pedido: tool.payload?.url ?? "" };
@@ -359,6 +445,15 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
       const para = data.para || payload.para || "BRL";
       fontes.push({ titulo: `Cotação ${de}/${para} (AwesomeAPI)`, url: "https://economia.awesomeapi.com.br" });
       contextText = `Cotação de ${de} para ${para}: 1 ${de} = ${data.resultado ?? data.taxa} ${para} (Atualizado em: ${data.atualizado || new Date().toISOString()})`;
+      break;
+    }
+    case "github": {
+      const commits = Array.isArray(data.commits) ? data.commits : [];
+      if (data.ok) {
+        fontes.push({ titulo: `GitHub ${data.repo}`, url: `https://github.com/${data.repo}` });
+        contextText = `Repositório ${data.repo}: ${data.descricao || "sem descrição"} · ${data.estrelas} estrelas · linguagem ${data.linguagem || "?"} · branch ${data.branch} · atualizado ${String(data.atualizado).slice(0, 10)}.\nÚltimos commits:\n` +
+          commits.map((c: any) => `- ${c.sha} ${c.mensagem} (${c.autor}, ${String(c.quando).slice(0, 10)})`).join("\n");
+      } else contextText = `GitHub: ${data.erro ?? "sem dados"}`;
       break;
     }
     case "clima": {
@@ -625,6 +720,7 @@ Deno.serve(async (req) => {
         const fontesColetadas: { titulo: string; url: string }[] = [];
         let imagemEntregue = false;
         let midiaTocando: any = null;
+        let entregaDireta: { quadro: any; texto: string } | null = null;
         let capturaEntregue: any = null;
 
         // Primeira etapa visivel: o plano do agente (o que ele escolheu fazer e por que).
@@ -681,6 +777,24 @@ Deno.serve(async (req) => {
             if (tool.name === "midia" && toolResult?.embed) {
               midiaTocando = toolResult;
               controller.enqueue(tDados({ tipo: "midia", provedor: toolResult.provedor, url: toolResult.url, embed: toolResult.embed, titulo: toolResult.titulo, aviso: toolResult.aviso }));
+            }
+            if (tool.name === "clima" && toolResult?.ok) {
+              entregaDireta = {
+                quadro: { tipo: "clima", dados: toolResult },
+                texto: `Clima em **${toolResult.cidade}** agora: ${toolResult.agora?.temp}°C, ${toolResult.agora?.descricao}. Hoje fica entre ${toolResult.hoje?.min}°C e ${toolResult.hoje?.max}°C, com até ${toolResult.hoje?.chuva_max ?? 0}% de chance de chuva. O gráfico interativo está na conversa.`,
+              };
+            }
+            if (tool.name === "widget" && toolResult?.ok) {
+              entregaDireta = {
+                quadro: { tipo: "widget", spec: { tipo: toolResult.tipo, titulo: toolResult.titulo } },
+                texto: `Criei o **${toolResult.titulo}**. Ele já foi salvo no seu painel de widgets.`,
+              };
+            }
+            if (tool.name === "arquivo" && toolResult?.ok) {
+              entregaDireta = {
+                quadro: { tipo: "arquivo", nome: toolResult.nome, mime: toolResult.mime, conteudo: toolResult.conteudo },
+                texto: `Gerei o arquivo **${toolResult.nome}** (${toolResult.bytes} bytes). Baixe pelo cartão na conversa.`,
+              };
             }
             if (tool.name === "imagem") {
               imagemEntregue = true;
@@ -741,6 +855,14 @@ Deno.serve(async (req) => {
           if (contextText) {
             toolContexts.push(contextText);
           }
+        }
+
+        if (entregaDireta) {
+          controller.enqueue(tDados(entregaDireta.quadro));
+          enviaTexto(entregaDireta.texto);
+          enviaFim({ conversationId: convId, model: entregaDireta.quadro.tipo, pedido: model, auto: true, fallback: false, tentativas: [] });
+          controller.close();
+          return;
         }
 
         if (midiaTocando) {

@@ -93,6 +93,12 @@ export async function streamChat({ conversationId, content, model }, handlers) {
             if (!it) continue;
             if (it.tipo === "etapa" && handlers.onTool) {
               handlers.onTool({ tool: it.ferramenta, status: it.estado, detalhe: it.detalhe, entrada: it.entrada, saida: it.saida, ms: it.ms, fontes: it.fontes, erro: it.erro, quando: it.quando });
+            } else if (it.tipo === "clima" && handlers.onClima) {
+              handlers.onClima(it.dados ?? it);
+            } else if (it.tipo === "widget" && handlers.onWidget) {
+              handlers.onWidget(it.spec ?? it);
+            } else if (it.tipo === "arquivo" && handlers.onArquivo) {
+              handlers.onArquivo({ nome: it.nome, mime: it.mime, conteudo: it.conteudo });
             } else if (it.tipo === "midia" && handlers.onMidia) {
               handlers.onMidia({ provedor: it.provedor, url: it.url, embed: it.embed, titulo: it.titulo, aviso: it.aviso });
             } else if (it.tipo === "imagem" && handlers.onImage) {
@@ -155,6 +161,9 @@ export async function streamChatAuto({ conversationId, content, model }, handler
         onTool: (toolEv) => handlers.onTool?.(toolEv),
         onImage: (url) => handlers.onImage?.(url),
         onMidia: (m) => handlers.onMidia?.(m),
+        onClima: (d) => handlers.onClima?.(d),
+        onWidget: (s) => handlers.onWidget?.(s),
+        onArquivo: (a) => handlers.onArquivo?.(a),
         onReason: (txt) => handlers.onReason?.(txt),
         onModelo: (info) => handlers.onModelo?.(info),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
