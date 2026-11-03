@@ -9,6 +9,7 @@ import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
 import { chatModels, labelFor } from "../models.js";
 import * as voz from "../voz.js";
+import RichText from "../rich.jsx";
 
 const actions = [
   { label: "Pesquisar", icon: IconGlobe, color: "#3b82f6" },
@@ -608,7 +609,12 @@ export default function Home() {
                       );
                     })()}
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
-                    {message.image && !message.text ? null : message.text}
+                    {message.image && !message.text ? null : (
+                      <RichText
+                        texto={message.text}
+                        vivo={busy && index === messages.length - 1 && message.role === "assistant"}
+                      />
+                    )}
                     {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (
                       <div className="tool-fontes">
                         <div className="fontes-chips">

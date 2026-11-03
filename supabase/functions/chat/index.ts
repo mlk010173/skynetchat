@@ -38,6 +38,7 @@ const ROTULOS: Record<string, string> = {
   hora: "Ver hora",
   imagem: "Gerar imagem",
   navegar: "Navegar no site",
+  sistema: "Checar o sistema",
   politicos: "Abrir painel de políticos",
   memoria: "Consultar memória",
 };
@@ -71,6 +72,10 @@ function resumirResultado(nome: string, r: unknown): string {
   if (nome === "calcular") return `${d.expressao ?? ""} = ${d.resultado ?? ""}`.slice(0, 80);
   if (nome === "moeda") return `1 ${d.de ?? ""} = ${d.resultado ?? d.taxa ?? ""} ${d.para ?? ""}`.slice(0, 80);
   if (nome === "clima") return `${d.cidade ?? ""}: ${d.temperatura_c ?? "?"}°C, ${d.descricao ?? ""}`.slice(0, 100);
+  if (nome === "sistema") {
+    const partes = [d.site ? `site ${d.site.ok ? "no ar" : "fora do ar"} (${d.site.status ?? d.site.erro}, ${d.site.ms}ms)` : "", d.agente ? `agente ${d.agente.ok ? "ok" : "falhou"} (${d.agente.status ?? d.agente.erro})` : "", `banco ${d.banco ?? "?"}`].filter(Boolean);
+    return partes.join(" · ").slice(0, 180);
+  }
   if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
   if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
   return JSON.stringify(d).slice(0, 150);
@@ -93,6 +98,13 @@ function detectTools(text: string): DetectedTool[] {
   if (pedeNavegar) {
     const alvoUrl = urlMatch ? urlMatch[1] : siteNoTexto ? `https://${siteNoTexto[1]}` : "";
     tools.push({ name: "navegar", payload: alvoUrl ? { url: alvoUrl } : { consulta: text.slice(0, 120) } });
+  }
+
+  // 1c. "seu site está no ar?", "status do sistema", "seus servidores" -> autodiagnóstico
+  if (/\b(seu|teu|pr[oó]prio)\s+(site|servidor(?:es)?|sistema|backend|banco)\b/i.test(text) ||
+      /\b(status|sa[uú]de|diagn[oó]stico|autodiagn[oó]stico)\b[\s\S]{0,24}\b(sistema|site|servidor|skynet|voc[eê])\b/i.test(text) ||
+      /\b(est[aá] (no ar|online|fora do ar)|tudo funcionando|como voc[eê] est[aá])\b/i.test(text)) {
+    tools.push({ name: "sistema", payload: { pedido: text.slice(0, 120) } });
   }
 
   // 1b. pedido de imagem -> imagem (gera de verdade, nao devolve JSON do modelo)
@@ -187,6 +199,38 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool) {
+  if (tool.name === "sistema") {
+    const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+    const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const agente = (Deno.env.get("AGENT_URL") ?? "https://skynet-agent.onrender.com").replace(/\/+$/, "");
+    const site = Deno.env.get("SITE_URL") ?? "https://skynetchat-xi.vercel.app";
+    const sonda = async (nome: string, url: string) => {
+      const t0 = Date.now();
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(9000), headers: { apikey: anon } });
+        return { nome, ok: r.ok, status: r.status, ms: Date.now() - t0 };
+      } catch (e) {
+        return { nome, ok: false, erro: String(e).slice(0, 60), ms: Date.now() - t0 };
+      }
+    };
+    const [statusFn, siteSonda, agenteSonda] = await Promise.all([
+      fetch(`${base}/functions/v1/status`, { headers: { apikey: anon }, signal: AbortSignal.timeout(12000) })
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      sonda("site", site),
+      sonda("agente", `${agente}/health`),
+    ]);
+    return {
+      ok: true,
+      site: siteSonda,
+      agente: agenteSonda,
+      banco: statusFn?.banco ?? "sem resposta",
+      integracoes: statusFn?.integracoes ?? [],
+      funcoes: statusFn?.funcoes ?? [],
+      numeros: statusFn?.numeros ?? {},
+      chaves: statusFn?.chaves ?? {},
+      verificado_em: new Date().toISOString(),
+    };
+  }
   if (tool.name === "navegar") {
     const alvo = String((tool.payload as Record<string, unknown>)?.url ?? "");
     if (alvo) return callTool({ name: "abrir", payload: { url: alvo } });
@@ -233,6 +277,18 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
   }
 
   switch (toolName) {
+    case "sistema": {
+      const linhas = [
+        `Site público: ${data.site?.ok ? "no ar" : "fora do ar"} (HTTP ${data.site?.status ?? data.site?.erro}, ${data.site?.ms}ms)`,
+        `Servidor do agente (Render): ${data.agente?.ok ? "respondendo" : "sem resposta"} (${data.agente?.status ?? data.agente?.erro})`,
+        `Banco: ${data.banco}`,
+        `Integrações: ${(data.integracoes ?? []).map((i: any) => `${i.motor}=${i.ok ? "ok" : "falha"}`).join(", ") || "sem dados"}`,
+        `Chaves configuradas: ${Object.entries(data.chaves ?? {}).map(([k, v]) => `${k}=${v ? "sim" : "não"}`).join(", ")}`,
+        `Números: ${JSON.stringify(data.numeros ?? {})}`,
+      ];
+      fontes.push({ titulo: "Status do SKYNET (ao vivo)", url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/status` });
+      return { fontes, contextText: `DIAGNÓSTICO DO PRÓPRIO SKYNET AGORA (${data.verificado_em}):\n${linhas.join("\n")}` };
+    }
     case "web_pesquisar": {
       const resultados = Array.isArray(data.resultados) ? data.resultados : [];
       const items: string[] = [];
@@ -467,6 +523,7 @@ Deno.serve(async (req) => {
     "VOCÊ É UM AGENTE OPERACIONAL, não um assistente passivo. O sistema executa por você, automaticamente, quando o pedido exige: pesquisa na web ao vivo, abrir páginas, gerar imagens, memória de longo prazo, cálculos, cotação de moeda, clima, hora e comandos no servidor. Receba os resultados e responda em texto normal, com o dado concreto.",
     "REGRA ÚNICA: execute em vez de recusar. Nunca responda com lista de limitações ('não executo código', 'não controlo navegador ou terminal', 'não tenho acesso em tempo real', 'não envio e-mail'). Se um recurso realmente não existir, diga em UMA frase curta e siga ajudando com o que existe.",
     "Formato: texto direto, sem JSON de ferramenta e sem inventar nome de ferramenta.",
+    "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com '-' para passos, tabelas curtas quando comparar coisas, ```linguagem para trechos de código, ![descrição](URL) para mostrar uma imagem e links de imagem/vídeo (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
   ];
   if (nickname) systemParts.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
   if (userId) {

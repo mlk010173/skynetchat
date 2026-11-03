@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   IconBell, IconBook, IconChat, IconClose, IconCode, IconEdit, IconFolder,
-  IconGift, IconHistory, IconImage, IconInstagram, IconLife, IconMail, IconMoney,
+  IconGift, IconGlobe, IconHistory, IconImage, IconInstagram, IconLife, IconMail, IconMoney,
   IconPlug, IconTheme, IconUser, IconUsers, IconZap,
 } from "./Icons.jsx";
 import { api, getSession } from "../lib.js";
@@ -702,9 +702,17 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
         <div className="drawer-foot">
           {logged ? (
             <>
-              <p className="account-line">Conta ativa · acesso por código</p>
-              <button type="button" className="drawer-item plain" onClick={() => { onClose(); onLogout(); }}>
+              <p className="account-line">Conta ativa · código ou e-mail e senha</p>
+              <Link to="/account" className="drawer-item plain" onClick={onClose}>
                 <IconUser className="di-icon" />
+                <span className="di-title">Acessar perfil</span>
+              </Link>
+              <Link to="/dashboard" className="drawer-item plain" onClick={onClose}>
+                <IconGlobe className="di-icon" />
+                <span className="di-title">Meu painel</span>
+              </Link>
+              <button type="button" className="drawer-item plain" onClick={() => { onClose(); onLogout(); }}>
+                <IconClose className="di-icon" />
                 <span className="di-title">Sair da conta</span>
               </button>
             </>
