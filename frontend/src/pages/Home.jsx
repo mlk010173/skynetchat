@@ -217,6 +217,8 @@ export default function Home() {
 
 
   useEffect(() => {
+    // só rola quando existe conversa: no estado vazio isso cortava o topo do hero
+    if (!messages.length) return;
     stageRef.current?.scrollTo({ top: stageRef.current.scrollHeight });
   }, [messages, busy]);
 

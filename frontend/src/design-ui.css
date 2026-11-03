@@ -265,3 +265,397 @@
     transform: none;
   }
 }
+
+/* ==========================================================================
+   refinamento v3 — hierarquia, ritmo, um acento só, correções de layout
+   ========================================================================== */
+
+:root {
+  --sky-accent-2: #ff4d4d;
+  --sky-hairline-2: rgba(255, 255, 255, 0.14);
+}
+
+/* correção: conteúdo alto era cortado no topo (flex centering) */
+.stage {
+  justify-content: flex-start;
+  padding-bottom: 108px;
+}
+
+.stage > .hero {
+  padding-top: 10px;
+}
+
+/* centraliza só quando há espaço de sobra (evita margem negativa e corte) */
+@media (min-height: 860px) {
+  .stage > .hero {
+    margin-block: auto;
+  }
+}
+
+.stage > .thread {
+  margin-top: auto;
+}
+
+/* correção: topbar estourava 63px em telas de 360px */
+.topbar {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--sky-hairline);
+  background: color-mix(in oklab, var(--bg) 84%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+}
+
+.model > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model {
+  min-width: 0;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+
+.model b {
+  color: var(--sky-accent-2);
+}
+
+.icon-btn {
+  border-radius: 14px;
+  transition: background 0.16s var(--sky-ease), color 0.16s var(--sky-ease);
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+
+@media (max-width: 420px) {
+  .icon-btn,
+  .top-actions .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .model {
+    font-size: 15px;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+}
+
+/* halo sem estourar a largura da tela */
+.stage::after {
+  width: min(760px, 100%);
+}
+
+/* -------------------------------------------------------------------- hero */
+.hero {
+  padding: 4px 0 0;
+}
+
+.hero .hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(220, 38, 38, 0.24);
+  background: rgba(220, 38, 38, 0.07);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: #e78484 !important;
+}
+
+.hero-eyebrow::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sky-accent-2);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+}
+
+.hero h1 {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 8.4vw, 50px);
+  line-height: 1.06;
+  font-weight: 600;
+  letter-spacing: -0.032em;
+  color: #ededed;
+  text-wrap: balance;
+}
+
+.hero h1 .red {
+  font-weight: 700;
+  background-image: linear-gradient(100deg, #ff8a8a, #c4161c 34%, #ffb1b1 58%, #b3121a);
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: skyAurora 9s linear infinite;
+}
+
+.hero .hero-sub {
+  margin: 0 auto 22px;
+  max-width: 46ch;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #9d9d9d !important;
+  text-wrap: pretty;
+}
+
+/* cards de ação: leitura de lista, não de grade colorida */
+.hero-cards {
+  grid-template-columns: repeat(auto-fit, minmax(244px, 1fr));
+  gap: 10px;
+  max-width: 780px;
+}
+
+.hero-card {
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 15px;
+  border: 1px solid var(--sky-hairline-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
+}
+
+.hero-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(220, 38, 38, 0.42);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(220, 38, 38, 0.06));
+  box-shadow: 0 18px 34px -26px rgba(220, 38, 38, 0.85);
+}
+
+.hero-card-icone {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  color: #9a9a9a !important;
+  border-color: var(--sky-hairline-2) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  transition: color 0.18s var(--sky-ease), background 0.18s var(--sky-ease),
+    border-color 0.18s var(--sky-ease);
+}
+
+.hero-card:hover .hero-card-icone {
+  color: var(--sky-accent-2) !important;
+  background: rgba(220, 38, 38, 0.12) !important;
+  border-color: rgba(220, 38, 38, 0.3) !important;
+}
+
+.hero-card-texto b {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #efefef;
+}
+
+.hero-card-texto small {
+  font-size: 11.5px;
+  color: #8b8b8b;
+}
+
+.hero-card-seta {
+  font-size: 14px;
+  color: #5f5f5f;
+}
+
+.hero .hero-dica {
+  margin: 18px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #6d6d6d;
+}
+
+/* ------------------------------------------------------------------- thread */
+.thread {
+  gap: 18px;
+  padding-top: 24px;
+}
+
+.bubble {
+  font-size: 15.5px;
+  line-height: 1.68;
+  padding: 14px 17px;
+}
+
+.bubble.assistant {
+  max-width: 94%;
+  padding-left: 2px;
+  color: #d9d9d9;
+}
+
+.bubble.user {
+  max-width: 82%;
+  border-radius: 18px 18px 6px 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.055));
+  border: 1px solid var(--sky-hairline);
+  color: #f2f2f2;
+}
+
+.bubble-meta {
+  gap: 9px;
+  margin-bottom: 7px;
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  color: #6d6d6d;
+}
+
+.bubble-quem.user {
+  color: #9a9a9a;
+}
+
+.bubble-quem.assistant {
+  color: var(--sky-accent-2);
+}
+
+.typing-bubble {
+  color: var(--sky-accent-2);
+  letter-spacing: 3px;
+  animation: skyPulse 1.4s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------- dock */
+.dock {
+  height: 64px;
+  border-radius: 24px;
+  border: 1px solid var(--sky-hairline-2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    color-mix(in oklab, var(--bg) 88%, #fff 4%);
+  box-shadow: 0 24px 60px -40px #000, inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.2s var(--sky-ease), box-shadow 0.25s var(--sky-ease);
+}
+
+.dock:focus-within {
+  border-color: rgba(220, 38, 38, 0.42);
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.16), 0 22px 50px -30px rgba(220, 38, 38, 0.9);
+}
+
+.dock-plus {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--sky-hairline);
+  color: #c9c9c9;
+  transition: background 0.16s var(--sky-ease), color 0.16s var(--sky-ease);
+}
+
+.dock-plus:hover {
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+}
+
+.dock input {
+  font-size: 16.5px;
+  padding: 0 12px;
+}
+
+.dock input::placeholder {
+  color: #6b6b6b;
+}
+
+.dock-send {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(160deg, #ef4444, #b3121a);
+  box-shadow: 0 10px 24px -14px rgba(220, 38, 38, 0.9);
+  transition: transform 0.16s var(--sky-ease), filter 0.16s var(--sky-ease);
+}
+
+.dock-send::after {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.4) 50%, transparent 58%);
+  transform: translateX(-120%);
+  animation: skyShine 5.2s var(--sky-ease) infinite;
+  pointer-events: none;
+}
+
+.dock-send:hover {
+  filter: brightness(1.07);
+}
+
+.dock-send:active {
+  transform: scale(0.95);
+}
+
+@media (min-width: 900px) {
+  .dock {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(880px, calc(100% - 40px));
+    max-width: none;
+  }
+}
+
+/* ------------------------------------------------------------------ detalhes */
+::selection {
+  background: rgba(220, 38, 38, 0.32);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 38, 38, 0.42);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes skyAurora {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 280% 50%; }
+}
+
+@keyframes skyShine {
+  0%, 64% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+
+@keyframes skyPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero h1 .red,
+  .dock-send::after,
+  .typing-bubble {
+    animation: none !important;
+  }
+
+  .hero-card,
+  .dock,
+  .dock-send,
+  .icon-btn {
+    transition: none !important;
+  }
+
+  .hero-card:hover {
+    transform: none;
+  }
+}
