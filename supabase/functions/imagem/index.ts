@@ -109,20 +109,28 @@ Deno.serve(async (req) => {
     if (po.ok) return json(200, { ok: true, provedor: "pollinations", modelo: po.modelo, formato: "jpeg", data_url: po.data_url });
     return json(503, { ok: false, error: "nenhum provedor de imagem disponivel" });
   }
-  const r = await fetch(`https://ai.api.nvidia.com/v1/genai/${qual}`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${K}`, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify(envio),
-    signal: AbortSignal.timeout(90_000),
-  });
-  const d = await r.json().catch(() => null);
+  let r: Response | null = null;
+  let d: any = null;
+  let erroNvidia = "";
+  try {
+    r = await fetch(`https://ai.api.nvidia.com/v1/genai/${qual}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${K}`, "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(envio),
+      signal: AbortSignal.timeout(60_000),
+    });
+    d = await r.json().catch(() => null);
+  } catch (e) {
+    // modelo inexistente/instavel na NVIDIA: nao pode derrubar a funcao (antes voltava corpo vazio)
+    erroNvidia = String(e).slice(0, 120);
+  }
   const artefato = d?.artifacts?.[0];
-  if (!r.ok || !artefato?.base64) {
+  if (!r || !r.ok || !artefato?.base64) {
     const hf = await porHuggingFace(prompt, String(body.familia ?? "fluxschnell"));
     if (hf.ok) return json(200, { ok: true, provedor: "huggingface", modelo: hf.modelo, formato: "png", data_url: hf.data_url });
     const po = await porPollinations(prompt, aspecto);
     if (po.ok) return json(200, { ok: true, provedor: "pollinations", modelo: po.modelo, formato: "jpeg", data_url: po.data_url });
-    return json(502, { ok: false, error: "geracao falhou", detalhe: JSON.stringify(d).slice(0, 220) });
+    return json(502, { ok: false, error: "geracao falhou", modelo: qual, detalhe: (erroNvidia || JSON.stringify(d)).slice(0, 220) });
   }
   return json(200, {
     ok: true,

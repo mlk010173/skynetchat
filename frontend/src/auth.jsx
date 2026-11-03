@@ -38,9 +38,9 @@ export function AuthProvider({ children }) {
     (async () => {
       await supabase.auth.setSession({ access_token: acesso, refresh_token: renovacao });
       if (tipo === "recovery") setRecuperacao(true);
-      // limpa os tokens da barra de endereços sem recarregar
-      const limpo = window.location.href.replace(/(#?)([?&]?(access_token|refresh_token|expires_in|token_type|type)=[^#&]*)+/g, "");
-      history.replaceState(null, "", limpo || window.location.pathname);
+      // limpa os tokens da barra de endereços sem recarregar (mantém só a rota)
+      const rota = String(window.location.hash || "").split("&")[0].split("?")[0] || "#/";
+      history.replaceState(null, "", `${window.location.pathname}${window.location.search}${rota}`);
     })();
   }, []);
 
