@@ -15,10 +15,12 @@ import * as voz from "../voz.js";
 import RichText from "../rich.jsx";
 
 const actions = [
-  { label: "Pesquisar", icon: IconGlobe, color: "#3b82f6" },
-  { label: "Gerar Imagens", icon: IconImage, color: "#eab308" },
-  { label: "Persuasão", icon: IconBrain, color: "#dc2626" },
-  { label: "Programar", icon: IconCode, color: "#16a34a" },
+  { label: "Pesquisar na web agora", icon: IconGlobe, color: "#60a5fa", desc: "manchetes e fontes ao vivo" },
+  { label: "Abrir um site e ler a página", icon: IconGlobe, color: "#a78bfa", desc: "navegação real no site" },
+  { label: "Gerar uma imagem", icon: IconImage, color: "#fbbf24", desc: "NVIDIA, Hugging Face, fallback" },
+  { label: "Tocar uma música ou vídeo", icon: IconWave, color: "#f472b6", desc: "player dentro do chat" },
+  { label: "Clima de hoje com gráfico", icon: IconBrain, color: "#34d399", desc: "24h e 5 dias, interativo" },
+  { label: "Criar um widget para o painel", icon: IconCode, color: "#ff6b6b", desc: "salva em /widgets" },
 ];
 
 function formatHora(isoStr) {
@@ -84,6 +86,10 @@ export default function Home() {
   const [ph, setPh] = useState(0);
   const [logged, setLogged] = useState(false);
   const [model, setModel] = useState("");
+  // 4.0 = roteamento rápido · 4.5 Pro = roteador pede o modelo mais forte
+  const [modo, setModo] = useState(() => localStorage.getItem("skynet-modo") || "4.5");
+  const trocarModo = (m) => { setModo(m); localStorage.setItem("skynet-modo", m); setModel(m === "4.5" ? "melhor" : "auto"); };
+  useEffect(() => { if (!model) setModel((localStorage.getItem("skynet-modo") || "4.5") === "4.5" ? "melhor" : "auto"); }, [model]);
   const [models, setModels] = useState([]);
   const [toast, setToast] = useState("");
   const [notifs, setNotifs] = useState([]);
@@ -592,18 +598,41 @@ export default function Home() {
       </header>
 
       <main className="stage" ref={stageRef}>
-        {messages.length === 0 ? (
-          <section className="hero">
-            <h1>Apresentamos o <span className="red">SKYNETchat</span></h1>
-            <p>Sua inteligência artificial avançada sem censura</p>
-            <div className="chips">
-              {actions.map(({ label, icon: Icon, color }) => (
-                <button key={label} type="button" className="chip" onClick={() => setDraft(label)}>
-                  <Icon width={20} height={20} style={{ color }} />
-                  <span>{label}</span>
+          <section className="modo-barra" aria-label="Modo de operação">
+            <div className="modo-switch">
+              {[["4.0", "Chat simples"], ["4.5", "Pro · agente"]].map(([v, rotulo]) => (
+                <button
+                  key={v} type="button"
+                  className={modo === v ? "ativo" : ""}
+                  onClick={() => trocarModo(v)}
+                  title={rotulo}
+                >
+                  <b>{v}</b><span>{rotulo}</span>
                 </button>
               ))}
             </div>
+            <span className="modo-nota">{modo === "4.5" ? "ferramentas e navegação liberadas" : "respostas rápidas, sem agente"}</span>
+          </section>
+        {messages.length === 0 ? (
+          <section className="hero">
+            <p className="hero-eyebrow">INTELIGÊNCIA OPERACIONAL · AO VIVO</p>
+            <h1>O que vamos <span className="red">executar</span> agora?</h1>
+            <p className="hero-sub">Pesquisa na web, sites, imagens, vídeo, clima, arquivos e widgets: o SKYNET faz e mostra o resultado aqui.</p>
+            <div className="hero-cards">
+              {actions.map(({ label, icon: Icon, color, desc }) => (
+                <button key={label} type="button" className="hero-card" onClick={() => setDraft(label)}>
+                  <span className="hero-card-icone" style={{ color, borderColor: `${color}44`, background: `${color}14` }}>
+                    <Icon width={18} height={18} />
+                  </span>
+                  <span className="hero-card-texto">
+                    <b>{label}</b>
+                    <small>{desc || "executar agora"}</small>
+                  </span>
+                  <span className="hero-card-seta" aria-hidden="true">→</span>
+                </button>
+              ))}
+            </div>
+            <p className="hero-dica">Enter envia · Shift+Enter quebra linha · tudo roda com o modelo escolhido pelo roteador do servidor</p>
           </section>
         ) : (
           <section className="thread">
@@ -615,6 +644,10 @@ export default function Home() {
             )}
             {messages.map((message, index) => (
               <article key={index} className={`bubble ${message.role}${message.image ? " with-img" : ""}`}>
+                <div className="bubble-meta">
+                  <span className={`bubble-quem ${message.role}`}>{message.role === "assistant" ? "SKYNET" : "Você"}</span>
+                  <time>{message.ts ? new Date(message.ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</time>
+                </div>
                 {editIdx === index ? (
                   <>
                     <textarea className="edit-area" value={editText} onChange={(e) => setEditText(e.target.value)} rows={3} aria-label="Editando mensagem" />

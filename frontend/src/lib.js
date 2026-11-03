@@ -41,7 +41,8 @@ export async function streamChat({ conversationId, content, model }, handlers) {
         apikey: SUPA_ANON,
         ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
       },
-      body: JSON.stringify({ conversationId, content, model }),
+      // conversa nova: o campo vai ausente (null faz o servidor recusar)
+      body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), content, model }),
     });
   } catch {
     handlers.onError("Sem conexão com o servidor.");
@@ -216,7 +217,7 @@ export async function askOnce({ conversationId, content, model }) {
   const res = await fetch(`${SUPA_URL}/functions/v1/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_ANON, ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-    body: JSON.stringify({ conversationId, content, model }),
+    body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), content, model }),
   });
   const ctype = res.headers.get("content-type") ?? "";
   if (!ctype.includes("text/event-stream")) {

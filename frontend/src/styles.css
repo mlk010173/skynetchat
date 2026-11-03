@@ -649,3 +649,37 @@ button { font-family: inherit; color: inherit; }
 }
 @keyframes aoVivoEntra { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .ao-vivo-ponto, .ao-vivo-selo { animation: none; } }
+
+/* ---------- barra de modo, hero e bolhas redesenhados ---------- */
+.modo-barra { width: 100%; max-width: 760px; margin: 0 auto 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; animation: wgEntra .3s ease both; }
+.modo-switch { display: inline-flex; padding: 3px; gap: 3px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); }
+.modo-switch button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border: 0; border-radius: 999px; background: none; color: #9a9a9a; font: inherit; font-size: 12px; cursor: pointer; transition: background .18s ease, color .18s ease, transform .18s ease; }
+.modo-switch button b { font-size: 12.5px; }
+.modo-switch button span { font-size: 11px; opacity: .85; }
+.modo-switch button:hover { color: #fff; transform: translateY(-1px); }
+.modo-switch button.ativo { background: linear-gradient(180deg, rgba(255,87,87,.9), rgba(214,45,45,.95)); color: #fff; box-shadow: 0 6px 18px -8px rgba(255,60,60,.9); }
+.modo-nota { font-size: 11px; color: #7d7d7d; }
+
+.hero { padding-top: 8px; }
+.hero-eyebrow { margin: 0 0 8px; font-size: 10.5px; letter-spacing: .22em; color: #ff6b6b !important; }
+.hero h1 { font-size: clamp(24px, 3.4vw, 36px); line-height: 1.15; letter-spacing: -.02em; margin: 0 0 8px; text-wrap: balance; }
+.hero-sub { margin: 0 auto 20px; max-width: 52ch; color: #9c9c9c !important; font-size: 13.5px; line-height: 1.55; }
+.hero-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(216px, 1fr)); gap: 9px; width: 100%; max-width: 760px; margin: 0 auto; }
+.hero-card { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.035); color: inherit; text-align: left; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease; animation: wgEntra .34s ease both; }
+.hero-card:hover { transform: translateY(-2px); border-color: rgba(255,87,87,.45); background: rgba(255,87,87,.07); box-shadow: 0 12px 26px -18px rgba(0,0,0,.9); }
+.hero-card:focus-visible { outline: 2px solid #ff6b6b; outline-offset: 2px; }
+.hero-card-icone { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; border: 1px solid; flex: 0 0 auto; }
+.hero-card-texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.hero-card-texto b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hero-card-texto small { font-size: 10.5px; color: #8b8b8b; }
+.hero-card-seta { margin-left: auto; color: #6f6f6f; font-size: 13px; transition: transform .18s ease, color .18s ease; }
+.hero-card:hover .hero-card-seta { transform: translateX(3px); color: #ff8a8a; }
+.hero-dica { margin: 16px 0 0; font-size: 10.5px; color: #6a6a6a; }
+
+.bubble-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 10px; letter-spacing: .06em; color: #6f6f6f; }
+.bubble-meta .bubble-quem { text-transform: uppercase; font-weight: 700; }
+.bubble-quem.assistant { color: #ff6b6b; }
+.bubble-quem.user { color: #7dd3fc; }
+.bubble-meta time { font-variant-numeric: tabular-nums; }
+.bubble.assistant { border-left: 2px solid rgba(255,87,87,.28); padding-left: 12px; }
+@media (prefers-reduced-motion: reduce) { .hero-card, .modo-barra { animation: none; } .hero-card:hover { transform: none; } }
