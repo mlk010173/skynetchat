@@ -55,6 +55,15 @@ export const TIPOS = {
     tamanho: { cols: 2, linhas: 4 },
     atualizarAgora: 0,
   },
+  galeria: {
+    nome: "Galeria multimídia",
+    desc: "Vários vídeos, músicas e imagens na mesma grade",
+    icone: "▦",
+    critico: false,
+    padrao: { itens: [] },
+    tamanho: { cols: 4, linhas: 5 },
+    atualizarAgora: 0,
+  },
   terminal: {
     nome: "Terminal real",
     desc: "Comandos no servidor do agente (com aprovação)",
@@ -168,6 +177,7 @@ export function porPalavras(descricao) {
     ["metricas", /(gr[aá]fico|lat[eê]ncia|m[eé]trica|s[eé]rie|tempo de resposta|desempenho)/],
     ["noticias", /(not[ií]cia|manchete|jornal|aconteceu|news)/],
     ["github", /(github|reposit[oó]rio|repo|commit|pull request|c[oó]digo-fonte)/],
+    ["galeria", /(galeria|v[aá]rios v[ií]deos|mural de m[ií]dia|cole[cç][aã]o de v[ií]deos)/],
     ["midia", /(m[uú]sica|spotify|soundcloud|playlist|tocar|player|podcast|lofi)/],
     ["video", /(v[ií]deo|youtube|vimeo|transmiss[aã]o|live)/],
     ["terminal", /(terminal|comando|shell|servidor|ssh|executar)/],

@@ -233,6 +233,59 @@ export function MidiaBody({ config, atualizarConfig }) {
   );
 }
 
+/* ---------- galeria multimídia ---------- */
+
+const ehImagem = (u) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(u) || /^data:image\//i.test(u);
+
+export function GaleriaBody({ config, atualizarConfig }) {
+  const itens = Array.isArray(config.itens) ? config.itens : [];
+  const [novo, setNovo] = useState("");
+  const [modo, setModo] = useState("auto");
+
+  const adicionar = () => {
+    const v = novo.trim();
+    if (!v) return;
+    atualizarConfig({ itens: [...itens, v].slice(0, 12) });
+    setNovo("");
+  };
+  const remover = (i) => atualizarConfig({ itens: itens.filter((_, j) => j !== i) });
+
+  return (
+    <div className="wg-galeria">
+      <div className="wg-galeria-add">
+        <input
+          value={novo}
+          onChange={(e) => setNovo(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") adicionar(); }}
+          placeholder="cole um link de vídeo, música ou imagem"
+        />
+        <button type="button" className="botao" onClick={adicionar} disabled={!novo.trim()}>Adicionar</button>
+      </div>
+      {itens.length === 0 ? (
+        <p className="wg-pe">Nada na galeria ainda. YouTube, Spotify, SoundCloud, Vimeo, MP4, MP3 e imagens entram aqui, em grade.</p>
+      ) : (
+        <div className={`wg-galeria-grade ${modo === "video" ? "so-video" : ""}`}>
+          {itens.map((url, i) => (
+            <figure key={`${url}-${i}`} className="wg-galeria-item">
+              <button type="button" className="wg-galeria-x" title="Remover" onClick={() => remover(i)}>×</button>
+              {ehImagem(url) ? (
+                <img src={url} alt="" loading="lazy" />
+              ) : (
+                <MediaPlayer compacto url={url} titulo={url.split("/").pop()} />
+              )}
+            </figure>
+          ))}
+        </div>
+      )}
+      {itens.length > 1 ? (
+        <button type="button" className="wg-galeria-modo" onClick={() => setModo(modo === "video" ? "auto" : "video")}>
+          {modo === "video" ? "mostrar tudo" : "só o primeiro em destaque"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 /* ---------- terminal (com aprovação) ---------- */
 
 export function TerminalBody({ config, pedirAprovacao, tick }) {

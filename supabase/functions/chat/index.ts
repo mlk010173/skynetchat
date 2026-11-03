@@ -30,6 +30,7 @@ const tErro = (m: string) => enc.encode(`3:${JSON.stringify(m)}\n`);
 const tFim = (meta: unknown) => enc.encode(`d:${JSON.stringify({ finishReason: "stop", messageMetadata: meta })}\n`);
 
 import { resolverMidia } from "../_shared/midia.ts";
+import { capturarTela } from "../_shared/print.ts";
 
 const ROTULOS: Record<string, string> = {
   web_pesquisar: "Pesquisar na web",
@@ -42,6 +43,7 @@ const ROTULOS: Record<string, string> = {
   navegar: "Navegar no site",
   sistema: "Checar o sistema",
   midia: "Tocar mídia",
+  print: "Capturar a tela do site",
   politicos: "Abrir painel de políticos",
   memoria: "Consultar memória",
 };
@@ -79,6 +81,7 @@ function resumirResultado(nome: string, r: unknown): string {
     const partes = [d.site ? `site ${d.site.ok ? "no ar" : "fora do ar"} (${d.site.status ?? d.site.erro}, ${d.site.ms}ms)` : "", d.agente ? `agente ${d.agente.ok ? "ok" : "falhou"} (${d.agente.status ?? d.agente.erro})` : "", `banco ${d.banco ?? "?"}`].filter(Boolean);
     return partes.join(" · ").slice(0, 180);
   }
+  if (nome === "print") return d.ok ? `captura de ${String(d.alvo ?? "").slice(0, 80)} (${d.provedor})` : String(d.erro ?? "falha na captura");
   if (nome === "midia") return d.ok ? `tocando ${d.provedor}: ${String(d.titulo ?? "").slice(0, 60)}` : String(d.mensagem ?? "mídia não encontrada").slice(0, 120);
   if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
   if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
@@ -123,6 +126,15 @@ function detectTools(text: string): DetectedTool[] {
       .replace(/\s+/g, " ")
       .trim();
     tools.unshift({ name: "imagem", payload: { prompt: (prompt || text).slice(0, 400) } });
+  }
+
+  // 1e. "manda um print da tela", "captura o site X", "tira um print" -> print
+  const pedePrint =
+    /\b(print|screenshot|captura\w*|foto da tela|tela do site|capturar a tela)\b/i.test(text) &&
+    !/\b(c[oó]digo|programa|imprimir documento)\b/i.test(text);
+  if (pedePrint) {
+    const link = text.match(/https?:\/\/\S+/)?.[0] ?? text.match(/\b((?:[a-z0-9-]+\.)+(?:com|com\.br|net|org|io|dev|app|br)(?:\/[^\s,]*)?)\b/i)?.[0] ?? "";
+    tools.unshift({ name: "print", payload: { url: link.replace(/[.,;]$/, "") } });
   }
 
   // 1d. "toca X", "abre o youtube e toca Y", "coloca uma playlist", link de música -> midia
@@ -221,6 +233,10 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool) {
+  if (tool.name === "print") {
+    const r = await capturarTela(String(tool.payload?.url ?? "https://skynetchat-xi.vercel.app"));
+    return { ...r, pedido: tool.payload?.url ?? "" };
+  }
   if (tool.name === "midia") {
     const r = await resolverMidia({
       consulta: String(tool.payload?.consulta ?? ""),
@@ -609,6 +625,7 @@ Deno.serve(async (req) => {
         const fontesColetadas: { titulo: string; url: string }[] = [];
         let imagemEntregue = false;
         let midiaTocando: any = null;
+        let capturaEntregue: any = null;
 
         // Primeira etapa visivel: o plano do agente (o que ele escolheu fazer e por que).
         if (!toolsToRun.length) {
@@ -657,6 +674,10 @@ Deno.serve(async (req) => {
           const { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
 
           if (toolResult && toolResult.ok) {
+            if (tool.name === "print" && toolResult?.ok && toolResult.url) {
+              capturaEntregue = toolResult;
+              controller.enqueue(tDados({ tipo: "imagem", url: toolResult.url, legenda: `Print de ${toolResult.alvo}` }));
+            }
             if (tool.name === "midia" && toolResult?.embed) {
               midiaTocando = toolResult;
               controller.enqueue(tDados({ tipo: "midia", provedor: toolResult.provedor, url: toolResult.url, embed: toolResult.embed, titulo: toolResult.titulo, aviso: toolResult.aviso }));
@@ -726,6 +747,13 @@ Deno.serve(async (req) => {
           const titulo = String(midiaTocando.titulo || "").slice(0, 90);
           enviaTexto(`${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Tocando agora${titulo ? `: **${titulo}**` : ""} (${midiaTocando.provedor}). O player está na conversa.`);
           enviaFim({ conversationId: convId, model: "midia", pedido: model, auto: true, fallback: false, tentativas: [] });
+          controller.close();
+          return;
+        }
+
+        if (capturaEntregue) {
+          enviaTexto(`Aqui está o print de ${capturaEntregue.alvo} (${capturaEntregue.provedor}).`);
+          enviaFim({ conversationId: convId, model: "print", pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;
         }

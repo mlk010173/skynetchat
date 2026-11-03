@@ -7,7 +7,7 @@ import {
   intervaloValido, listaTipos, porPalavras, promptDoWidget, salvarWidgets,
 } from "./registry.js";
 import {
-  GithubBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
+  GaleriaBody, GithubBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
 } from "./Corpos.jsx";
 import { useAuth } from "../auth.jsx";
 
@@ -57,6 +57,7 @@ function CorpoDoWidget({ widget, tick, pedirAprovacao, notificar, atualizarConfi
     case "noticias": return <NoticiasBody config={c} tick={tick} />;
     case "github": return <GithubBody config={c} tick={tick} />;
     case "video": return <VideoBody config={c} />;
+    case "galeria": return <GaleriaBody config={c} atualizarConfig={(novo) => atualizarConfig(widget.id, novo)} />;
     case "midia": return <MidiaBody config={c} atualizarConfig={(novo) => atualizarConfig(widget.id, novo)} />;
     case "terminal": return <TerminalBody config={c} tick={tick} pedirAprovacao={pedirAprovacao} notificar={notificar} />;
     case "ia": return <IaBody config={c} tick={tick} />;

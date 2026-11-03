@@ -528,3 +528,62 @@ button { font-family: inherit; color: inherit; }
 .mp-lista button:hover { color: #fff; }
 .wg-check { flex-direction: row !important; align-items: center; gap: 6px !important; font-size: 11px; }
 .wg-check input { width: auto; }
+
+/* ---------- animações dos widgets e da trilha ---------- */
+@keyframes wgEntra {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes wgBrilho {
+  0%   { box-shadow: 0 0 0 0 rgba(255,77,77,.28); }
+  100% { box-shadow: 0 0 0 14px rgba(255,77,77,0); }
+}
+.wg-card { animation: wgEntra .34s cubic-bezier(.22,.61,.36,1) both; transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+.wg-card:nth-child(1) { animation-delay: .02s; }
+.wg-card:nth-child(2) { animation-delay: .06s; }
+.wg-card:nth-child(3) { animation-delay: .1s; }
+.wg-card:nth-child(4) { animation-delay: .14s; }
+.wg-card:nth-child(5) { animation-delay: .18s; }
+.wg-card:nth-child(6) { animation-delay: .22s; }
+.wg-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(0,0,0,.32); border-color: rgba(255,77,77,.35); }
+.wg-card:focus-within { border-color: rgba(255,77,77,.5); }
+.wg-card.acabou-de-atualizar { animation: wgBrilho .9s ease-out; }
+
+/* esqueleto com brilho deslizante */
+@keyframes wgShimmer { 100% { background-position: -200% 0; } }
+.wg-esqueleto, .wg-skel {
+  background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.12) 37%, rgba(255,255,255,.05) 63%);
+  background-size: 200% 100%;
+  animation: wgShimmer 1.2s linear infinite;
+  border-radius: 8px;
+}
+
+/* transição suave ao abrir/fechar configuração e listas */
+.wg-config { animation: wgEntra .2s ease both; overflow: hidden; }
+.wg-lista li, .mp-lista li { animation: wgEntra .22s ease both; }
+
+/* player dentro da galeria */
+.wg-galeria { display: flex; flex-direction: column; gap: 8px; }
+.wg-galeria-add { display: flex; gap: 6px; }
+.wg-galeria-add input { flex: 1; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.35); color: inherit; font: inherit; font-size: 12.5px; }
+.wg-galeria-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.wg-galeria-grade.so-video .wg-galeria-item:not(:first-child) { display: none; }
+.wg-galeria-grade.so-video { grid-template-columns: 1fr; }
+.wg-galeria-item { position: relative; margin: 0; border-radius: 12px; overflow: hidden; background: rgba(0,0,0,.35); animation: wgEntra .3s ease both; }
+.wg-galeria-item img { display: block; width: 100%; height: 100%; object-fit: cover; max-height: 190px; }
+.wg-galeria-item .mp { margin: 0; border: 0; background: none; }
+.wg-galeria-x { position: absolute; top: 4px; right: 6px; z-index: 3; border: 0; background: rgba(0,0,0,.6); color: #fff; width: 20px; height: 20px; border-radius: 50%; line-height: 1; cursor: pointer; font-size: 13px; }
+.wg-galeria-modo { align-self: flex-start; background: none; border: 0; color: var(--muted, #a3a3a3); font: inherit; font-size: 11px; text-decoration: underline; cursor: pointer; }
+
+/* trilha de pensamento: linha de progresso e pulso */
+@keyframes traceEntra { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+.trace-step { animation: traceEntra .24s ease both; }
+.trace-step.executando .trace-icone { animation: tracePulso 1.1s ease-in-out infinite; }
+.trace-list { position: relative; }
+.trace-list::before { content: ""; position: absolute; left: 11px; top: 4px; bottom: 4px; width: 1px; background: linear-gradient(rgba(255,77,77,.5), rgba(255,255,255,.06)); }
+@keyframes pensandoPontos { 0%, 20% { opacity: .25; } 50% { opacity: 1; } 100% { opacity: .25; } }
+.bubble.assistant:has(.rich.vivo) .trace-chev { animation: pensandoPontos 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .wg-card, .wg-galeria-item, .trace-step, .wg-config { animation: none !important; }
+  .wg-card:hover { transform: none; }
+}
