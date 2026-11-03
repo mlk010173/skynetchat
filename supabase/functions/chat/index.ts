@@ -520,6 +520,32 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ---- chamada interna (api/mcp): a conta vem assinada pelo service role ----
+  // Só vale quando o Authorization é exatamente a chave de serviço do projeto,
+  // então ninguém de fora consegue forjar "sou a conta X".
+  const chaveServico = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const chamadaInterna = chaveServico.length > 20 && authHeader === `Bearer ${chaveServico}`;
+  const contaDoHeader = chamadaInterna ? (req.headers.get("x-conta-id") ?? "").trim() : "";
+  if (!conta && contaDoHeader) {
+    const { data: c } = await svc
+      .from("accounts")
+      .select("id, tier, role, nickname, blocked")
+      .eq("id", contaDoHeader)
+      .maybeSingle();
+    if (c && !c.blocked) {
+      contaId = c.id;
+      userId = c.id;
+      if (c.nickname) nickname = c.nickname;
+      const uso = await consumirMensagem(c.id, c.role === "admin" ? "admin" : c.tier);
+      if (!uso.pode) {
+        return json({
+          ok: false,
+          error: `Você usou as ${uso.limite} mensagens de hoje do plano ${c.tier}.`,
+        }, 429);
+      }
+    }
+  }
+
   // ---- visitante sem conta: limite por IP para não virar torneira de graça ----
   // conta por codigo (x-session) OU usuario logado no Supabase nao entram no limite anonimo por IP
   if (!conta && !userId && !(await liberar("chat-anon:" + ipDe(req), ANON_LIMIT, "hour"))) return respostaLimite();

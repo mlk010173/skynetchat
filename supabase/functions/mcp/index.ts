@@ -15,7 +15,7 @@ const FERRAMENTAS = [
     inputSchema: {
       type: "object",
       properties: {
-        mensagem: { type: "string", description: "Pergunta ou instrução para o SKYNET." },
+        mensagem: { type: "string", description: "Pergunta ou instrução para o SKYNET (aceita o apelido 'pergunta')." },
         modelo: { type: "string", description: "Opcional. Nome exato do modelo; padrão 'auto'." },
         conversa: { type: "string", description: "Opcional. ID de conversa para manter o contexto." },
       },
@@ -75,9 +75,10 @@ const falha = (texto: string) => ({ content: [{ type: "text", text: texto }], is
 async function chamarFerramenta(nome: string, args: any, accountId: string) {
   const db = svc();
   if (nome === "skynet_perguntar") {
-    const mensagem = String(args?.mensagem ?? "").trim();
-    if (!mensagem) return falha("Faltou o campo 'mensagem'.");
-    const r = await perguntar(mensagem, args?.modelo || "auto", args?.conversa || null);
+    const mensagem = String(args?.mensagem ?? args?.pergunta ?? args?.prompt ?? args?.message ?? "").trim();
+    if (!mensagem) return falha("Faltou o campo 'mensagem' (também aceito como 'pergunta' ou 'prompt').");
+    const r = await perguntar(mensagem, args?.modelo || args?.model || "auto",
+      args?.conversa || args?.conversation || null, accountId);
     return resultado(r.answer || "(resposta vazia)", { modelo: r.model, conversa: r.conversationId });
   }
   if (nome === "skynet_status" || nome === "skynet_imagem" || nome === "skynet_print" || nome === "skynet_midia") {

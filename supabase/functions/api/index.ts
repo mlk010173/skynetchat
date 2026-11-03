@@ -84,12 +84,18 @@ Deno.serve(async (req) => {
     if (texto.length > 4000) return json({ ok: false, error: "Mensagem longa demais (máx. 4000)." }, 400);
     try {
       const saida = await perguntar(texto, typeof body.model === "string" && body.model ? body.model : "auto",
-        typeof body.conversation === "string" && body.conversation ? body.conversation : null);
+        typeof body.conversation === "string" && body.conversation ? body.conversation : null,
+        autor.accountId);
       await registrar(autor, caminho, 200, Math.round(t0() - inicio));
       return json({ ok: true, ...saida });
     } catch (e) {
       await registrar(autor, caminho, 502, Math.round(t0() - inicio));
-      return json({ ok: false, error: (e as Error).message }, 502);
+      // log detalhado fica no servidor; o cliente recebe só o suficiente
+      const detalhe = (e as Error)?.message ?? "";
+      const extra = /timeout|abort/i.test(detalhe)
+        ? "O provedor de IA demorou demais. Tente de novo."
+        : "Falha ao falar com o provedor de IA.";
+      return json({ ok: false, error: extra }, 502);
     }
   }
 

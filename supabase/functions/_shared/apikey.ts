@@ -51,10 +51,10 @@ export async function autorizar(req: Request): Promise<Autorizado | null> {
     if (!data || data.revoked) return null;
     const { data: conta } = await db
       .from("accounts")
-      .select("id, tier, role")
+      .select("id, tier, role, blocked")
       .eq("id", data.account_id)
       .maybeSingle();
-    if (!conta) return null;
+    if (!conta || (conta as any).blocked) return null; // conta bloqueada perde a chave na hora
     void db
       .from("api_keys")
       .update({ last_used: new Date().toISOString(), calls: (data as any).calls ?? undefined })

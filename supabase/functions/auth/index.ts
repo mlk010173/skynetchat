@@ -240,7 +240,10 @@ Deno.serve(async (req) => {
       const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "0.0.0.0";
       await svc.from("auth_attempts").insert({ ip, code: digitado.slice(-4), ok: false }).then(() => {}, () => {});
 
-      const { data: contas } = await svc.from("accounts").select("*").eq("blocked", false).limit(2000);
+      // filtra pelo sufixo (code_hint) para não decifrar a base inteira a cada tentativa
+      const sufixo = digitado.slice(-4);
+      const { data: contas } = await svc.from("accounts").select("*").eq("blocked", false)
+        .or(`code_hint.eq.${sufixo},code_hint.is.null`).limit(300);
       let alvo: Record<string, unknown> | null = null;
       for (const c of contas ?? []) {
         try {
@@ -372,7 +375,7 @@ Deno.serve(async (req) => {
       const conta = await contaPorToken(svc, token);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const chave = String(corpo.chave ?? corpo.key ?? "").trim().slice(0, 80);
-      const valor = String(corpo.valor ?? corpo.value ?? "").trim().slice(0, 2000);
+      const valor = String(corpo.valor ?? corpo.value ?? corpo.texto ?? corpo.conteudo ?? corpo.content ?? "").trim().slice(0, 2000);
       if (!chave || !valor) return json({ ok: false, error: "Informe o que guardar." }, 400);
       await svc.from("acc_memory").upsert({
         account_id: conta.id,
