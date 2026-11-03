@@ -152,6 +152,38 @@ export function promptDoWidget(descricao) {
   ].join("\n");
 }
 
+/** Quando a IA não devolve JSON válido, o pedido é interpretado por palavras-chave. */
+export function porPalavras(descricao) {
+  const d = String(descricao || "").toLowerCase();
+  const regras = [
+    ["metricas", /(gr[aá]fico|lat[eê]ncia|m[eé]trica|s[eé]rie|tempo de resposta|desempenho)/],
+    ["noticias", /(not[ií]cia|manchete|jornal|aconteceu|news)/],
+    ["github", /(github|reposit[oó]rio|repo|commit|pull request|c[oó]digo-fonte)/],
+    ["video", /(v[ií]deo|youtube|vimeo|transmiss[aã]o|live|player)/],
+    ["terminal", /(terminal|comando|shell|servidor|ssh|executar)/],
+    ["ia", /(pergunt|resum|escrev|texto|resposta|an[aá]lise)/],
+    ["texto", /(nota|anota[cç][aã]o|lembrete|rascunho)/],
+    ["status", /(status|monitor|sa[uú]de|online|fora do ar|disponibilidade)/],
+  ];
+  const achado = regras.find(([, re]) => re.test(d));
+  const tipo = achado ? achado[0] : "status";
+  const config = { ...TIPOS[tipo].padrao };
+  if (tipo === "noticias") config.consulta = String(descricao).slice(0, 120);
+  if (tipo === "github" && /([\w.-]+\/[\w.-]+)/.test(descricao)) config.repo = descricao.match(/([\w.-]+\/[\w.-]+)/)[1];
+  if (tipo === "video") {
+    const url = String(descricao).match(/https?:\/\/\S+/);
+    if (url) config.url = url[0];
+  }
+  if (tipo === "ia") config.pergunta = String(descricao).slice(0, 160);
+  if (tipo === "metricas") {
+    const seg = String(descricao).match(/(\d+)\s*(s|seg|segundos)/i);
+    if (seg) config.atualizarAgora = Number(seg[1]);
+  }
+  const intervalo = String(descricao).match(/cada\s+(\d+)\s*(s|seg|segundos|min|minutos)?/i);
+  const atualizarAgora = intervalo ? (/(min)/i.test(intervalo[2] || "") ? Number(intervalo[1]) * 60 : Number(intervalo[1])) : TIPOS[tipo].atualizarAgora;
+  return criarWidget(tipo, { config, atualizarAgora });
+}
+
 export function chaveStorage(userId) {
   return `skynet-widgets:${userId || "convidado"}`;
 }

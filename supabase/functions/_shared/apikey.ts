@@ -17,7 +17,7 @@ const json = (body: unknown, status = 200, extra: Record<string, string> = {}) =
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "authorization, x-api-key, x-session, content-type",
+      "Access-Control-Allow-Headers": "authorization, apikey, x-api-key, x-session, content-type, x-client-info",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       ...extra,
     },

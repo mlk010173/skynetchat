@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { askOnce } from "../lib.js";
 import {
   TIPOS, carregarWidgets, chaveStorage, criarWidget, daSpec, extrairJson,
-  intervaloValido, listaTipos, promptDoWidget, salvarWidgets,
+  intervaloValido, listaTipos, porPalavras, promptDoWidget, salvarWidgets,
 } from "./registry.js";
 import {
   GithubBody, IaBody, MetricasBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
@@ -123,15 +123,18 @@ export default function WidgetBoard() {
     if (!pedido || iaBusy) return;
     setIaBusy(true); setErro("");
     const r = await askOnce({ content: promptDoWidget(pedido) });
+    const motivo = r?.ok === false ? String(r.erro ?? "modelo indisponível") : "";
     const texto = r?.ok === false ? "" : String(r?.texto ?? r ?? "");
-    const spec = extrairJson(texto);
-    const res = daSpec(spec);
+    const res = daSpec(extrairJson(texto));
     setIaBusy(false);
-    if (!res.ok) { setErro(`A IA não devolveu um widget válido (${res.erro}). Tente descrever de outro jeito.`); return; }
-    setWidgets((lista) => [...lista, res.widget]);
+    // se o modelo não devolver JSON válido, o pedido é interpretado localmente
+    const widget = res.ok ? res.widget : porPalavras(pedido);
+    if (!widget) { setErro(`Não consegui criar esse widget${motivo ? ` (${motivo})` : ""}.`); return; }
+    setWidgets((lista) => [...lista, widget]);
     setIaTexto("");
     setMenuAberto(false);
-    notificar("Widget criado pela IA", res.widget.titulo);
+    notificar(res.ok ? "Widget criado pela IA" : "Widget criado pelo interpretador local", `${widget.titulo}${motivo ? ` · IA: ${motivo.slice(0, 40)}` : ""}`);
+    if (!res.ok) setErro(`A IA não respondeu em JSON; montei o widget pelo seu texto (${TIPOS[widget.tipo]?.nome}).`);
   }
 
   return (
