@@ -241,10 +241,17 @@ export function TerminalBody({ config, pedirAprovacao, tick }) {
   const executar = useCallback(async () => {
     const cmd = String(config.comando || "").trim();
     if (!cmd) return;
-    const liberado = await pedirAprovacao({ titulo: "Executar comando no servidor", detalhe: cmd });
+    const isolado = config.sandbox !== false;
+    const alvo = isolado
+      ? `mkdir -p /tmp/skynet-sandbox && cd /tmp/skynet-sandbox && ${cmd}`
+      : cmd;
+    const liberado = await pedirAprovacao({
+      titulo: isolado ? "Executar no sandbox isolado" : "Executar comando no servidor",
+      detalhe: cmd,
+    });
     if (!liberado) return;
     setEstado("rodando"); setSaida("");
-    const r = await api("agent", { method: "POST", body: { tool: "terminal", payload: { cmd } } });
+    const r = await api("agent", { method: "POST", body: { tool: "terminal", payload: { cmd: alvo } } });
     const out = r?.resultado?.saida ?? r?.resultado?.stdout ?? r?.error ?? "";
     setSaida(String(out).slice(0, 4000) || "(sem saída)");
     setEstado("pronto");
@@ -257,7 +264,7 @@ export function TerminalBody({ config, pedirAprovacao, tick }) {
         <button type="button" onClick={executar} disabled={estado === "rodando"}>{estado === "rodando" ? "…" : "executar"}</button>
       </div>
       <pre className="wg-saida">{saida || "aguardando execução"}</pre>
-      <p className="wg-pe">cada execução pede aprovação</p>
+      <p className="wg-pe">{config.sandbox === false ? "roda no diretório do agente" : "sandbox: pasta temporária /tmp/skynet-sandbox por execução"} · cada execução pede aprovação</p>
     </div>
   );
 }

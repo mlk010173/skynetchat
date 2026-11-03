@@ -248,7 +248,15 @@ export default function WidgetBoard() {
                       <label>link (opcional)<input value={w.config.url || ""} onChange={(e) => atualizarConfig(w.id, { url: e.target.value })} placeholder="cole um link ou use o player" /></label>
                     </>
                   )}
-                  {w.tipo === "terminal" && <label>comando<input value={w.config.comando || ""} onChange={(e) => atualizarConfig(w.id, { comando: e.target.value })} /></label>}
+                  {w.tipo === "terminal" && (
+                    <>
+                      <label>comando<input value={w.config.comando || ""} onChange={(e) => atualizarConfig(w.id, { comando: e.target.value })} /></label>
+                      <label className="wg-check">
+                        <input type="checkbox" checked={w.config.sandbox !== false} onChange={(e) => atualizarConfig(w.id, { sandbox: e.target.checked })} />
+                        rodar em sandbox isolado (pasta temporária por execução)
+                      </label>
+                    </>
+                  )}
                   {w.tipo === "ia" && <label>pergunta<input value={w.config.pergunta || ""} onChange={(e) => atualizarConfig(w.id, { pergunta: e.target.value })} /></label>}
                   {w.tipo === "metricas" && <label>rótulo<input value={w.config.rotulo || ""} onChange={(e) => atualizarConfig(w.id, { rotulo: e.target.value })} /></label>}
                   <label>atualizar a cada (s, 0 = manual)

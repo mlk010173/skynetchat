@@ -526,3 +526,5 @@ button { font-family: inherit; color: inherit; }
 .mp-lista { list-style: none; margin: 0; padding: 0 10px 10px; display: flex; flex-direction: column; gap: 4px; }
 .mp-lista button { background: none; border: 0; padding: 3px 0; color: var(--muted, #a3a3a3); font: inherit; font-size: 11.5px; text-align: left; cursor: pointer; }
 .mp-lista button:hover { color: #fff; }
+.wg-check { flex-direction: row !important; align-items: center; gap: 6px !important; font-size: 11px; }
+.wg-check input { width: auto; }

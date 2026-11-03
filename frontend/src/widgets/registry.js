@@ -60,7 +60,7 @@ export const TIPOS = {
     desc: "Comandos no servidor do agente (com aprovação)",
     icone: ">_",
     critico: true,
-    padrao: { comando: "ls" },
+    padrao: { comando: "ls", sandbox: true },
     tamanho: { cols: 2, linhas: 4 },
     atualizarAgora: 0,
   },
