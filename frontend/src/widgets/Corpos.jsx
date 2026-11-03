@@ -1,6 +1,7 @@
 // Corpos dos widgets: cada tipo sabe buscar seus dados e se desenhar.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, askOnce, SUPA_URL, SUPA_ANON } from "../lib.js";
+import MediaPlayer from "../media.jsx";
 
 /* ---------- utilidades ---------- */
 
@@ -217,6 +218,19 @@ export function VideoBody({ config }) {
   }
   if (/\.(mp4|webm)(\?|$)/i.test(url)) return <video className="wg-video" src={url} controls playsInline />;
   return <p className="wg-erro">cole um link do YouTube, Vimeo ou um arquivo .mp4</p>;
+}
+
+/* ---------- player de mídia ---------- */
+
+export function MidiaBody({ config, atualizarConfig }) {
+  return (
+    <MediaPlayer
+      provedor={config.provedor || "youtube"}
+      url={config.url || ""}
+      titulo={config.titulo || ""}
+      onTocar={(r) => atualizarConfig({ provedor: r.provedor, url: r.url, titulo: r.titulo || "" })}
+    />
+  );
 }
 
 /* ---------- terminal (com aprovação) ---------- */

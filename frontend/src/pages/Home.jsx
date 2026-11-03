@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import MediaPlayer from "../media.jsx";
 import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 
@@ -331,6 +332,13 @@ export default function Home() {
         copy[copy.length - 1] = { ...last, image: url };
         return copy;
       }),
+      onMidia: (midia) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant" || !midia?.embed) return prev;
+        copy[copy.length - 1] = { ...last, midia };
+        return copy;
+      }),
       onDelta: (delta) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -609,6 +617,16 @@ export default function Home() {
                       );
                     })()}
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
+                    {message.midia && message.midia.embed && (
+                      <MediaPlayer
+                        compacto
+                        provedor={message.midia.provedor}
+                        url={message.midia.url}
+                        embed={message.midia.embed}
+                        titulo={message.midia.titulo}
+                        aviso={message.midia.aviso}
+                      />
+                    )}
                     {message.image && !message.text ? null : (
                       <RichText
                         texto={message.text}

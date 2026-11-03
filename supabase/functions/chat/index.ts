@@ -29,6 +29,8 @@ const tDados = (o: unknown) => enc.encode(`2:${JSON.stringify([o])}\n`);
 const tErro = (m: string) => enc.encode(`3:${JSON.stringify(m)}\n`);
 const tFim = (meta: unknown) => enc.encode(`d:${JSON.stringify({ finishReason: "stop", messageMetadata: meta })}\n`);
 
+import { resolverMidia } from "../_shared/midia.ts";
+
 const ROTULOS: Record<string, string> = {
   web_pesquisar: "Pesquisar na web",
   abrir: "Abrir página",
@@ -39,6 +41,7 @@ const ROTULOS: Record<string, string> = {
   imagem: "Gerar imagem",
   navegar: "Navegar no site",
   sistema: "Checar o sistema",
+  midia: "Tocar mídia",
   politicos: "Abrir painel de políticos",
   memoria: "Consultar memória",
 };
@@ -76,6 +79,7 @@ function resumirResultado(nome: string, r: unknown): string {
     const partes = [d.site ? `site ${d.site.ok ? "no ar" : "fora do ar"} (${d.site.status ?? d.site.erro}, ${d.site.ms}ms)` : "", d.agente ? `agente ${d.agente.ok ? "ok" : "falhou"} (${d.agente.status ?? d.agente.erro})` : "", `banco ${d.banco ?? "?"}`].filter(Boolean);
     return partes.join(" · ").slice(0, 180);
   }
+  if (nome === "midia") return d.ok ? `tocando ${d.provedor}: ${String(d.titulo ?? "").slice(0, 60)}` : String(d.mensagem ?? "mídia não encontrada").slice(0, 120);
   if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
   if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
   return JSON.stringify(d).slice(0, 150);
@@ -119,6 +123,24 @@ function detectTools(text: string): DetectedTool[] {
       .replace(/\s+/g, " ")
       .trim();
     tools.unshift({ name: "imagem", payload: { prompt: (prompt || text).slice(0, 400) } });
+  }
+
+  // 1d. "toca X", "abre o youtube e toca Y", "coloca uma playlist", link de música -> midia
+  const pedeMidia =
+    /\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play)\b[\s\S]{0,48}?\b(m[uú]sica|som|playlist|[aá]lbum|v[ií]deo|clipe|filme|trilha|podcast|lofi|youtube|spotify|soundcloud|deezer)\b/i.test(text) ||
+    /\b(youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\b/i.test(text);
+  if (pedeMidia) {
+    const provedor = /spotify/i.test(text) ? "spotify" : /soundcloud/i.test(text) ? "soundcloud" : /vimeo/i.test(text) ? "vimeo" : "youtube";
+    const link = text.match(/https?:\/\/\S+/) ?? text.match(/\b((?:www\.)?(?:youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\/\S+)/i);
+    const semComando = text
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play|por favor|pra mim|para mim|agora)\b/gi, " ")
+      .replace(/\b(no|na|do|da|de|o|a|os|as|um|uma|em|pelo|pela)\s+(youtube|spotify|soundcloud|vimeo)\b/gi, " ")
+      .replace(/\b(m[uú]sica|v[ií]deo|clipe|playlist|filme|trilha sonora|podcast)s?\b/gi, " ")
+      .replace(/\b(youtube|spotify|soundcloud|vimeo|deezer)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    tools.push({ name: "midia", payload: { provedor, url: link ? link[1] ?? link[0] : "", consulta: link ? "" : semComando.slice(0, 120) } });
   }
 
   // 2. 'hoje/agora/atual/notíc.../pesquis.../quem é X atualmente' -> web_pesquisar
@@ -199,6 +221,14 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool) {
+  if (tool.name === "midia") {
+    const r = await resolverMidia({
+      consulta: String(tool.payload?.consulta ?? ""),
+      provedor: String(tool.payload?.provedor ?? ""),
+      url: String(tool.payload?.url ?? ""),
+    });
+    return r;
+  }
   if (tool.name === "sistema") {
     const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
     const anon = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -523,6 +553,8 @@ Deno.serve(async (req) => {
     "VOCÊ É UM AGENTE OPERACIONAL, não um assistente passivo. O sistema executa por você, automaticamente, quando o pedido exige: pesquisa na web ao vivo, abrir páginas, gerar imagens, memória de longo prazo, cálculos, cotação de moeda, clima, hora e comandos no servidor. Receba os resultados e responda em texto normal, com o dado concreto.",
     "REGRA ÚNICA: execute em vez de recusar. Nunca responda com lista de limitações ('não executo código', 'não controlo navegador ou terminal', 'não tenho acesso em tempo real', 'não envio e-mail'). Se um recurso realmente não existir, diga em UMA frase curta e siga ajudando com o que existe.",
     "Formato: texto direto, sem JSON de ferramenta e sem inventar nome de ferramenta.",
+    "NADA DE DESPEJAR CÓDIGO: quando o pedido é uma ação (abrir, tocar, pesquisar, gerar, checar), execute e responda com o resultado em texto. Nunca responda com HTML, CSS, JS ou um arquivo inteiro como se fosse entrega, a não ser que o usuário peça explicitamente por código.",
+    "MÍDIA: o sistema tem player próprio (YouTube, Spotify, SoundCloud, Vimeo, MP4/MP3). Se o usuário pedir para tocar/abrir/colocar música, vídeo, filme ou playlist, o player é aberto automaticamente na conversa: confirme em UMA frase curta, com o título. Nunca responda apenas com o link.",
     "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com '-' para passos, tabelas curtas quando comparar coisas, ```linguagem para trechos de código, ![descrição](URL) para mostrar uma imagem e links de imagem/vídeo (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
   ];
   if (nickname) systemParts.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
@@ -576,6 +608,7 @@ Deno.serve(async (req) => {
         const toolContexts: string[] = [];
         const fontesColetadas: { titulo: string; url: string }[] = [];
         let imagemEntregue = false;
+        let midiaTocando: any = null;
 
         // Primeira etapa visivel: o plano do agente (o que ele escolheu fazer e por que).
         if (!toolsToRun.length) {
@@ -624,6 +657,10 @@ Deno.serve(async (req) => {
           const { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
 
           if (toolResult && toolResult.ok) {
+            if (tool.name === "midia" && toolResult?.embed) {
+              midiaTocando = toolResult;
+              controller.enqueue(tDados({ tipo: "midia", provedor: toolResult.provedor, url: toolResult.url, embed: toolResult.embed, titulo: toolResult.titulo, aviso: toolResult.aviso }));
+            }
             if (tool.name === "imagem") {
               imagemEntregue = true;
               const url = String(toolResult.url ?? toolResult.imagem ?? toolResult.data_url ?? toolResult.dataUrl ?? "");
@@ -683,6 +720,14 @@ Deno.serve(async (req) => {
           if (contextText) {
             toolContexts.push(contextText);
           }
+        }
+
+        if (midiaTocando) {
+          const titulo = String(midiaTocando.titulo || "").slice(0, 90);
+          enviaTexto(`${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Tocando agora${titulo ? `: **${titulo}**` : ""} (${midiaTocando.provedor}). O player está na conversa.`);
+          enviaFim({ conversationId: convId, model: "midia", pedido: model, auto: true, fallback: false, tentativas: [] });
+          controller.close();
+          return;
         }
 
         if (imagemEntregue) {

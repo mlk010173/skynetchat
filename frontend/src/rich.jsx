@@ -86,6 +86,8 @@ function BlocoCodigo({ linguagem, codigo }) {
 /**
  * Converte o texto em nós. `vivo` anima o cursor no fim enquanto o stream corre.
  */
+import { embedDeMidia } from "./media.jsx";
+
 export default function RichText({ texto = "", vivo = false }) {
   const blocos = useMemo(() => {
     const saida = [];
@@ -139,7 +141,7 @@ export default function RichText({ texto = "", vivo = false }) {
     return saida;
   }, [texto]);
 
-  const embedDe = (url) => youtube(url) || vimeo(url);
+  const embedDe = (url) => youtube(url) || vimeo(url) || embedDeMidiaSeguro(url);
 
   return (
     <div className={`rich${vivo ? " vivo" : ""}`}>

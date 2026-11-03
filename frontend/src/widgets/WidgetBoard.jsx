@@ -7,7 +7,7 @@ import {
   intervaloValido, listaTipos, porPalavras, promptDoWidget, salvarWidgets,
 } from "./registry.js";
 import {
-  GithubBody, IaBody, MetricasBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
+  GithubBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
 } from "./Corpos.jsx";
 import { useAuth } from "../auth.jsx";
 
@@ -57,6 +57,7 @@ function CorpoDoWidget({ widget, tick, pedirAprovacao, notificar, atualizarConfi
     case "noticias": return <NoticiasBody config={c} tick={tick} />;
     case "github": return <GithubBody config={c} tick={tick} />;
     case "video": return <VideoBody config={c} />;
+    case "midia": return <MidiaBody config={c} atualizarConfig={(novo) => atualizarConfig(widget.id, novo)} />;
     case "terminal": return <TerminalBody config={c} tick={tick} pedirAprovacao={pedirAprovacao} notificar={notificar} />;
     case "ia": return <IaBody config={c} tick={tick} />;
     case "texto": return <TextoBody config={c} onChange={(novo) => atualizarConfig(widget.id, novo)} />;
@@ -235,6 +236,18 @@ export default function WidgetBoard() {
                     </>
                   )}
                   {w.tipo === "video" && <label>URL<input value={w.config.url || ""} onChange={(e) => atualizarConfig(w.id, { url: e.target.value })} placeholder="YouTube, Vimeo ou .mp4" /></label>}
+                  {w.tipo === "midia" && (
+                    <>
+                      <label>serviço
+                        <select value={w.config.provedor || "youtube"} onChange={(e) => atualizarConfig(w.id, { provedor: e.target.value })}>
+                          <option value="youtube">YouTube</option>
+                          <option value="spotify">Spotify</option>
+                          <option value="soundcloud">SoundCloud</option>
+                        </select>
+                      </label>
+                      <label>link (opcional)<input value={w.config.url || ""} onChange={(e) => atualizarConfig(w.id, { url: e.target.value })} placeholder="cole um link ou use o player" /></label>
+                    </>
+                  )}
                   {w.tipo === "terminal" && <label>comando<input value={w.config.comando || ""} onChange={(e) => atualizarConfig(w.id, { comando: e.target.value })} /></label>}
                   {w.tipo === "ia" && <label>pergunta<input value={w.config.pergunta || ""} onChange={(e) => atualizarConfig(w.id, { pergunta: e.target.value })} /></label>}
                   {w.tipo === "metricas" && <label>rótulo<input value={w.config.rotulo || ""} onChange={(e) => atualizarConfig(w.id, { rotulo: e.target.value })} /></label>}
