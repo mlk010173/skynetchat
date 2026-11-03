@@ -326,16 +326,25 @@ export default function Home() {
         return copy;
       }),
       onImage: (url) => setMessages((prev) => {
+        if (!url) return prev;
         const copy = [...prev];
         const last = copy[copy.length - 1];
-        if (!last || last.role !== "assistant" || !url) return prev;
+        if (!last || last.role !== "assistant") {
+          copy.push({ role: "assistant", text: "", image: url, passos: [], fontes: [], ts: Date.now() });
+          return copy;
+        }
         copy[copy.length - 1] = { ...last, image: url };
         return copy;
       }),
       onMidia: (midia) => setMessages((prev) => {
+        if (!midia?.embed) return prev;
         const copy = [...prev];
         const last = copy[copy.length - 1];
-        if (!last || last.role !== "assistant" || !midia?.embed) return prev;
+        // o quadro de mídia pode chegar antes do texto: nesse caso já cria a bolha
+        if (!last || last.role !== "assistant") {
+          copy.push({ role: "assistant", text: "", midia, passos: [], fontes: [], ts: Date.now() });
+          return copy;
+        }
         copy[copy.length - 1] = { ...last, midia };
         return copy;
       }),
