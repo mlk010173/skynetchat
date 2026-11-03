@@ -154,6 +154,7 @@ export async function streamChatAuto({ conversationId, content, model }, handler
       streamChat({ conversationId, content, model: tentativa }, {
         onTool: (toolEv) => handlers.onTool?.(toolEv),
         onImage: (url) => handlers.onImage?.(url),
+        onMidia: (m) => handlers.onMidia?.(m),
         onReason: (txt) => handlers.onReason?.(txt),
         onModelo: (info) => handlers.onModelo?.(info),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
