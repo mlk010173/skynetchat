@@ -364,3 +364,25 @@ button { font-family: inherit; color: inherit; }
 
 .trace-cmd { display: block; margin-top: 3px; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,.04); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; opacity: .8; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
 .trace-saida { display: block; margin-top: 2px; font-size: 11px; opacity: .55; word-break: break-word; }
+
+/* ---------- autenticação: abas, forca de senha, avisos e ações ---------- */
+.auth-tabs { display: flex; gap: 6px; margin: 10px 0 14px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.auth-tabs button { flex: 1; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); font: inherit; font-size: 11px; letter-spacing: .06em; padding: 8px 4px; cursor: pointer; }
+.auth-tabs button.ativo { color: inherit; border-bottom-color: #ff4d4d; }
+.auth-tabs button:hover { color: inherit; }
+.auth-form { display: flex; flex-direction: column; gap: 8px; }
+.auth-form p { margin: 0 0 2px; }
+.erro { color: #ff8a8a; font-size: 12px; margin: 8px 0 0; }
+.aviso-ok { color: #7ee0a1; font-size: 12px; margin: 8px 0 0; }
+.forca { display: flex; gap: 4px; margin: 2px 0 4px; }
+.forca span { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.1); }
+.forca span.on { background: #7ee0a1; }
+.link-secundario { background: none; border: 0; color: var(--muted); font: inherit; font-size: 11px; letter-spacing: .05em; cursor: pointer; text-decoration: underline; padding: 4px 0; }
+.link-secundario:hover { color: inherit; }
+.botao { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; border-radius: 10px; background: #ff4d4d; color: #fff; font-size: 12px; letter-spacing: .05em; text-decoration: none; border: 0; cursor: pointer; }
+.botao.secundario { background: rgba(255,255,255,.08); color: inherit; }
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+.dados { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 14px 0; font-size: 12.5px; }
+.dados dt { color: var(--muted); }
+.dados dd { margin: 0; word-break: break-word; }
+.dados .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; opacity: .8; }
