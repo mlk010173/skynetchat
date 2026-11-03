@@ -4,13 +4,14 @@ import AuthShell from "../components/AuthShell.jsx";
 import { formatCode } from "../code-format.js";
 import { codeAuth } from "../lib.js";
 import { useAuth } from "../auth.jsx";
+import { destinoSeguro } from "../auth-helpers.js";
 
 /** /login: e-mail + senha (principal) e código de 12 dígitos (alternativo). */
 export default function Login() {
   const { entrar, reenviarConfirmacao } = useAuth();
   const navigate = useNavigate();
   const local = useLocation();
-  const destino = local.state?.from || "/";
+  const destino = destinoSeguro(local.state?.from);
 
   const [metodo, setMetodo] = useState("senha");
   const [email, setEmail] = useState("");
