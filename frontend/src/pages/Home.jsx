@@ -80,6 +80,7 @@ export default function Home() {
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [segundosAoVivo, setSegundosAoVivo] = useState(0);
   const [ph, setPh] = useState(0);
   const [logged, setLogged] = useState(false);
   const [model, setModel] = useState("");
@@ -212,6 +213,13 @@ export default function Home() {
   useEffect(() => {
     stageRef.current?.scrollTo({ top: stageRef.current.scrollHeight });
   }, [messages, busy]);
+
+  // relógio do "ao vivo": conta enquanto uma resposta está sendo produzida
+  useEffect(() => {
+    if (!busy) { setSegundosAoVivo(0); return undefined; }
+    const t = setInterval(() => setSegundosAoVivo((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [busy]);
 
   const send = useCallback(async (event) => {
     if (event) event.preventDefault();
@@ -599,6 +607,12 @@ export default function Home() {
           </section>
         ) : (
           <section className="thread">
+            {busy && (
+              <div className="ao-vivo-selo" aria-live="polite">
+                <span className="ao-vivo-ponto" />
+                AO VIVO · {segundosAoVivo}s
+              </div>
+            )}
             {messages.map((message, index) => (
               <article key={index} className={`bubble ${message.role}${message.image ? " with-img" : ""}`}>
                 {editIdx === index ? (
