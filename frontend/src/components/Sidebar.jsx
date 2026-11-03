@@ -711,16 +711,26 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
                 <IconGlobe className="di-icon" />
                 <span className="di-title">Meu painel</span>
               </Link>
+              <Link to="/widgets" className="drawer-item plain" onClick={onClose}>
+                <IconZap className="di-icon" />
+                <span className="di-title">Widgets</span>
+              </Link>
               <button type="button" className="drawer-item plain" onClick={() => { onClose(); onLogout(); }}>
                 <IconClose className="di-icon" />
                 <span className="di-title">Sair da conta</span>
               </button>
             </>
           ) : (
-            <Link to="/login" className="drawer-item plain" onClick={onClose}>
-              <IconUser className="di-icon" />
-              <span className="di-title">Fazer login / Criar conta</span>
-            </Link>
+            <>
+              <Link to="/widgets" className="drawer-item plain" onClick={onClose}>
+                <IconZap className="di-icon" />
+                <span className="di-title">Widgets</span>
+              </Link>
+              <Link to="/login" className="drawer-item plain" onClick={onClose}>
+                <IconUser className="di-icon" />
+                <span className="di-title">Fazer login / Criar conta</span>
+              </Link>
+            </>
           )}
         </div>
       </aside>

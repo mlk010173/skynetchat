@@ -9,6 +9,7 @@ import Account from "./pages/Account.jsx";
 import Settings from "./pages/Settings.jsx";
 import Terms from "./pages/Terms.jsx";
 import Integracoes from "./pages/Integracoes.jsx";
+import Widgets from "./pages/Widgets.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./auth.jsx";
 
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/sign-up" element={<SignUp />} />
         <Route path="/recovery" element={<Recovery />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/widgets" element={<Widgets />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/integracoes" element={<Integracoes />} />
         {/* rotas que exigem conta */}
