@@ -5,6 +5,7 @@ import ClimaCard from "../clima.jsx";
 import { criarWidget, carregarWidgets, salvarWidgets } from "../widgets/registry.js";
 import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
+import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
 
 const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá além", "Sem filtros, sem limites."];
 import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
@@ -80,6 +81,7 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("Novo chat");
   const [draft, setDraft] = useState("");
+  const [acaoSheet, setAcaoSheet] = useState(null);
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [segundosAoVivo, setSegundosAoVivo] = useState(0);
@@ -229,9 +231,9 @@ export default function Home() {
     return () => clearInterval(t);
   }, [busy]);
 
-  const send = useCallback(async (event) => {
+  const send = useCallback(async (event, textoDireto) => {
     if (event) event.preventDefault();
-    const text = draft.trim();
+    const text = (typeof textoDireto === "string" ? textoDireto : draft).trim();
     if (!text || busy) return;
     setDraft("");
     setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "", started: Date.now(), passos: [] }]);
@@ -533,6 +535,11 @@ export default function Home() {
     return send(event);
   }, [draft, send, rodarComando]);
 
+  const enviarTexto = useCallback((texto) => {
+    setAcaoSheet(null);
+    return send(null, texto);
+  }, [send]);
+
   return (
     <div className="app">
       <Sidebar
@@ -622,7 +629,13 @@ export default function Home() {
             <p className="hero-sub">Pesquisa na web, sites, imagens, vídeo, clima, arquivos e widgets: o SKYNET faz e mostra o resultado aqui.</p>
             <div className="hero-cards">
               {actions.map(({ label, icon: Icon, color, desc }) => (
-                <button key={label} type="button" className="hero-card" onClick={() => setDraft(label)}>
+                <button
+                  key={label}
+                  type="button"
+                  className="hero-card"
+                  aria-haspopup="dialog"
+                  onClick={() => (ACOES[label] ? setAcaoSheet(label) : setDraft(label))}
+                >
                   <span className="hero-card-icone" style={{ color, borderColor: `${color}44`, background: `${color}14` }}>
                     <Icon width={18} height={18} />
                   </span>
@@ -770,7 +783,10 @@ export default function Home() {
               </article>
             ))}
             {busy && messages[messages.length - 1]?.text === "" && !messages[messages.length - 1]?.toolStatus && (
-              <article className="bubble assistant typing-bubble">●●●</article>
+              <article className="bubble assistant typing-bubble" aria-live="polite">
+                <span className="tb-pontos" aria-hidden="true"><i /><i /><i /></span>
+                <em>SKYNET está escrevendo</em>
+              </article>
             )}
           </section>
         )}
@@ -805,14 +821,16 @@ export default function Home() {
         </div>
       )}
 
+      <AcaoSheet acao={acaoSheet} onFechar={() => setAcaoSheet(null)} onEnviar={enviarTexto} />
+
       <form className="dock" onSubmit={enviar}>
         <div className="plus-wrap">
           <button type="button" className="dock-plus" aria-label="Mais" onClick={() => { setPlusOpen((v) => !v); setModelOpen(false); }}><IconPlus /></button>
           {plusOpen && (
             <div className="plus-menu">
               <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); say("Envio de arquivos em construção — logo você anexa fotos e docs."); }}>📎 Adicionar fotos e arquivos</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setImgPrompt(""); }}>🖼 Criar imagem</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Pense passo a passo: "); }}>💡 Pensar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Gerar uma imagem"); }}>🖼 Criar imagem</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Pesquisar na web agora"); }}>💡 Pensar</button>
               <button type="button" onClick={() => { setPlusOpen(false); setDraft("Investigue com atenção: "); }}>🔍 Investigar</button>
               <button type="button" onClick={() => { setPlusOpen(false); setDraft("Gere o código: "); }}>⌨ Gerar código</button>
               <button type="button" onClick={() => { setPlusOpen(false); setDraft("Traduza para português: "); }}>文 Traduzir texto</button>

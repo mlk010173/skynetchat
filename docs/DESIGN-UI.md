@@ -79,3 +79,42 @@ O `run.sh` espera o laboratório em `${DESIGN_LAB:-/app/design-lab}`. Sem o labo
    ou instale pelo registry.
 2. O app não usa Tailwind: adapte o componente substituindo classes por variáveis `--sky-*`.
 3. Meça antes de publicar: `node verify.mjs` no laboratório ou `preview` + inspeção de console.
+
+## v4 — seleção imersiva e menu em grupos (04/11/2026)
+
+### Folha de ação (`frontend/src/components/AcaoSheet.jsx`)
+
+Clicar em um cartão do hero não escreve mais texto no composer: abre uma interface
+própria com campo, presets e prévia do pedido.
+
+| Ação | Campo | Presets |
+|---|---|---|
+| Pesquisar na web | o que descobrir | atalhos + formato da resposta |
+| Abrir um site | endereço | sites rápidos + o que fazer na página |
+| Gerar imagem | descrição (textarea) | estilo + enquadramento |
+| Música ou vídeo | o que tocar | busca + atmosfera |
+| Clima | cidade | cidades + o que mostrar |
+| Criar widget | o que mostrar | widgets prontos + atualização |
+
+Comportamento: `Enter` envia, `Shift+Enter` quebra linha, `Esc` fecha, foco automático no
+campo, trava o scroll do body, `aria-modal`, prévia ao vivo em `aria-live`. No celular sobe
+como bottom sheet (`@media max-width: 560px`); no desktop é um cartão central de 560px.
+
+Montagem do texto fica em `ACOES[label].montar(valor, selecionados)`, então acrescentar uma
+ação é só adicionar uma entrada nesse objeto.
+
+### Menu lateral em grupos
+
+`components/Sidebar.jsx` passou a ter busca (`.dl-busca`), CTA "Novo chat" (`.dl-cta`) e
+quatro grupos: Conversa, Ferramentas, Crescer, Descobrir. A navegação foi centralizada em
+`abrirItem(label)` para não duplicar as regras de rota.
+
+### Conversa
+
+Bolha do assistente com filete vermelho, meta em 10.5px, e o estado de espera agora mostra
+três pontos animados com "SKYNET está escrevendo" em vez de `●●●`.
+
+### Laboratório (`/app/design-lab`)
+
+Galeria ganhou barra fixa com busca por componente (filtra seções), contador `NumberTicker`
+e âncoras (Tipografia, Superfícies, Movimento, Dados, Ações) com estado vazio.

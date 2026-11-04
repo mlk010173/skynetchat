@@ -9,6 +9,13 @@ import { api, getSession } from "../lib.js";
 import AutomationsPanel from "./AutomationsPanel.jsx";
 import MemoriaPanel from "./MemoriaPanel.jsx";
 
+const GRUPOS = [
+  { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens"] },
+  { titulo: "Ferramentas", itens: ["Codex", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
+  { titulo: "Crescer", itens: ["Indique e Ganhe", "Monetize com SKYNETchat", "Conversas em grupo"] },
+  { titulo: "Descobrir", itens: ["Conheça o SKYNETchat", "Prompts", "Suporte", "Atualizações"] },
+];
+
 const items = [
   { label: "Novo chat", desc: "Inicie uma conversa do zero", icon: IconEdit },
   { label: "Indique e Ganhe", desc: "Convide amigos e ganhe assinatura PRO", icon: IconGift },
@@ -33,6 +40,7 @@ const items = [
 export default function Sidebar({ open, onClose, active, onSelect, logged, onLogout, say, onOpenConv, draftFill }) {
   const navigate = useNavigate();
   const [view, setView] = useState("menu");
+  const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState([]);
 
   // Estados do E-mail
@@ -202,6 +210,22 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
 
   useEffect(() => { if (view === "history") loadConvs(); }, [view, loadConvs]);
 
+  const abrirItem = (label) => {
+    onSelect(label);
+    if (label === "Histórico de conversas") setView("history");
+    else if (label === "Novo chat") onClose();
+    else if (label === "Atualizações") setView("updates");
+    else if (label === "Prompts") setView("prompts");
+    else if (label === "Suporte") setView("support");
+    else if (label === "Conheça o SKYNETchat") setView("about");
+    else if (label === "Codex") setView("terminal");
+    else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
+    else if (label === "Automações") setView("automations");
+    else if (label === "E-mail") setView("email");
+    else if (label === "Memória") setView("memoria");
+    else if (label !== "Fazer login") soon(label);
+  };
+
   const soon = (label) => {
     say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações, Terminal Codex, Integrações e Automações.`);
     onClose();
@@ -252,39 +276,68 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
         </div>
 
         {view === "menu" && (
+          <>
+          <div className="dl-busca-wrap">
+            <input
+              className="dl-busca"
+              type="search"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar função…"
+              aria-label="Buscar função no menu"
+            />
+          </div>
+
           <nav className="drawer-list">
-            {items.map(({ label, desc, tag, icon: Icon }) => (
-              <button
-                key={label}
-                type="button"
-                className={`drawer-item ${active === label ? "active" : ""}`}
-                onClick={() => {
-                  onSelect(label);
-                  if (label === "Histórico de conversas") { setView("history"); }
-                  else if (label === "Novo chat") onClose();
-                  else if (label === "Atualizações") { setView("updates"); }
-                  else if (label === "Prompts") { setView("prompts"); }
-                  else if (label === "Suporte") { setView("support"); }
-                  else if (label === "Conheça o SKYNETchat") { setView("about"); }
-                  else if (label === "Codex") { setView("terminal"); }
-                  else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
-                  else if (label === "Automações") { setView("automations"); }
-                  else if (label === "E-mail") { setView("email"); }
-                  else if (label === "Memória") { setView("memoria"); }
-                  else if (label !== "Fazer login") soon(label);
-                }}
-              >
-                <Icon className="di-icon" />
-                <span className="di-text">
-                  <span className="di-title">
-                    {label}
-                    {tag && <em className="tag">{tag}</em>}
-                  </span>
-                  {desc && <small>{desc}</small>}
-                </span>
-              </button>
-            ))}
+            <button
+              type="button"
+              className="dl-cta"
+              onClick={() => { onSelect("Novo chat"); onClose(); }}
+            >
+              <IconEdit width={18} height={18} />
+              <span>Novo chat</span>
+              <kbd>N</kbd>
+            </button>
+
+            {GRUPOS.map((grupo) => {
+              const visiveis = grupo.itens
+                .map((label) => items.find((i) => i.label === label))
+                .filter(Boolean)
+                .filter(({ label, desc }) => {
+                  const q = busca.trim().toLowerCase();
+                  if (!q) return true;
+                  return `${label} ${desc || ""}`.toLowerCase().includes(q);
+                });
+              if (!visiveis.length) return null;
+              return (
+                <div className="dl-grupo-bloco" key={grupo.titulo}>
+                  <p className="dl-grupo">{grupo.titulo}</p>
+                  {visiveis.map(({ label, desc, tag, icon: Icon }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className={`drawer-item ${active === label ? "active" : ""}`}
+                      onClick={() => abrirItem(label)}
+                    >
+                      <Icon className="di-icon" />
+                      <span className="di-text">
+                        <span className="di-title">
+                          {label}
+                          {tag && <em className="tag">{tag}</em>}
+                        </span>
+                        {desc && <small>{desc}</small>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+
+            {busca.trim() && !items.some(({ label, desc }) => `${label} ${desc || ""}`.toLowerCase().includes(busca.trim().toLowerCase())) && (
+              <p className="dl-vazio">Nada com “{busca.trim()}”. Tente imagem, codex, e-mail…</p>
+            )}
           </nav>
+          </>
         )}
 
                 {view === "memoria" && (
