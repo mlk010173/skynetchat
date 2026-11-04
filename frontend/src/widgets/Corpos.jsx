@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, askOnce, SUPA_URL, SUPA_ANON } from "../lib.js";
 import MediaPlayer from "../media.jsx";
-import { ImagemIaBody } from "./avancado.jsx";
+import { ImagemIaBody, Lightbox } from "./avancado.jsx";
 
 /* ---------- utilidades ---------- */
 
@@ -248,6 +248,7 @@ export function GaleriaBody({ config, atualizarConfig }) {
   const itens = Array.isArray(config.itens) ? config.itens : [];
   const [novo, setNovo] = useState("");
   const [modo, setModo] = useState("auto");
+  const [zoom, setZoom] = useState("");
 
   const adicionar = () => {
     const v = novo.trim();
@@ -276,7 +277,9 @@ export function GaleriaBody({ config, atualizarConfig }) {
             <figure key={`${url}-${i}`} className="wg-galeria-item">
               <button type="button" className="wg-galeria-x" title="Remover" onClick={() => remover(i)}>×</button>
               {ehImagem(url) ? (
-                <img src={url} alt="" loading="lazy" />
+                <button type="button" className="wg-galeria-zoom" onClick={() => setZoom(url)} title="Ampliar">
+                  <img src={url} alt="" loading="lazy" />
+                </button>
               ) : (
                 <MediaPlayer compacto url={url} titulo={url.split("/").pop()} />
               )}
@@ -284,6 +287,7 @@ export function GaleriaBody({ config, atualizarConfig }) {
           ))}
         </div>
       )}
+      {zoom ? <Lightbox url={zoom} alt="mídia ampliada" onFechar={() => setZoom("")} /> : null}
       {itens.length > 1 ? (
         <button type="button" className="wg-galeria-modo" onClick={() => setModo(modo === "video" ? "auto" : "video")}>
           {modo === "video" ? "mostrar tudo" : "só o primeiro em destaque"}
