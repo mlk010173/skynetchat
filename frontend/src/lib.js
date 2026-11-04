@@ -93,7 +93,7 @@ export async function streamChat({ conversationId, content, model }, handlers) {
           for (const it of (Array.isArray(itens) ? itens : [itens])) {
             if (!it) continue;
             if (it.tipo === "etapa" && handlers.onTool) {
-              handlers.onTool({ tool: it.ferramenta, status: it.estado, detalhe: it.detalhe, entrada: it.entrada, saida: it.saida, ms: it.ms, fontes: it.fontes, erro: it.erro, quando: it.quando });
+              handlers.onTool({ tool: it.ferramenta, titulo: it.titulo, status: it.estado, detalhe: it.detalhe, entrada: it.entrada, saida: it.saida, ms: it.ms, fontes: it.fontes, erro: it.erro, quando: it.quando });
             } else if (it.tipo === "clima" && handlers.onClima) {
               handlers.onClima(it.dados ?? it);
             } else if (it.tipo === "widget" && handlers.onWidget) {

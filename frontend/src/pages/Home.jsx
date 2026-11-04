@@ -48,6 +48,9 @@ const ICONES_PASSO = {
   clima: "☁",
   moeda: "¤",
   hora: "◔",
+  habilidade: "⟨⟩",
+  memoria: "❑",
+  infra: "⛭",
   conferindo: "✔",
 };
 
@@ -62,6 +65,9 @@ function rotuloDoPasso(ferramenta) {
     calculadora: "Calculando",
     clima: "Consultando o clima",
     moeda: "Consultando a cotação",
+    habilidade: "Usando a habilidade",
+    memoria: "Consultando a memória",
+    infra: "Consultando a infraestrutura",
     hora: "Conferindo o horário",
     conferindo: "Conferindo a resposta",
   };

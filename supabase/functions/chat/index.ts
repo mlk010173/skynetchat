@@ -1255,7 +1255,9 @@ Deno.serve(async (req) => {
                 ? citou
                   ? `resposta conferida e apoiada em ${fontesColetadas.length} fonte(s)`
                   : `respondi com ${fontesColetadas.length} fonte(s) coletada(s)`
-                : "respondi sem ferramentas",
+                : toolsToRun.length
+                  ? `resposta pronta com ${toolsToRun.length} ferramenta(s)`
+                  : "respondi direto, sem ferramentas",
               ms: Date.now() - (inicioDoPedido ?? Date.now()),
             });
           }
