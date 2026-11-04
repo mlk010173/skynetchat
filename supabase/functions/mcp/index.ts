@@ -5,6 +5,7 @@ import { autorizar, json, registrar } from "../_shared/apikey.ts";
 import { liberar, respostaLimite } from "../_shared/limite.ts";
 import { svc } from "../_shared/sessao.ts";
 import { perguntar } from "../_shared/chat.ts";
+import { infraTudo } from "../_shared/infra.ts";
 
 const PROTOCOLO = "2025-06-18";
 
@@ -20,6 +21,30 @@ const FERRAMENTAS = [
         conversa: { type: "string", description: "Opcional. ID de conversa para manter o contexto." },
       },
       required: ["mensagem"],
+    },
+  },
+  {
+    name: "skynet_infra",
+    description: "Status ao vivo da infraestrutura: Supabase (projeto, funções, contagens), Vercel (deploy e site) e Render (saúde do agente).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        plataforma: { type: "string", description: "Opcional: supabase, vercel, render ou tudo (padrão tudo)." },
+      },
+    },
+  },
+  {
+    name: "skynet_memoria",
+    description: "Memória de longo prazo da conta: salvar um fato (acao=salvar) ou listar (acao=buscar).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        acao: { type: "string", description: "salvar ou buscar (padrão buscar)." },
+        chave: { type: "string", description: "Identificador curto do fato (ex.: cidade, preferencia)." },
+        valor: { type: "string", description: "Texto do fato a guardar." },
+        tipo: { type: "string", description: "Opcional: fato, preferencia, decisao." },
+      },
+      required: ["acao"],
     },
   },
   {
@@ -80,6 +105,47 @@ async function chamarFerramenta(nome: string, args: any, accountId: string) {
     const r = await perguntar(mensagem, args?.modelo || args?.model || "auto",
       args?.conversa || args?.conversation || null, accountId);
     return resultado(r.answer || "(resposta vazia)", { modelo: r.model, conversa: r.conversationId });
+  }
+  if (nome === "skynet_infra") {
+    const qual = String(args?.plataforma ?? "tudo").toLowerCase();
+    const r = await infraTudo();
+    const escolhido = qual === "supabase" ? { supabase: r.supabase }
+      : qual === "vercel" ? { vercel: r.vercel }
+      : qual === "render" ? { render: r.render }
+      : { supabase: r.supabase, vercel: r.vercel, render: r.render };
+    return resultado(
+      [r.supabase.resumo, r.vercel.resumo, r.render.resumo].filter(Boolean).join("\n"),
+      escolhido,
+    );
+  }
+  if (nome === "skynet_memoria") {
+    const acao = String(args?.acao ?? "buscar").toLowerCase();
+    if (acao === "salvar") {
+      const valor = String(args?.valor ?? args?.texto ?? "").trim();
+      const chave = String(args?.chave ?? "").trim() ||
+        "nota-" + valor.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 42);
+      if (valor.length < 3) return falha("Faltou 'valor' com o fato a guardar.");
+      const { error } = await db.from("acc_memory").upsert({
+        account_id: accountId,
+        chave,
+        valor: valor.slice(0, 1000),
+        tipo: String(args?.tipo ?? "fato"),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "account_id,chave" });
+      if (error) return falha("Não consegui salvar a memória.");
+      return resultado(`Memória "${chave}" salva.`, { ok: true, chave });
+    }
+    const { data } = await db
+      .from("acc_memory")
+      .select("chave, valor, tipo, updated_at")
+      .eq("account_id", accountId)
+      .order("updated_at", { ascending: false })
+      .limit(50);
+    const lista = data ?? [];
+    return resultado(
+      lista.length ? lista.map((m: any) => `- ${m.chave}: ${m.valor}`).join("\n") : "Nenhuma memória guardada ainda.",
+      { ok: true, memorias: lista },
+    );
   }
   if (nome === "skynet_status" || nome === "skynet_imagem" || nome === "skynet_print" || nome === "skynet_midia") {
     const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
@@ -184,7 +250,7 @@ Deno.serve(async (req) => {
         protocolVersion: PROTOCOLO,
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "skynet", version: "1.0.0" },
-        instructions: "Ferramentas do SKYNET: pergunte qualquer coisa com skynet_perguntar. Modelos ficam no servidor.",
+        instructions: "Ferramentas do SKYNET: pergunte com skynet_perguntar, veja a infra com skynet_infra, guarde fatos com skynet_memoria. Modelos ficam no servidor.",
       });
     case "notifications/initialized":
     case "notifications/cancelled":

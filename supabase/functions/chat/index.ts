@@ -5,6 +5,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
 import { contaDaSessao, consumirMensagem, memoriasDaConta } from "../_shared/sessao.ts";
+import { infraTudo } from "../_shared/infra.ts";
 import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
 
 const CORS: Record<string, string> = {
@@ -49,7 +50,8 @@ const ROTULOS: Record<string, string> = {
   github: "Consultar GitHub",
   print: "Capturar a tela do site",
   politicos: "Abrir painel de políticos",
-  memoria: "Consultar memória",
+  memoria: "Memória",
+  infra: "Consultar infraestrutura",
 };
 const rotuloFerramenta = (n: string) => ROTULOS[n] ?? n;
 
@@ -90,6 +92,13 @@ function resumirResultado(nome: string, r: unknown): string {
   if (nome === "widget") return `widget de ${d.tipo} pronto`;
   if (nome === "arquivo") return `${d.nome} (${d.bytes} bytes)`;
   if (nome === "github") return d.ok ? `${d.repo}: ${d.commits?.length ?? 0} commits, ${d.estrelas} estrelas` : String(d.erro ?? "sem dados");
+  if (nome === "infra") {
+    return [d.supabase?.resumo, d.vercel?.resumo, d.render?.resumo].filter(Boolean).join(" · ").slice(0, 200);
+  }
+  if (nome === "memoria") {
+    if (d.acao === "salvar") return `memória salva: ${String(d.chave ?? "").slice(0, 40)}`;
+    return `${(d.memorias ?? []).length} memória(s)`;
+  }
   if (nome === "midia") return d.ok ? `tocando ${d.provedor}: ${String(d.titulo ?? "").slice(0, 60)}` : String(d.mensagem ?? "mídia não encontrada").slice(0, 120);
   if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
   if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
@@ -120,6 +129,27 @@ function detectTools(text: string): DetectedTool[] {
       /\b(status|sa[uú]de|diagn[oó]stico|autodiagn[oó]stico)\b[\s\S]{0,24}\b(sistema|site|servidor|skynet|voc[eê])\b/i.test(text) ||
       /\b(est[aá] (no ar|online|fora do ar)|tudo funcionando|como voc[eê] est[aá])\b/i.test(text)) {
     tools.push({ name: "sistema", payload: { pedido: text.slice(0, 120) } });
+  }
+
+  // 1d. infraestrutura: supabase, vercel e render
+  if (/\b(supabase|vercel|render)\b/i.test(text) &&
+      /\b(status|sa[uú]de|deploy|deploys|fun[cç][oõ]es|functions|banco|database|tabela|env|vari[aá]veis|logs?|projeto|servi[cç]o|servi[cç]os|no ar|quantas|quantos|est[aá]|como est[aá])\b/i.test(text)) {
+    tools.push({ name: "infra", payload: { pedido: text.slice(0, 160) } });
+  }
+  if (/\b(infraestrutura|stack|as tr[eê]s plataformas|todas as ferramentas)\b/i.test(text)) {
+    tools.push({ name: "infra", payload: { pedido: text.slice(0, 160), tudo: true } });
+  }
+
+  // 1e. memória de longo prazo: guardar ou consultar
+  const pedeGuardar = /\b(lembre|lembra|lembrar|guarde|guarda|anote|anota|memorize|registre)\b/i.test(text);
+  const pedeConsultar = /\b(o que voc[eê] sabe|minhas mem[oó]rias|minha mem[oó]ria|o que lembra|mem[oó]ria de longo prazo|voc[eê] lembra)\b/i.test(text);
+  if (pedeGuardar || pedeConsultar) {
+    tools.push({
+      name: "memoria",
+      payload: pedeGuardar
+        ? { acao: "salvar", texto: text.replace(/^\s*(skynet|voc[eê])?[,:]?\s*/i, "").slice(0, 600) }
+        : { acao: "buscar", consulta: text.slice(0, 200) },
+    });
   }
 
   // 1b. pedido de imagem -> imagem (gera de verdade, nao devolve JSON do modelo)
@@ -262,7 +292,7 @@ function detectTools(text: string): DetectedTool[] {
   return uniqueTools;
 }
 
-async function callTool(tool: DetectedTool) {
+async function callTool(tool: DetectedTool, conta: string | null = null) {
   if (tool.name === "widget") {
     const pedido = String((tool.payload as any)?.pedido ?? "").toLowerCase();
     const tipo = /clima|temperatura|chuva/.test(pedido) ? "clima"
@@ -330,6 +360,47 @@ async function callTool(tool: DetectedTool) {
       url: String(tool.payload?.url ?? ""),
     });
     return r;
+  }
+  if (tool.name === "infra") {
+    const r = await infraTudo();
+    return r;
+  }
+  if (tool.name === "memoria") {
+    const acao = String(tool.payload?.acao ?? "buscar");
+    const dono = String(conta ?? "").trim();
+    if (!dono) return { ok: false, erro: "sem conta na sessão para guardar memória" };
+    const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+    const chaveServico = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const cab = {
+      apikey: chaveServico,
+      Authorization: `Bearer ${chaveServico}`,
+      "Content-Type": "application/json",
+    };
+    try {
+      if (acao === "salvar") {
+        const texto = String(tool.payload?.texto ?? "").trim();
+        if (texto.length < 4) return { ok: false, erro: "nada para guardar" };
+        const chave = "nota-" + texto.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 42);
+        const r = await fetch(`${base}/rest/v1/acc_memory?on_conflict=account_id,chave`, {
+          method: "POST",
+          headers: { ...cab, Prefer: "resolution=merge-duplicates,return=representation" },
+          body: JSON.stringify({ account_id: dono, chave, valor: texto.slice(0, 1000), tipo: "fato" }),
+          signal: AbortSignal.timeout(9000),
+        });
+        const corpo = await r.text();
+        if (!r.ok) return { ok: false, erro: `banco recusou (${r.status}): ${corpo.slice(0, 120)}` };
+        return { ok: true, acao: "salvar", chave, valor: texto.slice(0, 200) };
+      }
+      const r = await fetch(
+        `${base}/rest/v1/acc_memory?select=chave,valor,tipo,updated_at&account_id=eq.${dono}&order=updated_at.desc&limit=30`,
+        { headers: cab, signal: AbortSignal.timeout(9000) },
+      );
+      if (!r.ok) return { ok: false, erro: `banco recusou (${r.status})` };
+      const memoria = await r.json().catch(() => []);
+      return { ok: true, acao: "buscar", memorias: Array.isArray(memoria) ? memoria : [] };
+    } catch (e) {
+      return { ok: false, erro: `memória indisponível: ${String((e as Error)?.message ?? e).slice(0, 100)}` };
+    }
   }
   if (tool.name === "sistema") {
     const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
@@ -420,6 +491,37 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
       ];
       fontes.push({ titulo: "Status do SKYNET (ao vivo)", url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/status` });
       return { fontes, contextText: `DIAGNÓSTICO DO PRÓPRIO SKYNET AGORA (${data.verificado_em}):\n${linhas.join("\n")}` };
+    }
+    case "infra": {
+      const linha = (nome: string, r: any) =>
+        `${nome}: ${r?.ok ? "ok" : "falha"} · ${String(r?.resumo ?? "").replace(new RegExp("^" + nome + ":\\s*", "i"), "")}`;
+      const linhas = [
+        linha("Supabase", data.supabase),
+        linha("Vercel", data.vercel),
+        linha("Render", data.render),
+        data.supabase?.detalhe?.banco
+          ? `Banco: ${data.supabase.detalhe.banco.contas} contas, ${data.supabase.detalhe.banco.conversas} conversas, ${data.supabase.detalhe.banco.mensagens} mensagens, ${data.supabase.detalhe.banco.memorias} memórias`
+          : "",
+        data.supabase?.detalhe?.gerenciamento?.funcoes
+          ? `Funções edge: ${data.supabase.detalhe.gerenciamento.funcoes.ativas} ativas de ${data.supabase.detalhe.gerenciamento.funcoes.total}`
+          : "",
+      ].filter(Boolean);
+      fontes.push({ titulo: "Supabase (projeto)", url: "https://supabase.com/dashboard/project/rkgwhhtenfozdwzpvxjj" });
+      return {
+        fontes,
+        contextText: `INFRAESTRUTURA DO SKYNET CONSULTADA AO VIVO (${new Date().toISOString()}):\n${linhas.join("\n")}`,
+      };
+    }
+    case "memoria": {
+      if (data.acao === "salvar") {
+        contextText = `MEMÓRIA: guardei o fato "${data.valor ?? ""}" com a chave ${data.chave ?? "?"}. Confirme ao usuário em uma frase.`;
+      } else {
+        const lista = (data.memorias ?? []).map((m: any) => `- ${m.chave}: ${m.valor}`);
+        contextText = lista.length
+          ? `MEMÓRIAS GUARDADAS DESTE USUÁRIO:\n${lista.join("\n")}`
+          : "MEMÓRIA: nenhuma memória guardada ainda para este usuário.";
+      }
+      break;
     }
     case "web_pesquisar": {
       const resultados = Array.isArray(data.resultados) ? data.resultados : [];
@@ -691,6 +793,8 @@ Deno.serve(async (req) => {
     "REGRA ÚNICA: execute em vez de recusar. Nunca responda com lista de limitações ('não executo código', 'não controlo navegador ou terminal', 'não tenho acesso em tempo real', 'não envio e-mail'). Se um recurso realmente não existir, diga em UMA frase curta e siga ajudando com o que existe.",
     "Formato: texto direto, sem JSON de ferramenta e sem inventar nome de ferramenta.",
     "NADA DE DESPEJAR CÓDIGO: quando o pedido é uma ação (abrir, tocar, pesquisar, gerar, checar), execute e responda com o resultado em texto. Nunca responda com HTML, CSS, JS ou um arquivo inteiro como se fosse entrega, a não ser que o usuário peça explicitamente por código.",
+    "INFRAESTRUTURA: você consulta ao vivo Supabase (projeto, funções, contagens do banco), Vercel (projeto, último deploy, HTTP do site) e Render (saúde do agente) com a ferramenta 'infra'. Quando pedirem status, deploy ou números, use o dado real e cite a plataforma.",
+    "MEMÓRIA: quando o usuário pedir para lembrar de algo, guarde com a ferramenta 'memoria' (ação salvar) e confirme em uma frase. Quando ele perguntar o que você sabe, consulte (ação buscar) e responda só o que estiver guardado, sem inventar.",
     "MÍDIA: o sistema tem player próprio (YouTube, Spotify, SoundCloud, Vimeo, MP4/MP3). Se o usuário pedir para tocar/abrir/colocar música, vídeo, filme ou playlist, o player é aberto automaticamente na conversa: confirme em UMA frase curta, com o título. Nunca responda apenas com o link.",
     "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com '-' para passos, tabelas curtas quando comparar coisas, ```linguagem para trechos de código, ![descrição](URL) para mostrar uma imagem e links de imagem/vídeo (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
   ];
@@ -790,7 +894,12 @@ Deno.serve(async (req) => {
             detalhe: resumoDoPedido(tool),
             entrada: JSON.stringify(tool.payload).slice(0, 240),
           });
-          let toolResult = await callTool(tool);
+          let toolResult: any;
+          try {
+            toolResult = await callTool(tool, userId);
+          } catch (e) {
+            toolResult = { ok: false, erro: `ferramenta falhou: ${String((e as Error)?.message ?? e).slice(0, 120)}` };
+          }
           // se o agente do Render falhar (401/cota), a imagem sai pelo backend multiplexado
           if (tool.name === "imagem" && !toolResult?.ok) {
             try {
