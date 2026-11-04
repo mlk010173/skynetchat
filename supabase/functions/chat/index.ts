@@ -723,6 +723,20 @@ Deno.serve(async (req) => {
     if (mErr) return json({ ok: false, error: "Falha ao salvar mensagem." }, 500);
   }
 
+  // ---- respostas entregues por caminho direto (clima, widget, arquivo, midia, print, imagem) ----
+  // Antes esses caminhos enviavam o texto e fechavam o stream sem gravar a resposta:
+  // a conversa ficava com a pergunta do usuario e nenhuma resposta no historico.
+  const salvarRespostaDireta = async (texto: string) => {
+    if (!userId || !convId) return;
+    const limpo = String(texto ?? "").trim();
+    if (!limpo) return;
+    await svc.from("messages").insert({
+      conversation_id: convId,
+      role: "assistant",
+      content: limpo.slice(0, 4000),
+    });
+  };
+
   // ---- memoria automatica do agente (memory id = usuario): guarda fatos duraveis do chat ----
   if (userId && content.length < 500 && /\b(lembre|lembra|guarde|anote|memorize|meu nome|eu sou|eu tenho|prefiro|minha|meu|moro|trabalho|nasci)\b/i.test(content)) {
     try { await svc.from("agent_memory").insert({ email: userId, texto: content.slice(0, 500) }); } catch { /* opcional */ }
@@ -886,6 +900,7 @@ Deno.serve(async (req) => {
         if (entregaDireta) {
           controller.enqueue(tDados(entregaDireta.quadro));
           enviaTexto(entregaDireta.texto);
+          await salvarRespostaDireta(entregaDireta.texto);
           enviaFim({ conversationId: convId, model: entregaDireta.quadro.tipo, pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;
@@ -893,21 +908,27 @@ Deno.serve(async (req) => {
 
         if (midiaTocando) {
           const titulo = String(midiaTocando.titulo || "").slice(0, 90);
-          enviaTexto(`${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Tocando agora${titulo ? `: **${titulo}**` : ""} (${midiaTocando.provedor}). O player está na conversa.`);
+          const textoMidia = `${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Tocando agora${titulo ? `: **${titulo}**` : ""} (${midiaTocando.provedor}). O player está na conversa.`;
+          enviaTexto(textoMidia);
+          await salvarRespostaDireta(textoMidia);
           enviaFim({ conversationId: convId, model: "midia", pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;
         }
 
         if (capturaEntregue) {
-          enviaTexto(`Aqui está o print de ${capturaEntregue.alvo} (${capturaEntregue.provedor}).`);
+          const textoPrint = `Aqui está o print de ${capturaEntregue.alvo} (${capturaEntregue.provedor}).`;
+          enviaTexto(textoPrint);
+          await salvarRespostaDireta(textoPrint);
           enviaFim({ conversationId: convId, model: "print", pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;
         }
 
         if (imagemEntregue) {
-          enviaTexto("Pronto, a imagem foi gerada. Se quiser outra versão, é só pedir.");
+          const textoImagem = "Pronto, a imagem foi gerada. Se quiser outra versão, é só pedir.";
+          enviaTexto(textoImagem);
+          await salvarRespostaDireta(textoImagem);
           enviaFim({ conversationId: convId, model: "imagem", pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;
