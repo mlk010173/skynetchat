@@ -173,7 +173,20 @@ export async function pickChain(
     fila = [...fortes, ...resto];
   }
 
-  return { fila: fila.slice(0, 6), pedido: pedido ?? "auto", auto };
+  const filaFinal = fila.slice(0, 6);
+
+  // EXPLORAÇÃO: modelos sem histórico nunca entram na conta se só a nota decidir
+  // (os já medidos sempre ganham). Reservamos a última vaga para um deles, em rodízio,
+  // para que a base de saúde cresça e o roteador descubra modelos novos e bons.
+  const semHistorico = todos.filter((m) => !h.get(m.id));
+  if (semHistorico.length && filaFinal.length > 1) {
+    const semente = Math.abs(Number(pedidoLimpo.length) * 7 + new Date().getUTCMinutes()) % semHistorico.length;
+    const escolhido = semHistorico[semente];
+    const jaTem = filaFinal.some((m) => m.id === escolhido.id);
+    if (!jaTem && filaFinal[0].id !== escolhido.id) filaFinal[filaFinal.length - 1] = escolhido;
+  }
+
+  return { fila: filaFinal, pedido: pedido ?? "auto", auto };
 }
 
 // ------------------------------------------------------------------ registro
