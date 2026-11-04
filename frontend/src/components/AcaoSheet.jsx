@@ -162,13 +162,22 @@ export default function AcaoSheet({ acao, onFechar, onEnviar }) {
   const [sel, setSel] = useState([]);
   const campoRef = useRef(null);
 
+  // guarda o fechar em ref: o efeito não pode depender da identidade do callback,
+  // senão cada re-render do pai limpa o campo enquanto a pessoa digita.
+  const fecharRef = useRef(onFechar);
   useEffect(() => {
-    if (!cfg) return undefined;
+    fecharRef.current = onFechar;
+  }, [onFechar]);
+
+  const chave = cfg?.chave ?? null;
+
+  useEffect(() => {
+    if (!chave) return undefined;
     setValor("");
     setSel([]);
     const t = setTimeout(() => campoRef.current?.focus(), 240);
     const aoTeclar = (e) => {
-      if (e.key === "Escape") onFechar();
+      if (e.key === "Escape") fecharRef.current?.();
     };
     document.addEventListener("keydown", aoTeclar);
     const overflowAntes = document.body.style.overflow;
@@ -178,7 +187,7 @@ export default function AcaoSheet({ acao, onFechar, onEnviar }) {
       document.removeEventListener("keydown", aoTeclar);
       document.body.style.overflow = overflowAntes;
     };
-  }, [cfg, onFechar]);
+  }, [chave]);
 
   const previa = useMemo(() => {
     if (!cfg) return "";

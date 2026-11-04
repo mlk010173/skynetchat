@@ -535,6 +535,8 @@ export default function Home() {
     return send(event);
   }, [draft, send, rodarComando]);
 
+  const fecharSheet = useCallback(() => setAcaoSheet(null), []);
+
   const enviarTexto = useCallback((texto) => {
     setAcaoSheet(null);
     return send(null, texto);
@@ -821,7 +823,7 @@ export default function Home() {
         </div>
       )}
 
-      <AcaoSheet acao={acaoSheet} onFechar={() => setAcaoSheet(null)} onEnviar={enviarTexto} />
+      <AcaoSheet acao={acaoSheet} onFechar={fecharSheet} onEnviar={enviarTexto} />
 
       <form className="dock" onSubmit={enviar}>
         <div className="plus-wrap">
