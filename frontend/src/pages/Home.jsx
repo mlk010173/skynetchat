@@ -99,6 +99,10 @@ export default function Home() {
   const [bellOpen, setBellOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
+  const [abaMotor, setAbaMotor] = useState("modo");
+  const [habilidades, setHabilidades] = useState([]);
+  const [habBusca, setHabBusca] = useState("");
+  const [habPacote, setHabPacote] = useState("todos");
   const [plusOpen, setPlusOpen] = useState(false);
   const [limitHit, setLimitHit] = useState(false);
   const [tools, setTools] = useState([]);
@@ -537,6 +541,15 @@ export default function Home() {
 
   const fecharSheet = useCallback(() => setAcaoSheet(null), []);
 
+  useEffect(() => {
+    if (!modelOpen || habilidades.length) return;
+    let vivo = true;
+    api("skills")
+      .then((d) => { if (vivo && d?.ok) setHabilidades(d.habilidades || []); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [modelOpen, habilidades.length]);
+
   const enviarTexto = useCallback((texto) => {
     setAcaoSheet(null);
     return send(null, texto);
@@ -563,35 +576,132 @@ export default function Home() {
         <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Abrir menu">
           <IconMenu />
         </button>
-        <button type="button" className="model" aria-label="Escolher modelo" onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}>
-          <span>SKYNETchat</span>
-          <b>{labelFor(model)}</b>
-          <IconChevron className="chev" width={16} height={16} />
+        <button
+          type="button"
+          className={`motor${modelOpen ? " aberto" : ""}`}
+          aria-label="Motor, modelo e habilidades do agente"
+          aria-expanded={modelOpen}
+          onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}
+        >
+          <span className="motor-selo" aria-hidden="true" />
+          <span className="motor-nome">SKYNET</span>
+          <span className="motor-tag">{modo === "4.5" ? "agente" : "rápido"}</span>
+          <span className="motor-modelo">{labelFor(model)}</span>
+          <IconChevron className="chev" width={15} height={15} />
         </button>
+
         {modelOpen && (
-          <div className="model-panel">
-            <b className="mp-sec">MODELOS</b>
-            {models.slice(0, 8).map((m) => (
-              <button key={m} className={"mp-item" + (m === model ? " on" : "")} onClick={() => { setModel(m); setModelOpen(false); }}>
-                <IconChevron width={13} height={13} />
-                <span>{labelFor(m)}</span>
-                {m === model && <small>ativo</small>}
-              </button>
-            ))}
-            {tools.length > 0 && (
-              <>
-                <b className="mp-sec" style={{ marginTop: 10 }}>FERRAMENTAS DO AGENTE (LIVE)</b>
-                {tools.map((t) => (
-                  <div key={t.nome} className="mp-item static" title={t.desc}>
-                    <IconGlobe width={13} height={13} />
-                    <span>{t.nome}</span>
-                    <small>online</small>
-                  </div>
+          <div className="painel-motor" role="dialog" aria-label="Configuração do motor">
+            <div className="pm-topo">
+              <span className="pm-status">
+                <i className="pm-dot" aria-hidden="true" />
+                {tools.length} ferramentas · {habilidades.length || "…"} habilidades
+              </span>
+              <button type="button" className="pm-x" aria-label="Fechar" onClick={() => setModelOpen(false)}>✕</button>
+            </div>
+
+            <div className="pm-abas" role="tablist">
+              {[["modo", "Modo"], ["modelo", "Modelo"], ["habilidades", `Habilidades${habilidades.length ? ` ${habilidades.length}` : ""}`]].map(([id, rotulo]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={abaMotor === id}
+                  className={`pm-aba${abaMotor === id ? " on" : ""}`}
+                  onClick={() => setAbaMotor(id)}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+
+            {abaMotor === "modo" && (
+              <div className="pm-corpo">
+                {[["4.0", "Chat simples", "Responde direto, sem ferramentas nem navegação."],
+                  ["4.5", "Pro · agente", "Pesquisa, abre sites, gera imagem, clima e habilidades."]].map(([v, titulo, texto]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`pm-modo${modo === v ? " on" : ""}`}
+                    onClick={() => { trocarModo(v); setModelOpen(false); }}
+                  >
+                    <b>{v}</b>
+                    <span>
+                      <strong>{titulo}</strong>
+                      <small>{texto}</small>
+                    </span>
+                    {modo === v && <em>ativo</em>}
+                  </button>
                 ))}
-              </>
+              </div>
+            )}
+
+            {abaMotor === "modelo" && (
+              <div className="pm-corpo pm-lista">
+                {models.slice(0, 10).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`pm-item${m === model ? " on" : ""}`}
+                    onClick={() => { setModel(m); setModelOpen(false); }}
+                  >
+                    <span className="pm-radio" aria-hidden="true" />
+                    <span className="pm-item-txt">
+                      <strong>{labelFor(m)}</strong>
+                      <small>{m === "auto" || m === "melhor" ? "o roteador escolhe o provedor por latência" : m}</small>
+                    </span>
+                    {m === model && <em>ativo</em>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {abaMotor === "habilidades" && (
+              <div className="pm-corpo">
+                <input
+                  className="pm-busca"
+                  type="search"
+                  value={habBusca}
+                  onChange={(e) => setHabBusca(e.target.value)}
+                  placeholder="buscar habilidade (cpf, cep, juros, qr code…)"
+                  aria-label="Buscar habilidade"
+                />
+                <div className="pm-pacotes">
+                  {["todos", ...Array.from(new Set(habilidades.map((h) => h.pacote)))].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`pm-pacote${habPacote === p ? " on" : ""}`}
+                      onClick={() => setHabPacote(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="pm-habs">
+                  {habilidades
+                    .filter((h) => habPacote === "todos" || h.pacote === habPacote)
+                    .filter((h) => !habBusca.trim() || `${h.nome} ${h.descricao} ${h.id}`.toLowerCase().includes(habBusca.trim().toLowerCase()))
+                    .map((h) => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        className="pm-hab"
+                        title={h.descricao}
+                        onClick={() => { setDraft(`${h.exemplo}`); setModelOpen(false); }}
+                      >
+                        <strong>{h.nome}</strong>
+                        <small>{h.descricao}</small>
+                      </button>
+                    ))}
+                  {!habilidades.length && <p className="pm-vazio">carregando o catálogo…</p>}
+                </div>
+                <p className="pm-dica">Toque numa habilidade para levar o exemplo para o campo de mensagem.</p>
+              </div>
             )}
           </div>
         )}
+
         <div className="top-actions">
           <button type="button" className="icon-btn" aria-label="Tema" onClick={() => {
             const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
@@ -677,26 +787,51 @@ export default function Home() {
                   <>
                     {message.role === "assistant" && message.passos && message.passos.length > 0 && (() => {
                       const viva = message.passos.some((p) => p.estado === "executando");
+                      const feitas = message.passos.filter((p) => p.estado !== "executando").length;
+                      const total = message.passos.length;
+                      const pct = Math.round((feitas / total) * 100);
+                      const segundos = message.passos.reduce((acc, p) => acc + (Number(p.ms) || 0), 0) / 1000;
                       const aberto = traceAberto[index] ?? viva;
                       return (
-                        <div className={`trace${viva ? " viva" : ""}`}>
-                          <button type="button" className="trace-head" aria-expanded={aberto} onClick={() => setTraceAberto((v) => ({ ...v, [index]: !aberto }))}>
-                            <span className="trace-titulo">
-                              {viva ? "Trabalhando" : `Passo a passo · ${message.passos.length} etapa${message.passos.length > 1 ? "s" : ""}`}
+                        <div className={`trilha${viva ? " viva" : ""}`}>
+                          <button
+                            type="button"
+                            className="trilha-topo"
+                            aria-expanded={aberto}
+                            onClick={() => setTraceAberto((v) => ({ ...v, [index]: !aberto }))}
+                          >
+                            <span className="trilha-aro" aria-hidden="true">
+                              {viva ? <i className="trilha-pulso" /> : <b>{total}</b>}
                             </span>
-                            <span className="trace-chev">{aberto ? "▾" : "▸"}</span>
+                            <span className="trilha-resumo">
+                              <b>{viva ? "Raciocinando" : "Raciocínio"}</b>
+                              <small>
+                                {viva ? `etapa ${Math.min(feitas + 1, total)} de ${total}` : `${total} etapa${total > 1 ? "s" : ""} · ${segundos.toFixed(1)}s`}
+                              </small>
+                            </span>
+                            <span className="trilha-progresso" aria-hidden="true">
+                              <i style={{ width: `${viva ? Math.max(pct, 8) : 100}%` }} />
+                            </span>
+                            <span className="trilha-seta" aria-hidden="true">{aberto ? "▾" : "▸"}</span>
                           </button>
                           {aberto && (
-                            <ol className="trace-list">
+                            <ol className="trilha-passos">
                               {message.passos.map((p, i) => (
-                                <li key={i} className={`trace-step ${p.estado}`}>
-                                  <span className="trace-icone">{ICONES_PASSO[p.ferramenta] || "•"}</span>
-                                  <span className="trace-texto">
-                                    <b>{p.titulo}</b>
-                                    {p.detalhe ? <span className="trace-detalhe">{p.detalhe}</span> : null}
-              {p.entrada ? <code className="trace-cmd">{p.entrada}</code> : null}
-              {p.saida ? <span className="trace-saida">↳ {p.saida}</span> : null}
-                                    {p.estado === "falhou" && p.erro ? <span className="trace-erro">{p.erro}</span> : null}
+                                <li key={i} className={`trilha-passo ${p.estado}`}>
+                                  <span className="trilha-marca" aria-hidden="true">
+                                    <span className="trilha-icone">{ICONES_PASSO[p.ferramenta] || "•"}</span>
+                                  </span>
+                                  <div className="trilha-corpo">
+                                    <div className="trilha-linha">
+                                      <b>{p.titulo}</b>
+                                      {p.ms ? <em className="trilha-tempo">{(p.ms / 1000).toFixed(1)}s</em> : null}
+                                      {p.estado === "executando" ? <em className="trilha-tempo vivo">agora</em> : null}
+                                      {p.estado === "falhou" ? <em className="trilha-tempo erro">falhou</em> : null}
+                                    </div>
+                                    {p.detalhe ? <p className="trilha-detalhe">{p.detalhe}</p> : null}
+                                    {p.entrada ? <code className="trilha-codigo">{p.entrada}</code> : null}
+                                    {p.saida ? <p className="trilha-saida">{p.saida}</p> : null}
+                                    {p.estado === "falhou" && p.erro ? <p className="trilha-erro">{p.erro}</p> : null}
                                     {p.fontes && p.fontes.length > 0 && (
                                       <span className="fontes-chips">
                                         {p.fontes.map((f, j) => (
@@ -707,8 +842,7 @@ export default function Home() {
                                         ))}
                                       </span>
                                     )}
-                                  </span>
-                                  <span className="trace-ms">{p.ms ? `${(p.ms / 1000).toFixed(1)}s` : ""}</span>
+                                  </div>
                                 </li>
                               ))}
                             </ol>

@@ -52,6 +52,7 @@ const ROTULOS: Record<string, string> = {
   politicos: "Abrir painel de políticos",
   memoria: "Memória",
   infra: "Consultar infraestrutura",
+  habilidade: "Usar habilidade",
 };
 const rotuloFerramenta = (n: string) => ROTULOS[n] ?? n;
 
@@ -102,11 +103,30 @@ function resumirResultado(nome: string, r: unknown): string {
   if (nome === "midia") return d.ok ? `tocando ${d.provedor}: ${String(d.titulo ?? "").slice(0, 60)}` : String(d.mensagem ?? "mídia não encontrada").slice(0, 120);
   if (nome === "hora") return String(d.sao_paulo ?? d.iso_utc ?? "").slice(0, 60);
   if (nome === "imagem") return `imagem ${String(d.provedor ?? d.modelo ?? "")}`.slice(0, 80);
+  if (nome === "habilidade") return d.ok ? `${d.nome ?? d.skill}: ${String(d.detalhe ?? d.resultado ?? "")}`.slice(0, 160) : String(d.erro ?? "habilidade não encontrada").slice(0, 120);
   return JSON.stringify(d).slice(0, 150);
 }
 
 function detectTools(text: string): DetectedTool[] {
   const tools: DetectedTool[] = [];
+
+  const GATILHO_HABILIDADE = new RegExp([
+    "\\d+\\s*%", "por ?cento", "porcentagem",
+    "\\bbase64\\b", "\\bsha-?256\\b", "\\buuid\\b", "\\bsenha\\b", "pal[ií]ndromo", "vogais|consoantes",
+    "\\bromanos?\\b", "\\bbin[aá]rio\\b", "octal", "hexadecimal", "\\bjson\\b", "\\bcsv\\b", "\\bslug\\b", "acento",
+    "mai[uú]scul|min[uú]scul", "\\bcep\\b", "qr ?code", "wikipedia|cota[cç][aã]o", "d[oó]lar|euro|libra",
+    "\\bcpf\\b", "\\bcnpj\\b", "e-?mails?", "\\bimc\\b", "gorjeta|rachar", "desconto|acr[eé]scimo",
+    "combust[ií]vel|gasolina|km\\/l", "fatorial", "\\bprimo\\b", "\\bmdc\\b|\\bmmc\\b", "fibonacci",
+    "juros", "regra de (tr[eê]s|3)", "hipotenusa|pit[aá]goras", "m[eé]dia|mediana|desvio|estat[ií]stica",
+    "sorte(ie|ar)|cara ou coroa|\\bdado\\b", "por extenso", "\\bidade\\b", "dia da semana",
+    "daqui a \\d+ dia|dias? atr[aá]s", "diferen[cç]a entre datas|quantos dias",
+    "quantas palavras|contar palavras|quantos caracteres", "\\bregex\\b", "url ?encode|url ?decode",
+    "extrai[ar] (e-?mails?|links?|n[uú]meros)", "#[0-9a-f]{6}\\b", "rgb\\(",
+    "converter|milhas?|libras?|polegadas?|gal[oõ]es", "celsius|fahrenheit|kelvin",
+    "segundos|\\bbytes\\b|\\bgb\\b", "inverter (o )?texto", "repetir|truncar",
+    "camel ?case|snake ?case|kebab|pascal ?case",
+  ].join("|"), "i");
+
 
   // 1. URLs -> abrir
   const urlMatch = text.match(/(https?:\/\/[^\s]+)/i);
@@ -262,7 +282,9 @@ function detectTools(text: string): DetectedTool[] {
   const calcQuoteMatch = text.match(/["']([0-9\+\-\*\/\(\)\.\s]+)["']/);
   const calcMathMatch = text.match(/\b([0-9]+(?:\.[0-9]+)?\s*[\+\-\*\/]\s*[0-9]+(?:\.[0-9]+)?)\b/);
 
-  if (calcWordMatch || calcQuoteMatch || calcMathMatch) {
+  const ehDocumento = /\b\d{3}\.\d{3}\.\d{3}-\d{2}\b|\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b|\b\d{5}-?\d{3}\b/.test(text);
+  const pedeHabilidade = GATILHO_HABILIDADE.test(text);
+  if (!ehDocumento && (calcWordMatch || calcQuoteMatch || (calcMathMatch && !pedeHabilidade))) {
     let expr = "";
     if (calcWordMatch) expr = calcWordMatch[1].trim();
     else if (calcQuoteMatch) expr = calcQuoteMatch[1].trim();
@@ -276,6 +298,13 @@ function detectTools(text: string): DetectedTool[] {
   const termMatch = text.match(/^\s*\/terminal\s+(.+)$/i) || text.match(/\bexecut(?:e|ar)\s+(?:o\s+)?comando\s+(.+)$/i);
   if (termMatch) {
     tools.unshift({ name: "terminal", payload: { cmd: termMatch[1].trim() } });
+  }
+
+  // 8. biblioteca de habilidades (cálculo fino, texto, conversão, validação, web, sorteio)
+  //    só entra quando nada mais casou, para não competir com clima/imagem/hora/câmbio
+
+  if (!tools.length && pedeHabilidade) {
+    tools.push({ name: "habilidade", payload: { texto: text.slice(0, 600) } });
   }
 
   // Máximo 2 ferramentas por mensagem, sem duplicatas pelo nome da ferramenta
@@ -293,6 +322,24 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool, conta: string | null = null) {
+  if (tool.name === "habilidade") {
+    const texto = String((tool.payload as any)?.texto ?? "");
+    const base = Deno.env.get("SUPABASE_URL")!;
+    const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    try {
+      const resposta = await fetch(`${base}/functions/v1/skills`, {
+        method: "POST",
+        headers: { apikey: chave, authorization: `Bearer ${chave}`, "content-type": "application/json" },
+        body: JSON.stringify({ texto }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const dados = await resposta.json();
+      return dados;
+    } catch (e) {
+      return { ok: false, erro: `biblioteca de habilidades indisponível: ${String((e as Error)?.message ?? e).slice(0, 80)}` };
+    }
+  }
+
   if (tool.name === "widget") {
     const pedido = String((tool.payload as any)?.pedido ?? "").toLowerCase();
     const tipo = /clima|temperatura|chuva/.test(pedido) ? "clima"
@@ -578,6 +625,14 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
     case "calcular": {
       fontes.push({ titulo: "Calculadora Skynet", url: "https://skynet-agent.onrender.com/tools/calcular" });
       contextText = `Resultado do cálculo de "${data.expressao || payload.expressao}": ${data.resultado}`;
+      break;
+    }
+    case "habilidade": {
+      const detalhe = String(data?.detalhe ?? "").trim();
+      const bruto = data?.resultado ?? null;
+      contextText = data?.ok
+        ? `HABILIDADE "${data?.nome ?? data?.skill}" (pacote ${data?.pacote}) executada com sucesso. Resultado: ${detalhe || JSON.stringify(bruto)?.slice(0, 400)}. Responda usando exatamente esse resultado, sem recalcular.`
+        : `A biblioteca de habilidades não respondeu a esse pedido (${String(data?.erro ?? "sem correspondência")}). Se for uma conta simples, resolva diretamente; senão diga o que faltou.`;
       break;
     }
     default: {
