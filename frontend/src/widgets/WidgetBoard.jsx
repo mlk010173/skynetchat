@@ -7,7 +7,7 @@ import {
   intervaloValido, listaTipos, porPalavras, promptDoWidget, salvarWidgets,
 } from "./registry.js";
 import {
-  GaleriaBody, GithubBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
+  GaleriaBody, GithubBody, ImagemBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
 } from "./Corpos.jsx";
 import { useAuth } from "../auth.jsx";
 
@@ -57,6 +57,7 @@ function CorpoDoWidget({ widget, tick, pedirAprovacao, notificar, atualizarConfi
     case "noticias": return <NoticiasBody config={c} tick={tick} />;
     case "github": return <GithubBody config={c} tick={tick} />;
     case "video": return <VideoBody config={c} />;
+    case "imagem": return <ImagemBody config={c} tick={tick} atualizarConfig={(novo) => atualizarConfig(widget.id, novo)} />;
     case "galeria": return <GaleriaBody config={c} atualizarConfig={(novo) => atualizarConfig(widget.id, novo)} />;
     case "midia": return <MidiaBody config={c} atualizarConfig={(novo) => atualizarConfig(widget.id, novo)} />;
     case "terminal": return <TerminalBody config={c} tick={tick} pedirAprovacao={pedirAprovacao} notificar={notificar} />;
@@ -237,6 +238,16 @@ export default function WidgetBoard() {
                     </>
                   )}
                   {w.tipo === "video" && <label>URL<input value={w.config.url || ""} onChange={(e) => atualizarConfig(w.id, { url: e.target.value })} placeholder="YouTube, Vimeo ou .mp4" /></label>}
+                  {w.tipo === "imagem" && (
+                    <>
+                      <label>texto da imagem<input value={w.config.prompt || ""} onChange={(e) => atualizarConfig(w.id, { prompt: e.target.value })} placeholder="descreva a cena" /></label>
+                      <label>estilo
+                        <select value={w.config.estilo || "fotorrealista"} onChange={(e) => atualizarConfig(w.id, { estilo: e.target.value })}>
+                          {["fotorrealista", "cinematográfico", "3D", "anime", "minimalista"].map((x) => <option key={x} value={x}>{x}</option>)}
+                        </select>
+                      </label>
+                    </>
+                  )}
                   {w.tipo === "midia" && (
                     <>
                       <label>serviço

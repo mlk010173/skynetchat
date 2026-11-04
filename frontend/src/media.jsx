@@ -2,6 +2,7 @@
 // Funciona no chat (quadro "midia" e links), nos widgets e sozinho com busca.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SUPA_ANON, SUPA_URL } from "./lib.js";
+import { HlsPlayer } from "./widgets/avancado.jsx";
 
 const PROVEDORES = [
   { id: "youtube", rotulo: "YouTube" },
@@ -15,6 +16,8 @@ function provedorDaUrl(url) {
   if (/soundcloud\.com/i.test(u)) return "soundcloud";
   if (/vimeo\.com/i.test(u)) return "vimeo";
   if (/(youtube\.com|youtu\.be)/i.test(u)) return "youtube";
+  if (/\.m3u8(\?|$)/i.test(u)) return "hls";
+  if (/twitch\.tv\//i.test(u)) return "twitch";
   if (/\.(mp3|m4a|ogg|wav|opus)(\?|$)/i.test(u)) return "audio";
   if (/\.(mp4|webm)(\?|$)/i.test(u)) return "video";
   return "";
@@ -31,6 +34,10 @@ export function embedDeMidia(url) {
   if (p === "youtube") {
     const id = String(url).match(/(?:v=|youtu\.be\/|live\/|shorts\/|embed\/)([\w-]{11})/)?.[1];
     return id ? `https://www.youtube.com/embed/${id}` : "";
+  }
+  if (p === "twitch") {
+    const canal = String(url).match(/twitch\.tv\/([\w]+)/i)?.[1];
+    return canal ? `https://player.twitch.tv/?channel=${canal}&parent=${location.hostname}&autoplay=false` : "";
   }
   if (p === "vimeo") {
     const id = String(url).match(/vimeo\.com\/(?:video\/)?(\d+)/)?.[1];
@@ -94,10 +101,12 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
   }, [onTocar]);
 
   const altura = alturaDe(atual.provedor, atual.embed || "");
+  const ehHls = atual.provedor === "hls" || /\.m3u8(\?|$)/i.test(atual.url || "");
   const ehArquivo = /\.(mp3|mp4|m4a|ogg|wav|webm)(\?|$)/i.test(atual.url || "");
   const ehAudio = ehArquivo && /\.(mp3|m4a|ogg|wav)(\?|$)/i.test(atual.url || "");
 
   const midia = useMemo(() => {
+    if (ehHls && atual.url) return <HlsPlayer src={atual.url} titulo={atual.titulo} />;
     if (!atual.embed) return null;
     if (ehArquivo) {
       return ehAudio
@@ -115,7 +124,7 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
         loading="lazy"
       />
     );
-  }, [atual, altura, ehArquivo, ehAudio]);
+  }, [atual, altura, ehArquivo, ehAudio, ehHls]);
 
   return (
     <section className={`mp ${compacto ? "mp-compacto" : ""}`} aria-label="Player de mídia">

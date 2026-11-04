@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, askOnce, SUPA_URL, SUPA_ANON } from "../lib.js";
 import MediaPlayer from "../media.jsx";
+import { ImagemIaBody } from "./avancado.jsx";
 
 /* ---------- utilidades ---------- */
 
@@ -231,6 +232,12 @@ export function MidiaBody({ config, atualizarConfig }) {
       onTocar={(r) => atualizarConfig({ provedor: r.provedor, url: r.url, titulo: r.titulo || "" })}
     />
   );
+}
+
+/* ---------- imagem por IA ---------- */
+
+export function ImagemBody({ config, atualizarConfig, tick }) {
+  return <ImagemIaBody config={{ ...config, __tick: tick }} atualizarConfig={atualizarConfig} />;
 }
 
 /* ---------- galeria multimídia ---------- */
