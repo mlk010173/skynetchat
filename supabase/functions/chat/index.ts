@@ -438,13 +438,22 @@ async function callTool(tool: DetectedTool, conta: string | null = null) {
         if (!r.ok) return { ok: false, erro: `banco recusou (${r.status}): ${corpo.slice(0, 120)}` };
         return { ok: true, acao: "salvar", chave, valor: texto.slice(0, 200) };
       }
+      const consulta = String(tool.payload?.consulta ?? "").replace(/[%*,()]/g, " ").trim().slice(0, 60);
+      const filtro = consulta
+        ? `&or=(chave.ilike.*${encodeURIComponent(consulta)}*,valor.ilike.*${encodeURIComponent(consulta)}*)`
+        : "";
       const r = await fetch(
-        `${base}/rest/v1/acc_memory?select=chave,valor,tipo,updated_at&account_id=eq.${dono}&order=updated_at.desc&limit=30`,
+        `${base}/rest/v1/acc_memory?select=chave,valor,tipo,updated_at&account_id=eq.${dono}${filtro}&order=updated_at.desc&limit=30`,
         { headers: cab, signal: AbortSignal.timeout(9000) },
       );
       if (!r.ok) return { ok: false, erro: `banco recusou (${r.status})` };
       const memoria = await r.json().catch(() => []);
-      return { ok: true, acao: "buscar", memorias: Array.isArray(memoria) ? memoria : [] };
+      return {
+        ok: true,
+        acao: "buscar",
+        consulta: consulta || null,
+        memorias: Array.isArray(memoria) ? memoria : [],
+      };
     } catch (e) {
       return { ok: false, erro: `memória indisponível: ${String((e as Error)?.message ?? e).slice(0, 100)}` };
     }
@@ -552,6 +561,15 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
         data.supabase?.detalhe?.gerenciamento?.funcoes
           ? `Funções edge: ${data.supabase.detalhe.gerenciamento.funcoes.ativas} ativas de ${data.supabase.detalhe.gerenciamento.funcoes.total}`
           : "",
+        data.vercel?.detalhe?.variaveis?.length
+          ? `Variáveis da Vercel (somente nomes, ${data.vercel.detalhe.variaveis.length}): ${data.vercel.detalhe.variaveis.join(", ")}`
+          : "",
+        ...((data.render?.detalhe?.servicos ?? [])
+          .filter((sv: any) => (sv?.logs?.length ?? 0) > 0)
+          .map((sv: any) =>
+            `Logs recentes do ${sv.nome} (${sv.erros_nos_logs ?? 0} com erro):\n` +
+            sv.logs.slice(0, 6).map((t: string) => `  · ${t}`).join("\n")
+          )),
         ...((data.render?.detalhe?.servicos ?? [])
           .filter((sv: any) => /agent/i.test(String(sv?.nome ?? "")) && (sv?.variaveis?.length ?? 0) > 0)
           .map((sv: any) => `Variáveis do worker ${sv.nome} (somente nomes, ${sv.variaveis.length}): ${sv.variaveis.join(", ")}`)),
@@ -574,7 +592,9 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
         const lista = (data.memorias ?? []).map((m: any) => `- ${m.chave}: ${m.valor}`);
         contextText = lista.length
           ? `MEMÓRIAS GUARDADAS DESTE USUÁRIO:\n${lista.join("\n")}`
-          : "MEMÓRIA: nenhuma memória guardada ainda para este usuário.";
+          : data.consulta
+            ? `MEMÓRIA: nada guardado com "${data.consulta}". Diga isso ao usuário e ofereça guardar.`
+            : "MEMÓRIA: nenhuma memória guardada ainda para este usuário.";
       }
       break;
     }

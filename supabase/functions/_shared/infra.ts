@@ -110,10 +110,12 @@ export async function infraVercel(): Promise<Resultado> {
   }
   const h = { Authorization: `Bearer ${token}` };
   const dados = async () => {
-    const [proj, deploys, siteStatus] = await Promise.all([
+    const [proj, deploys, envs, siteStatus] = await Promise.all([
       fetch(`https://api.vercel.com/v9/projects/${projeto}`, { headers: h, signal: j(12000) })
         .then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch(`https://api.vercel.com/v6/deployments?projectId=${projeto}&limit=3`, { headers: h, signal: j(12000) })
+        .then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(`https://api.vercel.com/v9/projects/${projeto}/env?decrypt=false`, { headers: h, signal: j(12000) })
         .then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch(siteUrl, { method: "HEAD", signal: j(9000) }).then((r) => r.status).catch(() => 0),
     ]);
@@ -126,6 +128,7 @@ export async function infraVercel(): Promise<Resultado> {
         }))
         : null,
       site_http: siteStatus,
+      variaveis: Array.isArray(envs?.envs) ? [...new Set(envs.envs.map((e: { key?: string }) => e.key).filter(Boolean))] as string[] : null,
     };
   };
   const r = await comTempo(dados);
@@ -135,6 +138,7 @@ export async function infraVercel(): Promise<Resultado> {
     r.valor.projeto ? `projeto ${r.valor.projeto.nome}` : "",
     ultimo ? `último deploy ${ultimo.estado ?? "?"}${ultimo.quando ? " em " + ultimo.quando.slice(0, 16).replace("T", " ") : ""}` : "",
     r.valor.site_http ? `site HTTP ${r.valor.site_http}` : "site sem resposta",
+    r.valor.variaveis?.length ? `${r.valor.variaveis.length} variáveis` : "",
   ].filter(Boolean);
   return { ok: true, resumo: `vercel: ${partes.join(" · ")}`, detalhe: r.valor, ms: r.ms };
 }
@@ -150,6 +154,8 @@ type ServicoRender = {
   url?: string;
   ultimo_deploy?: { estado?: string; quando?: string; commit?: string };
   variaveis?: string[];
+  logs?: string[];
+  erros_nos_logs?: number;
 };
 
 export async function infraRender(): Promise<Resultado> {
@@ -200,6 +206,30 @@ export async function infraRender(): Promise<Resultado> {
         }
       } catch { /* segue sem deploy */ }
     }));
+    // logs recentes do agente (só as últimas linhas, sem cores ANSI)
+    const owner = await fetch("https://api.render.com/v1/owners?limit=1", {
+      headers: { Authorization: `Bearer ${token}`, accept: "application/json" },
+      signal: j(10000),
+    }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const ownerId = (Array.isArray(owner) ? owner[0] : null)?.owner?.id;
+    const alvoLogs = base.find((s) => /agent/i.test(s.nome ?? ""));
+    if (ownerId && alvoLogs) {
+      try {
+        const lg = await fetch(
+          `https://api.render.com/v1/logs?ownerId=${ownerId}&resource=${alvoLogs.id}&limit=30`,
+          { headers: { Authorization: `Bearer ${token}`, accept: "application/json" }, signal: j(12000) },
+        );
+        if (lg.ok) {
+          const dados = await lg.json();
+          const linhas = (Array.isArray(dados?.logs) ? dados.logs : [])
+            .map((l: any) => String(l.message ?? "").replace(/\u001b\[[0-9;]*m/g, "").trim())
+            .filter(Boolean)
+            .slice(0, 12);
+          alvoLogs.logs = linhas.map((t: string) => t.slice(0, 160));
+          alvoLogs.erros_nos_logs = linhas.filter((t: string) => /\b(error|erro|exception|unhandled|failed|falhou)\b/i.test(t)).length;
+        }
+      } catch { /* segue sem logs */ }
+    }
     // nomes das variáveis do agente (nunca os valores)
     const alvo = base.find((s) => /skynet-agent|agent/i.test(s.nome ?? ""));
     if (alvo) {
@@ -240,6 +270,8 @@ export async function infraRender(): Promise<Resultado> {
     if (comDeploy?.ultimo_deploy) {
       partes.push(`último deploy ${comDeploy.ultimo_deploy.estado}`);
     }
+    const comLogs = principais.find((s) => typeof s.erros_nos_logs === "number");
+    if (comLogs) partes.push(`${comLogs.erros_nos_logs} linha(s) de erro nos últimos logs`);
   } else {
     partes.push("API de serviços sem chave (RENDER_API_KEY)");
   }

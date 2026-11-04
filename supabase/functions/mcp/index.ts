@@ -42,6 +42,7 @@ const FERRAMENTAS = [
         acao: { type: "string", description: "salvar ou buscar (padrão buscar)." },
         chave: { type: "string", description: "Identificador curto do fato (ex.: cidade, preferencia)." },
         valor: { type: "string", description: "Texto do fato a guardar." },
+        consulta: { type: "string", description: "Opcional. Filtra a busca por palavra em chave ou valor." },
         tipo: { type: "string", description: "Opcional: fato, preferencia, decisao." },
       },
       required: ["acao"],
@@ -135,15 +136,20 @@ async function chamarFerramenta(nome: string, args: any, accountId: string) {
       if (error) return falha("Não consegui salvar a memória.");
       return resultado(`Memória "${chave}" salva.`, { ok: true, chave });
     }
-    const { data } = await db
+    const consulta = String(args?.consulta ?? "").replace(/[%*,()]/g, " ").trim().slice(0, 60);
+    let consultaQuery = db
       .from("acc_memory")
       .select("chave, valor, tipo, updated_at")
-      .eq("account_id", accountId)
-      .order("updated_at", { ascending: false })
-      .limit(50);
+      .eq("account_id", accountId);
+    if (consulta) consultaQuery = consultaQuery.or(`chave.ilike.*${consulta}*,valor.ilike.*${consulta}*`);
+    const { data } = await consultaQuery.order("updated_at", { ascending: false }).limit(50);
     const lista = data ?? [];
     return resultado(
-      lista.length ? lista.map((m: any) => `- ${m.chave}: ${m.valor}`).join("\n") : "Nenhuma memória guardada ainda.",
+      lista.length
+        ? lista.map((m: any) => `- ${m.chave}: ${m.valor}`).join("\n")
+        : consulta
+          ? `Nada guardado com "${consulta}".`
+          : "Nenhuma memória guardada ainda.",
       { ok: true, memorias: lista },
     );
   }
