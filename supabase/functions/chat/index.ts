@@ -552,6 +552,14 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
         data.supabase?.detalhe?.gerenciamento?.funcoes
           ? `Funções edge: ${data.supabase.detalhe.gerenciamento.funcoes.ativas} ativas de ${data.supabase.detalhe.gerenciamento.funcoes.total}`
           : "",
+        ...((data.render?.detalhe?.servicos ?? [])
+          .filter((sv: any) => /agent/i.test(String(sv?.nome ?? "")) && (sv?.variaveis?.length ?? 0) > 0)
+          .map((sv: any) => `Variáveis do worker ${sv.nome} (somente nomes, ${sv.variaveis.length}): ${sv.variaveis.join(", ")}`)),
+        ...((data.render?.detalhe?.servicos ?? []).slice(0, 3).map((sv: any) =>
+          `Render serviço ${sv.nome} (${sv.tipo ?? "?"}, ${sv.regiao ?? "?"})${sv.suspenso && sv.suspenso !== "not_suspended" ? " SUSPENSO" : ""}` +
+          (sv.ultimo_deploy?.estado ? ` · último deploy ${sv.ultimo_deploy.estado}${sv.ultimo_deploy.quando ? " em " + String(sv.ultimo_deploy.quando).slice(0, 16).replace("T", " ") : ""}` : "") +
+          (sv.variaveis?.length ? ` · ${sv.variaveis.length} variáveis: ${sv.variaveis.slice(0, 12).join(", ")}` : "")
+        )),
       ].filter(Boolean);
       fontes.push({ titulo: "Supabase (projeto)", url: "https://supabase.com/dashboard/project/rkgwhhtenfozdwzpvxjj" });
       return {

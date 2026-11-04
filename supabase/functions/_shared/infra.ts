@@ -141,31 +141,90 @@ export async function infraVercel(): Promise<Resultado> {
 
 /* -------------------------------- Render -------------------------------- */
 
+type ServicoRender = {
+  id: string;
+  nome: string;
+  tipo?: string;
+  suspenso?: string;
+  regiao?: string;
+  url?: string;
+  ultimo_deploy?: { estado?: string; quando?: string; commit?: string };
+  variaveis?: string[];
+};
+
 export async function infraRender(): Promise<Resultado> {
   const agente = (env("AGENT_URL") || "https://skynet-agent.onrender.com").replace(/\/+$/, "");
   const token = env("RENDER_API_KEY");
+
   const saude = async () => {
     const t0 = Date.now();
     const r = await fetch(`${agente}/health`, { signal: j(12000) });
     const corpo = await r.json().catch(() => null);
     return { ok: r.ok, status: r.status, ms: Date.now() - t0, corpo };
   };
-  const servicos = async () => {
-    const r = await fetch("https://api.render.com/v1/services?limit=5", {
+
+  const lerServicos = async (): Promise<ServicoRender[]> => {
+    const r = await fetch("https://api.render.com/v1/services?limit=20", {
       headers: { Authorization: `Bearer ${token}`, accept: "application/json" },
       signal: j(12000),
     });
     if (!r.ok) throw new Error(`render API ${r.status}`);
     const lista = await r.json();
-    return (Array.isArray(lista) ? lista : []).map((s: any) => {
-      const sv = s.service ?? s;
-      return { nome: sv.name, tipo: sv.type, suspenso: sv.suspended, url: sv.serviceDetails?.url };
+    const base: ServicoRender[] = (Array.isArray(lista) ? lista : []).map((x: any) => {
+      const sv = x.service ?? x;
+      return {
+        id: sv.id,
+        nome: sv.name,
+        tipo: sv.type,
+        suspenso: sv.suspended,
+        regiao: sv.serviceDetails?.region,
+        url: sv.serviceDetails?.url,
+      };
     });
+    // último deploy dos 3 primeiros, em paralelo, sem derrubar o resto se falhar
+    await Promise.all(base.slice(0, 3).map(async (sv) => {
+      try {
+        const d = await fetch(`https://api.render.com/v1/services/${sv.id}/deploys?limit=1`, {
+          headers: { Authorization: `Bearer ${token}`, accept: "application/json" },
+          signal: j(10000),
+        });
+        if (!d.ok) return;
+        const arr = await d.json();
+        const dep = (Array.isArray(arr) ? arr[0] : null)?.deploy ?? null;
+        if (dep) {
+          sv.ultimo_deploy = {
+            estado: dep.status,
+            quando: dep.finishedAt ?? dep.createdAt ?? null,
+            commit: dep.commit?.message ? String(dep.commit.message).slice(0, 70) : undefined,
+          };
+        }
+      } catch { /* segue sem deploy */ }
+    }));
+    // nomes das variáveis do agente (nunca os valores)
+    const alvo = base.find((s) => /skynet-agent|agent/i.test(s.nome ?? ""));
+    if (alvo) {
+      try {
+        const e = await fetch(`https://api.render.com/v1/services/${alvo.id}/env-vars?limit=50`, {
+          headers: { Authorization: `Bearer ${token}`, accept: "application/json" },
+          signal: j(10000),
+        });
+        if (e.ok) {
+          const arr = await e.json();
+          alvo.variaveis = (Array.isArray(arr) ? arr : [])
+            .map((v: any) => (v.envVar ?? v)?.key)
+            .filter(Boolean);
+        }
+      } catch { /* segue sem variáveis */ }
+    }
+    return base;
   };
-  const [h, s] = await Promise.all([
+
+  const [h, lista] = await Promise.all([
     comTempo(saude),
-    token ? comTempo(servicos) : Promise.resolve({ erro: "sem RENDER_API_KEY", ms: 0 }),
+    token ? comTempo(lerServicos, 18000) : Promise.resolve({ erro: "sem RENDER_API_KEY", ms: 0 } as { erro: string; ms: number; valor?: ServicoRender[] }),
   ]);
+
+  const servicos = (lista as { valor?: ServicoRender[] }).valor ?? null;
   const partes: string[] = [];
   if (h.valor) {
     partes.push(`agente ${h.valor.ok ? "no ar" : "fora"} (HTTP ${h.valor.status}, ${h.valor.ms}ms)`);
@@ -174,18 +233,22 @@ export async function infraRender(): Promise<Resultado> {
   } else {
     partes.push(`agente sem resposta (${h.erro})`);
   }
-  if (Array.isArray((s as { valor?: unknown[] }).valor)) {
-    const sv = (s as { valor: { nome?: string; suspenso?: string }[] }).valor;
-    partes.push(`${sv.length} serviço(s): ${sv.map((x) => x.nome).filter(Boolean).slice(0, 3).join(", ")}`);
+  if (servicos) {
+    const principais = servicos.filter((s) => !/static|static_site/i.test(String(s.tipo)));
+    partes.push(`${principais.length} serviço(s): ${principais.map((s) => s.nome).slice(0, 3).join(", ")}`);
+    const comDeploy = principais.find((s) => s.ultimo_deploy?.estado);
+    if (comDeploy?.ultimo_deploy) {
+      partes.push(`último deploy ${comDeploy.ultimo_deploy.estado}`);
+    }
   } else {
     partes.push("API de serviços sem chave (RENDER_API_KEY)");
   }
   return {
-    ok: !!h.valor?.ok,
+    ok: !!h.valor?.ok || !!servicos,
     resumo: `render: ${partes.join(" · ")}`,
-    detalhe: { saude: h.valor ?? null, servicos: (s as { valor?: unknown }).valor ?? null },
-    erro: h.erro,
-    ms: Math.max(h.ms, (s as { ms?: number }).ms ?? 0),
+    detalhe: { saude: h.valor ?? null, servicos },
+    erro: h.valor ? undefined : h.erro,
+    ms: Math.max(h.ms, (lista as { ms?: number }).ms ?? 0),
   };
 }
 
