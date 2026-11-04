@@ -242,7 +242,8 @@ export function ImagemBody({ config, atualizarConfig, tick }) {
 
 /* ---------- galeria multimídia ---------- */
 
-const ehImagem = (u) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(u) || /^data:image\//i.test(u);
+const HOSTS_IMAGEM = /(picsum\.photos|images\.unsplash\.com|source\.unsplash\.com|i\.imgur\.com|res\.cloudinary\.com|cdn\.pixabay\.com|media\.giphy\.com)/i;
+const ehImagem = (u) => /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(u) || /^data:image\//i.test(u) || HOSTS_IMAGEM.test(String(u || ""));
 
 export function GaleriaBody({ config, atualizarConfig }) {
   const itens = Array.isArray(config.itens) ? config.itens : [];
