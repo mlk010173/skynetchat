@@ -196,11 +196,15 @@ function detectTools(text: string): DetectedTool[] {
   }
 
   // 1d. "toca X", "abre o youtube e toca Y", "coloca uma playlist", link de música -> midia
+  const linkMidiaDireta = text.match(/https?:\/\/\S+\.(?:mp3|m4a|wav|ogg|opus|mp4|webm|flac)(?:\?\S*)?/i)?.[0] ?? "";
   const pedeMidia =
-    /\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play)\b[\s\S]{0,48}?\b(m[uú]sica|som|playlist|[aá]lbum|v[ií]deo|clipe|filme|trilha|podcast|lofi|youtube|spotify|soundcloud|deezer)\b/i.test(text) ||
-    /\b(youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\b/i.test(text);
+    /\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play)\b[\s\S]{0,48}?\b(m[uú]sica|som|playlist|[aá]lbum|v[ií]deo|clipe|filme|trilha|podcast|lofi|youtube|spotify|soundcloud|deezer|[aá]udio)\b/i.test(text) ||
+    /\b(youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\b/i.test(text) ||
+    Boolean(linkMidiaDireta);
   if (pedeMidia) {
-    const provedor = /spotify/i.test(text) ? "spotify" : /soundcloud/i.test(text) ? "soundcloud" : /vimeo/i.test(text) ? "vimeo" : "youtube";
+    const provedor = linkMidiaDireta
+      ? "arquivo"
+      : /spotify/i.test(text) ? "spotify" : /soundcloud/i.test(text) ? "soundcloud" : /vimeo/i.test(text) ? "vimeo" : "youtube";
     const link = text.match(/https?:\/\/\S+/) ?? text.match(/\b((?:www\.)?(?:youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\/\S+)/i);
     const semComando = text
       .replace(/https?:\/\/\S+/g, " ")
@@ -210,7 +214,8 @@ function detectTools(text: string): DetectedTool[] {
       .replace(/\b(youtube|spotify|soundcloud|vimeo|deezer)\b/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
-    tools.push({ name: "midia", payload: { provedor, url: link ? link[1] ?? link[0] : "", consulta: link ? "" : semComando.slice(0, 120) } });
+    const urlMidia = linkMidiaDireta || (link ? link[1] ?? link[0] : "");
+    tools.push({ name: "midia", payload: { provedor, url: urlMidia, consulta: urlMidia ? "" : semComando.slice(0, 120) } });
   }
 
   // 2. 'hoje/agora/atual/notíc.../pesquis.../quem é X atualmente' -> web_pesquisar
