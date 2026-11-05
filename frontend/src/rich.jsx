@@ -141,6 +141,14 @@ export default function RichText({ texto = "", vivo = false }) {
     return saida;
   }, [texto]);
 
+  const embedDeMidiaSeguro = (url) => {
+    try {
+      return embedDeMidia(url) || "";
+    } catch {
+      return "";
+    }
+  };
+
   const embedDe = (url) => youtube(url) || vimeo(url) || embedDeMidiaSeguro(url);
 
   return (
