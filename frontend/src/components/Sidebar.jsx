@@ -11,7 +11,7 @@ import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
   { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens"] },
-  { titulo: "Ferramentas", itens: ["Codex", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
+  { titulo: "Ferramentas", itens: ["Codex", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
   { titulo: "Crescer", itens: ["Indique e Ganhe", "Monetize com SKYNETchat", "Conversas em grupo"] },
   { titulo: "Descobrir", itens: ["Conheça o SKYNETchat", "Prompts", "Suporte", "Atualizações"] },
 ];
