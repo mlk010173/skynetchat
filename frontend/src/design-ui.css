@@ -1618,3 +1618,61 @@
 
 /* a topbar precisa ficar acima do palco (o palco vinha interceptando cliques) */
 .topbar { position: relative; z-index: 40; }
+
+/* ---- rede de segurança contra tela preta (Guarda) ---- */
+.guarda-erro {
+  max-width: 520px;
+  margin: 12vh auto;
+  padding: 28px;
+  border-radius: 18px;
+  background: var(--sky-superficie, #141416);
+  border: 1px solid var(--sky-linha, #2a2a2e);
+  color: var(--sky-texto, #f4f4f5);
+  text-align: center;
+}
+.guarda-erro h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+.guarda-erro p {
+  font-size: 13px;
+  color: var(--sky-texto-fraco, #a1a1aa);
+  margin: 0 0 18px;
+  word-break: break-word;
+}
+.guarda-acoes {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.guarda-acoes button,
+.guarda-acoes a {
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 16px;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: var(--sky-acento, #ef4444);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+.guarda-acoes button.secundario {
+  background: transparent;
+  border-color: var(--sky-linha, #2a2a2e);
+  color: inherit;
+}
+.guarda-acoes button:hover,
+.guarda-acoes a:hover {
+  filter: brightness(1.1);
+}
+.guarda-acoes button:focus-visible,
+.guarda-acoes a:focus-visible {
+  outline: 2px solid var(--sky-acento, #ef4444);
+  outline-offset: 3px;
+}
