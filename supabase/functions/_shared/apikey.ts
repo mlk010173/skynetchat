@@ -39,6 +39,24 @@ export function chaveDoHeader(req: Request): string {
 }
 
 export async function autorizar(req: Request): Promise<Autorizado | null> {
+  // chamada interna confiável (chat -> MCP): service role + x-conta-id.
+  // Só vale quando o Authorization é exatamente a chave de serviço do projeto.
+  const svcKey = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
+  const auth = (req.headers.get("authorization") ?? "").trim();
+  const contaInterna = (req.headers.get("x-conta-id") ?? "").trim();
+  if (svcKey.length > 20 && contaInterna && auth === `Bearer ${svcKey}`) {
+    const db = svc();
+    const { data } = await db
+      .from("accounts")
+      .select("id, tier, role, blocked")
+      .eq("id", contaInterna)
+      .maybeSingle();
+    if (data && !(data as { blocked?: boolean }).blocked) {
+      return { accountId: data.id, keyId: null, tier: data.tier, role: data.role, via: "sessao" };
+    }
+    return null;
+  }
+
   const chave = chaveDoHeader(req);
   if (chave) {
     const db = svc();

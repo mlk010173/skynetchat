@@ -6,6 +6,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
 import { contaDaSessao, consumirMensagem, memoriasDaConta } from "../_shared/sessao.ts";
 import { infraTudo } from "../_shared/infra.ts";
+import { politicaDa, pedirAutorizacao, autorizacaoVale, PADROES, ROTULOS as ROTULOS_PERM } from "../_shared/permissoes.ts";
 import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
 
 const CORS: Record<string, string> = {
@@ -52,6 +53,7 @@ const ROTULOS: Record<string, string> = {
   politicos: "Abrir painel de políticos",
   memoria: "Memória",
   infra: "Consultar infraestrutura",
+  mcp: "Usar ferramenta MCP",
   habilidade: "Usar habilidade",
 };
 const rotuloFerramenta = (n: string) => ROTULOS[n] ?? n;
@@ -93,6 +95,9 @@ function resumirResultado(nome: string, r: unknown): string {
   if (nome === "widget") return `widget de ${d.tipo} pronto`;
   if (nome === "arquivo") return `${d.nome} (${d.bytes} bytes)`;
   if (nome === "github") return d.ok ? `${d.repo}: ${d.commits?.length ?? 0} commits, ${d.estrelas} estrelas` : String(d.erro ?? "sem dados");
+  if (nome === "mcp") {
+    return `${d.ferramenta ?? "mcp"}: ${String(d.texto ?? d.erro ?? "").replace(/\s+/g, " ").slice(0, 150)}`;
+  }
   if (nome === "infra") {
     return [d.supabase?.resumo, d.vercel?.resumo, d.render?.resumo].filter(Boolean).join(" · ").slice(0, 200);
   }
@@ -151,6 +156,19 @@ function detectTools(text: string): DetectedTool[] {
     tools.push({ name: "sistema", payload: { pedido: text.slice(0, 120) } });
   }
 
+  // 1f. MCP: pedir para usar uma ferramenta do servidor MCP do SKYNET
+  if (/\bmcp\b/i.test(text) || /\bskynet_(infra|status|modelos|historico|imagem|print|midia|memoria)\b/i.test(text)) {
+    const nome = text.match(/\bskynet_(?:infra|status|modelos|historico|imagem|print|midia|memoria)\b/i)?.[0]?.toLowerCase();
+    const ferramenta = /\bmodelos\b/i.test(text) ? "skynet_modelos"
+      : /\bhist[oó]rico\b/i.test(text) ? "skynet_historico"
+      : /\bprint\b|captur/i.test(text) ? "skynet_print"
+      : /\bm[ií]dia\b|tocar/i.test(text) ? "skynet_midia"
+      : /\bimagem\b/i.test(text) ? "skynet_imagem"
+      : nome === "skynet_infra" ? "skynet_infra"
+      : "skynet_status";
+    tools.push({ name: "mcp", payload: { ferramenta, pedido: text.slice(0, 200) } });
+  }
+
   // 1d. infraestrutura: supabase, vercel e render
   if (/\b(supabase|vercel|render)\b/i.test(text) &&
       /\b(status|sa[uú]de|deploy|deploys|fun[cç][oõ]es|functions|banco|database|tabela|env|vari[aá]veis|logs?|projeto|servi[cç]o|servi[cç]os|no ar|quantas|quantos|est[aá]|como est[aá])\b/i.test(text)) {
@@ -196,15 +214,11 @@ function detectTools(text: string): DetectedTool[] {
   }
 
   // 1d. "toca X", "abre o youtube e toca Y", "coloca uma playlist", link de música -> midia
-  const linkMidiaDireta = text.match(/https?:\/\/\S+\.(?:mp3|m4a|wav|ogg|opus|mp4|webm|flac)(?:\?\S*)?/i)?.[0] ?? "";
   const pedeMidia =
-    /\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play)\b[\s\S]{0,48}?\b(m[uú]sica|som|playlist|[aá]lbum|v[ií]deo|clipe|filme|trilha|podcast|lofi|youtube|spotify|soundcloud|deezer|[aá]udio)\b/i.test(text) ||
-    /\b(youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\b/i.test(text) ||
-    Boolean(linkMidiaDireta);
+    /\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play)\b[\s\S]{0,48}?\b(m[uú]sica|som|playlist|[aá]lbum|v[ií]deo|clipe|filme|trilha|podcast|lofi|youtube|spotify|soundcloud|deezer)\b/i.test(text) ||
+    /\b(youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\b/i.test(text);
   if (pedeMidia) {
-    const provedor = linkMidiaDireta
-      ? "arquivo"
-      : /spotify/i.test(text) ? "spotify" : /soundcloud/i.test(text) ? "soundcloud" : /vimeo/i.test(text) ? "vimeo" : "youtube";
+    const provedor = /spotify/i.test(text) ? "spotify" : /soundcloud/i.test(text) ? "soundcloud" : /vimeo/i.test(text) ? "vimeo" : "youtube";
     const link = text.match(/https?:\/\/\S+/) ?? text.match(/\b((?:www\.)?(?:youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\/\S+)/i);
     const semComando = text
       .replace(/https?:\/\/\S+/g, " ")
@@ -214,8 +228,7 @@ function detectTools(text: string): DetectedTool[] {
       .replace(/\b(youtube|spotify|soundcloud|vimeo|deezer)\b/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
-    const urlMidia = linkMidiaDireta || (link ? link[1] ?? link[0] : "");
-    tools.push({ name: "midia", payload: { provedor, url: urlMidia, consulta: urlMidia ? "" : semComando.slice(0, 120) } });
+    tools.push({ name: "midia", payload: { provedor, url: link ? link[1] ?? link[0] : "", consulta: link ? "" : semComando.slice(0, 120) } });
   }
 
   // 2. 'hoje/agora/atual/notíc.../pesquis.../quem é X atualmente' -> web_pesquisar
@@ -412,6 +425,36 @@ async function callTool(tool: DetectedTool, conta: string | null = null) {
       url: String(tool.payload?.url ?? ""),
     });
     return r;
+  }
+  if (tool.name === "mcp") {
+    const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+    const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const ferramenta = String(tool.payload?.ferramenta ?? "skynet_status");
+    const argumentos: Record<string, unknown> = {};
+    const pedido = String(tool.payload?.pedido ?? "").trim();
+    if (ferramenta === "skynet_perguntar" && pedido) argumentos.mensagem = pedido;
+    const r = await fetch(`${base}/functions/v1/mcp`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${chave}`,
+        apikey: chave,
+        "x-conta-id": String(conta ?? ""),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "tools/call",
+        params: { name: ferramenta, arguments: argumentos },
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const corpo = await r.json().catch(() => null);
+    const texto = corpo?.result?.content?.[0]?.text ?? corpo?.error?.message ?? "";
+    if (!r.ok || corpo?.result?.isError) {
+      return { ok: false, ferramenta, erro: String(texto || `MCP respondeu ${r.status}`).slice(0, 200) };
+    }
+    return { ok: true, ferramenta, texto, estruturado: corpo?.result?.structuredContent ?? null };
   }
   if (tool.name === "infra") {
     const r = await infraTudo();
@@ -973,6 +1016,17 @@ Deno.serve(async (req) => {
           });
         }
 
+        let permissaoPendente: { id: string | null; ferramenta: string; rotulo: string; resumo: string } | null = null;
+        const resumoPedido = (t: DetectedTool) => {
+          const p: any = t.payload ?? {};
+          if (t.name === "terminal") return `comando: ${String(p.cmd ?? "").slice(0, 160)}`;
+          if (t.name === "deploy") return `deploy em ${String(p.alvo ?? "render/vercel")}`;
+          if (t.name === "arquivo") return `arquivo ${String(p.nome ?? p.pedido ?? "").slice(0, 100)}`;
+          if (t.name === "widget") return `widget ${String(p.pedido ?? p.tipo ?? "").slice(0, 100)}`;
+          if (t.name === "mcp") return `MCP ${String(p.ferramenta ?? "skynet_status")}`;
+          return `${ROTULOS_PERM[t.name] ?? t.name}: ${JSON.stringify(p).slice(0, 120)}`;
+        };
+
         for (const tool of toolsToRun) {
           const t0 = Date.now();
           enviaEtapa({
@@ -982,6 +1036,55 @@ Deno.serve(async (req) => {
             detalhe: resumoDoPedido(tool),
             entrada: JSON.stringify(tool.payload).slice(0, 240),
           });
+          // ---- permissões: livre roda direto, leve pede uma vez por dia, crítico pede sempre ----
+          const politica = await politicaDa(userId ?? "", tool.name);
+          if (politica === "bloqueado") {
+            enviaEtapa({
+              ferramenta: tool.name,
+              titulo: rotuloFerramenta(tool.name),
+              estado: "falhou",
+              detalhe: "bloqueada nas suas permissões",
+            });
+            continue;
+          }
+          if (politica === "critico" || politica === "leve") {
+            if (!userId) {
+              enviaEtapa({
+                ferramenta: tool.name,
+                titulo: rotuloFerramenta(tool.name),
+                estado: "falhou",
+                detalhe: "precisa estar logado para autorizar",
+              });
+              continue;
+            }
+            const vale = await autorizacaoVale(userId, tool.name, tool.payload);
+            if (!vale.autorizado) {
+              const resumo = resumoPedido(tool);
+              const pedido = await pedirAutorizacao(userId, tool.name, tool.payload, resumo);
+              enviaEtapa({
+                ferramenta: tool.name,
+                titulo: rotuloFerramenta(tool.name),
+                estado: "falhou",
+                detalhe: "aguardando sua autorização",
+              });
+              controller.enqueue(tDados({
+                tipo: "permissao",
+                id: pedido?.id ?? null,
+                ferramenta: tool.name,
+                rotulo: ROTULOS_PERM[tool.name] ?? tool.name,
+                politica,
+                resumo,
+              }));
+              permissaoPendente = {
+                id: pedido?.id ?? null,
+                ferramenta: tool.name,
+                rotulo: ROTULOS_PERM[tool.name] ?? tool.name,
+                resumo,
+              };
+              continue;
+            }
+          }
+
           let toolResult: any;
           try {
             toolResult = await callTool(tool, userId);
@@ -1092,6 +1195,17 @@ Deno.serve(async (req) => {
           if (contextText) {
             toolContexts.push(contextText);
           }
+        }
+
+        if (permissaoPendente) {
+          const texto = `Para ${permissaoPendente.rotulo.toLowerCase()} eu preciso da sua autorização. ` +
+            `Deixei o pedido aqui na conversa (${permissaoPendente.resumo}). ` +
+            `Toque em autorizar no cartão ou abra Permissões e eu executo na próxima mensagem.`;
+          enviaTexto(texto);
+          await salvarRespostaDireta(texto);
+          enviaFim({ conversationId: convId, model: "permissao", pedido: model, auto: true, fallback: false, tentativas: [] });
+          controller.close();
+          return;
         }
 
         if (entregaDireta) {

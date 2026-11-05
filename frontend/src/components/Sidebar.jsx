@@ -24,6 +24,7 @@ const items = [
   { label: "Imagens", tag: "BETA", desc: "Gere e explore imagens com IA", icon: IconImage },
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
   { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
+  { label: "Permissões", tag: "NOVO", desc: "Autorize o que o SKYNET executa", icon: IconServer },
   { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
   { label: "Automações", tag: "REAL", desc: "Central de automações e agendamentos", icon: IconZap },
   { label: "E-mail", tag: "REAL", desc: "Painel de E-mail via Gmail API", icon: IconMail },
@@ -220,6 +221,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "Conheça o SKYNETchat") setView("about");
     else if (label === "Codex") setView("terminal");
     else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
+    else if (label === "Permissões") { navigate("/permissoes"); onClose(); }
     else if (label === "Automações") setView("automations");
     else if (label === "E-mail") setView("email");
     else if (label === "Memória") setView("memoria");

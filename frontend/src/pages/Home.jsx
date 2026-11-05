@@ -396,6 +396,13 @@ export default function Home() {
         copy[copy.length - 1] = { ...last, widgetCriado: marca };
         return copy;
       }),
+      onPermissao: (perm) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", permissao: perm }); return copy; }
+        copy[copy.length - 1] = { ...last, permissao: perm };
+        return copy;
+      }),
       onArquivo: (arq) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -560,6 +567,16 @@ export default function Home() {
     setAcaoSheet(null);
     return send(null, texto);
   }, [send]);
+
+  const autorizarPermissao = useCallback(async (perm, autorizar) => {
+    if (!perm?.id) return;
+    const r = await api("permissoes?action=decidir", { method: "POST", body: { id: perm.id, autorizar } });
+    if (!r?.ok) { say(r?.error || "Não consegui registrar a decisão."); return; }
+    if (!autorizar) { say("Pedido negado."); return; }
+    const ultimo = [...messages].reverse().find((m) => m.role === "user")?.text ?? "";
+    say("Autorizado. Executando…");
+    if (ultimo) setTimeout(() => enviarTexto(ultimo), 60);
+  }, [enviarTexto, messages, say]);
 
   return (
     <div className="app">
@@ -858,6 +875,24 @@ export default function Home() {
                     })()}
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
                     {message.clima && <ClimaCard dados={message.clima} />}
+                    {message.permissao && (
+                      <div className="perm-card">
+                        <div className="perm-card-topo">
+                          <strong>Autorização necessária</strong>
+                          <span>{message.permissao.rotulo || message.permissao.ferramenta}</span>
+                        </div>
+                        <p>{message.permissao.resumo || "o SKYNET quer executar esta ação"}</p>
+                        <div className="perm-card-acoes">
+                          <button type="button" className="perm-ok" onClick={() => autorizarPermissao(message.permissao, true)}>
+                            Autorizar e executar
+                          </button>
+                          <button type="button" className="perm-no" onClick={() => autorizarPermissao(message.permissao, false)}>
+                            Negar
+                          </button>
+                          <a className="perm-link" href="#/permissoes">Permissões</a>
+                        </div>
+                      </div>
+                    )}
                     {message.widgetCriado && (
                       <a className="criado-card" href="#/widgets">
                         <b>Widget criado</b>
