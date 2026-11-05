@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   IconBell, IconBook, IconChat, IconClose, IconCode, IconEdit, IconFolder,
   IconGift, IconGlobe, IconHistory, IconImage, IconInstagram, IconLife, IconMail, IconMoney,
-  IconPlug, IconTheme, IconUser, IconUsers, IconZap,
+  IconPlug, IconServer, IconTheme, IconUser, IconUsers, IconZap,
 } from "./Icons.jsx";
 import { api, getSession } from "../lib.js";
 import AutomationsPanel from "./AutomationsPanel.jsx";
