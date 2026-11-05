@@ -119,3 +119,17 @@ O repositório é autodocumentado para agentes de IA trabalharem nele com segura
 - **CELEBRO.md** — protocolo de raciocínio profundo: ciclo observar→orientar→decidir→agir, análise de causa raíz e arquivo de casos reais resolvidos.
 - **SKILL.md** — catálogo de habilidades: navegador automático (Playwright E2E), pesquisa avançada, terminal/CMD, MCP (mcp.json incluído), DevTools e checklists de entrega.
 - **tests/e2e-login.mjs** — E2E real contra produção: `npm run e2e` (1ª vez: `npx playwright install chromium`).
+
+## 💬 Frontend publicado (chat + artefatos)
+
+O site em https://mlk010173.github.io/skynetchat/ deixou de ser o app React e passou a ser a
+interface completa do chat vinda de `skynetchat-clone`, agora com:
+
+- **artefatos nativos** no chat: notícias, clima ao vivo, galeria de fotos, tabela, gráfico e página HTML;
+- **prints**: colar/arrastar/anexar, luz de zoom (lightbox) e leitura da imagem pelo modelo no modo API.
+
+O que está em `site/` é publicado direto pelo workflow do Pages (sem build). O app React
+anterior segue acessível em `/app/` como reserva.
+
+Detalhes de arquitetura, contrato do JSON dos artefatos e roteiro de teste:
+[`docs/FRONTEND-CHAT-ARTEFATOS.md`](docs/FRONTEND-CHAT-ARTEFATOS.md).
