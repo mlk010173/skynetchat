@@ -737,10 +737,14 @@ Deno.serve(async (req) => {
   let userId: string | null = null;
   let contaId: string | null = null;
   let nickname: string | null = null;
+  let papel: "dev" | "user" = "user";
   const authHeader = req.headers.get("Authorization") ?? "";
   if (authHeader.startsWith("Bearer ") && authHeader.length > 30) {
     const { data } = await svc.auth.getUser(authHeader.slice(7));
     userId = data?.user?.id ?? null;
+    const meta: any = data?.user ?? {};
+    const papelBruto = String(meta?.app_metadata?.role ?? meta?.user_metadata?.role ?? "").toLowerCase();
+    if (["admin", "dev", "owner", "dono"].includes(papelBruto)) papel = "dev";
     const nick = data?.user?.user_metadata?.nickname;
     if (typeof nick === "string" && nick.trim()) nickname = nick.trim().slice(0, 40);
   }
@@ -751,7 +755,10 @@ Deno.serve(async (req) => {
     contaId = conta.id;
     userId = conta.id;
     if (conta.nickname) nickname = conta.nickname;
-    const uso = await consumirMensagem(conta.id, conta.role === "admin" ? "admin" : conta.tier);
+    if (conta.role === "admin") papel = "dev";
+    const uso = papel === "dev"
+      ? { pode: true, usado: 0, limite: 0 }
+      : await consumirMensagem(conta.id, conta.role === "admin" ? "admin" : conta.tier);
     if (!uso.pode) {
       return json({
         ok: false,
@@ -776,6 +783,7 @@ Deno.serve(async (req) => {
     if (c && !c.blocked) {
       contaId = c.id;
       userId = c.id;
+      if (c.role === "admin") papel = "dev";
       if (c.nickname) nickname = c.nickname;
       const uso = await consumirMensagem(c.id, c.role === "admin" ? "admin" : c.tier);
       if (!uso.pode) {
@@ -1075,7 +1083,7 @@ Deno.serve(async (req) => {
             entrada: JSON.stringify(tool.payload).slice(0, 240),
           });
           // ---- permissões: livre roda direto, leve pede uma vez por dia, crítico pede sempre ----
-          const politica = await politicaDa(userId ?? "", tool.name);
+          const politica = papel === "dev" ? "livre" : await politicaDa(userId ?? "", tool.name);
           if (politica === "bloqueado") {
             enviaEtapa({
               ferramenta: tool.name,
@@ -1422,6 +1430,7 @@ Deno.serve(async (req) => {
             });
           }
           enviaFim({
+            papel,
             conversationId: convId,
             model: usado,
             pedido: model,

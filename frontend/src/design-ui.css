@@ -1676,3 +1676,21 @@
   outline: 2px solid var(--sky-acento, #ef4444);
   outline-offset: 3px;
 }
+
+/* ---- selo de conta dev (sem limites) ---- */
+.dev-selo {
+  position: fixed;
+  right: 14px;
+  bottom: 96px;
+  z-index: 40;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--sky-acento, #ef4444) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--sky-acento, #ef4444) 45%, transparent);
+  color: inherit;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}

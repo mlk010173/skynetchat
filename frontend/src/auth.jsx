@@ -119,6 +119,12 @@ export function AuthProvider({ children }) {
       usuario: sessao?.user ?? null,
       email: sessao?.user?.email ?? null,
       nome: sessao?.user?.user_metadata?.nome ?? null,
+      papel: (() => {
+        const bruto = String(
+          sessao?.user?.app_metadata?.role ?? sessao?.user?.user_metadata?.role ?? "",
+        ).toLowerCase();
+        return ["admin", "dev", "owner", "dono"].includes(bruto) ? "dev" : "user";
+      })(),
       autenticado: Boolean(sessao),
       carregando,
       recuperacao,

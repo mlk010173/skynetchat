@@ -8,6 +8,7 @@ import Sidebar from "../components/Sidebar.jsx";
 import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
 
 const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá além", "Sem filtros, sem limites."];
+import { useAuth } from "../auth.jsx";
 import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
@@ -97,6 +98,8 @@ export default function Home() {
   const [segundosAoVivo, setSegundosAoVivo] = useState(0);
   const [ph, setPh] = useState(0);
   const [logged, setLogged] = useState(false);
+  const { papel: papelConta } = useAuth();
+  const ehDev = papelConta === "dev";
   const [model, setModel] = useState("");
   // 4.0 = roteamento rápido · 4.5 Pro = roteador pede o modelo mais forte
   const [modo, setModo] = useState(() => localStorage.getItem("skynet-modo") || "4.5");
@@ -1064,11 +1067,16 @@ export default function Home() {
         </div>
       )}
 
-      {messages.length > 0 && (
+      {messages.length > 0 && !ehDev && (
         <Link to="/account?tab=assinatura" className="pro-link">Assinar SKYNETchat PRO →</Link>
       )}
+      {ehDev && (
+        <div className="dev-selo" title="Conta de desenvolvedor: sem limites e com todas as ferramentas liberadas">
+          DEV · sem limites
+        </div>
+      )}
 
-      {limitHit && (
+      {limitHit && !ehDev && (
         <div className="limit-modal" role="dialog">
           <div className="limit-card">
             <h3>Seu limite diário acabou</h3>
