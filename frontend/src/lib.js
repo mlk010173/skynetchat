@@ -169,6 +169,7 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onArquivo: (a) => handlers.onArquivo?.(a),
         onReason: (txt) => handlers.onReason?.(txt),
         onModelo: (info) => handlers.onModelo?.(info),
+        onPermissao: (perm) => handlers.onPermissao?.(perm),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
         onDone: (info) => resolve({ ok: true, info: info ?? {} }),
         onError: (msg, configured) => resolve({ ok: false, erro: msg, configured }),
