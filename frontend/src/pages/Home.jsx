@@ -113,7 +113,6 @@ export default function Home() {
   const [bellOpen, setBellOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
-  const [continuarId, setContinuarId] = useState(null);
   const [abaMotor, setAbaMotor] = useState("modo");
   const [habilidades, setHabilidades] = useState([]);
   const [habBusca, setHabBusca] = useState("");
@@ -234,7 +233,7 @@ export default function Home() {
       say(novo ? "Modo agente 4.5 PRO ativado: ferramentas liberadas." : "Voltou para o 4.0 (só chat).");
       return novo;
     });
-  }, [say]);
+  }, [say, send]);
 
 
   useEffect(() => {
@@ -631,15 +630,6 @@ export default function Home() {
     return send(null, texto);
   }, [send]);
 
-  // quando a autorização chega, o agente retoma sozinho o turno pendente
-  useEffect(() => {
-    if (!continuarId || busy) return;
-    const id = continuarId;
-    setContinuarId(null);
-    // dispara na hora: com setTimeout o cleanup do efeito cancelava o envio
-    send(null, "continuar", { continuar: id });
-  }, [continuarId, busy, send]);
-
   const autorizarPermissao = useCallback(async (perm, autorizar) => {
     if (!perm?.id) return;
     const r = await api("permissoes?action=decidir", { method: "POST", body: { id: perm.id, autorizar } });
@@ -648,7 +638,7 @@ export default function Home() {
     // retomada: o agente continua exatamente do ponto onde parou, sem repetir o pedido
     setMessages((prev) => prev.map((m) => (m.permissao?.id === perm.id ? { ...m, permissao: { ...m.permissao, resolvido: true } } : m)));
     say("Autorizado. Retomando de onde parei…");
-    setContinuarId(perm.id);
+    send(null, "continuar", { continuar: perm.id });
   }, [say]);
 
   return (
