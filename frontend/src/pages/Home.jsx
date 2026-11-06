@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import MediaPlayer from "../media.jsx";
 import ClimaCard from "../clima.jsx";
 import { criarWidget, carregarWidgets, salvarWidgets } from "../widgets/registry.js";
@@ -97,6 +97,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [segundosAoVivo, setSegundosAoVivo] = useState(0);
   const [ph, setPh] = useState(0);
+  const navigate = useNavigate();
   const [logged, setLogged] = useState(false);
   const { papel: papelConta } = useAuth();
   const ehDev = papelConta === "dev";
@@ -526,7 +527,8 @@ export default function Home() {
   const pick = (label) => {
     setActive(label);
     if (label === "Novo chat") { convIdRef.current = null; setMessages([]); }
-    else if (["Indique e Ganhe", "Monetize com SKYNETchat", "Imagens", "Conversas em grupo", "Codex", "Projetos"].includes(label)) soon(label);
+    else if (label === "Codex") navigate("/codex");
+    else if (["Indique e Ganhe", "Monetize com SKYNETchat", "Imagens", "Conversas em grupo", "Projetos"].includes(label)) soon(label);
   };
 
   const redimensionar = useCallback((file, max = 1400) => new Promise((resolve, reject) => {

@@ -219,7 +219,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "Prompts") setView("prompts");
     else if (label === "Suporte") setView("support");
     else if (label === "Conheça o SKYNETchat") setView("about");
-    else if (label === "Codex") setView("terminal");
+    else if (label === "Codex") { navigate("/codex"); onClose(); }
     else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
     else if (label === "Permissões") { navigate("/permissoes"); onClose(); }
     else if (label === "Automações") setView("automations");
