@@ -250,10 +250,11 @@ export default function Home() {
     if ((!text && !anexos.length) || busy) return;
     setDraft("");
     setPrints([]);
+    const mid = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     setMessages((prev) => [
       ...prev,
       { role: "user", text, anexos },
-      { role: "assistant", text: "", started: Date.now(), passos: [] },
+      { role: "assistant", mid, text: "", started: Date.now(), passos: [] },
     ]);
     setBusy(true);
 
@@ -262,12 +263,12 @@ export default function Home() {
       .then((spec) => {
         if (!spec) return;
         setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.mid === mid);
+          if (idx < 0) return prev;
+          const alvoMsg = prev[idx];
+          if (alvoMsg.artefato || /```artefat/i.test(alvoMsg.text || "")) return prev;
           const copy = [...prev];
-          const last = copy[copy.length - 1];
-          if (!last || last.role !== "assistant") return prev;
-          if (/```artefat/i.test(last.text || "")) return prev;
-          const frase = last.text ? last.text : resumoDoArtefato(spec);
-          copy[copy.length - 1] = { ...last, text: frase, artefato: spec };
+          copy[idx] = { ...alvoMsg, text: alvoMsg.text || resumoDoArtefato(spec), artefato: spec };
           return copy;
         });
       })
