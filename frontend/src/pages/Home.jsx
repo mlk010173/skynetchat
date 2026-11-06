@@ -636,8 +636,8 @@ export default function Home() {
     if (!continuarId || busy) return;
     const id = continuarId;
     setContinuarId(null);
-    const t = setTimeout(() => { send(null, "continuar", { continuar: id }); }, 80);
-    return () => clearTimeout(t);
+    // dispara na hora: com setTimeout o cleanup do efeito cancelava o envio
+    send(null, "continuar", { continuar: id });
   }, [continuarId, busy, send]);
 
   const autorizarPermissao = useCallback(async (perm, autorizar) => {
