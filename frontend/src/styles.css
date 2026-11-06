@@ -730,3 +730,15 @@ button { font-family: inherit; color: inherit; }
 .permissoes-carregando { font-size: 13px; opacity: .6; }
 .permissoes-rodape { display: flex; gap: 12px; align-items: center; margin-top: 22px; font-size: 13px; }
 .permissoes-rodape button { background: transparent; color: inherit; border: 1px solid var(--border, #2a2a2a); border-radius: 9px; padding: 8px 12px; cursor: pointer; }
+
+/* prints anexados (chat) */
+.dock-prints { display: flex; align-items: center; gap: 8px; padding: 6px 4px; overflow-x: auto; }
+.dock-prints small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.print-chip { position: relative; flex: 0 0 auto; }
+.print-chip img { width: 46px; height: 46px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+.print-chip button {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 999px;
+  background: #1d1d1d; border: 1px solid #333; color: #ddd; font-size: 12px; line-height: 1; cursor: pointer;
+}
+.bubble-prints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.bubble-prints img { width: 104px; height: 78px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }

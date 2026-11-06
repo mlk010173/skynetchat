@@ -14,6 +14,7 @@ import { ajudaComandos, parseCommand } from "../commands.js";
 import { chatModels, labelFor } from "../models.js";
 import * as voz from "../voz.js";
 import RichText from "../rich.jsx";
+import { Artefato, montarArtefato, resumoDoArtefato, separarArtefatos } from "../artefatos.jsx";
 
 const actions = [
   { label: "Pesquisar na web agora", icon: IconGlobe, color: "#60a5fa", desc: "manchetes e fontes ao vivo" },
@@ -87,6 +88,7 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("Novo chat");
   const [draft, setDraft] = useState("");
+  const [prints, setPrints] = useState([]);
   const [acaoSheet, setAcaoSheet] = useState(null);
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -244,10 +246,32 @@ export default function Home() {
   const send = useCallback(async (event, textoDireto) => {
     if (event) event.preventDefault();
     const text = (typeof textoDireto === "string" ? textoDireto : draft).trim();
-    if (!text || busy) return;
+    const anexos = prints.slice();
+    if ((!text && !anexos.length) || busy) return;
     setDraft("");
-    setMessages((prev) => [...prev, { role: "user", text }, { role: "assistant", text: "", started: Date.now(), passos: [] }]);
+    setPrints([]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", text, anexos },
+      { role: "assistant", text: "", started: Date.now(), passos: [] },
+    ]);
     setBusy(true);
+
+    // artefato ao vivo: monta em paralelo com a resposta (não depende do backend)
+    montarArtefato(text, { imagens: anexos })
+      .then((spec) => {
+        if (!spec) return;
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (!last || last.role !== "assistant") return prev;
+          if (/```artefat/i.test(last.text || "")) return prev;
+          const frase = last.text ? last.text : resumoDoArtefato(spec);
+          copy[copy.length - 1] = { ...last, text: frase, artefato: spec };
+          return copy;
+        });
+      })
+      .catch(() => {});
 
     // Passo de navegacao real: abre o site pedido e mostra o comando na trilha.
     let conteudo = text;
@@ -445,7 +469,7 @@ export default function Home() {
       },
     });
     setBusy(false);
-  }, [draft, busy, model, say]);
+  }, [draft, busy, model, say, prints]);
 
   // Ditado: Whisper local (transformers.js) com o reconhecedor do navegador como reserva.
   const stopMic = useCallback(() => {
@@ -498,12 +522,40 @@ export default function Home() {
     else if (["Indique e Ganhe", "Monetize com SKYNETchat", "Imagens", "Conversas em grupo", "Codex", "Projetos"].includes(label)) soon(label);
   };
 
+  const redimensionar = useCallback((file, max = 1400) => new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = reject;
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const escala = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * escala);
+        c.height = Math.round(img.height * escala);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.88));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }), []);
+
   const fileRef = useRef(null);
   const onFile = useCallback(async (event) => {
     const f = event.target.files?.[0];
     event.target.value = "";
     if (!f) return;
-    if (f.size > 200 * 1024) { say("Arquivo grande demais (limite 200 KB)."); return; }
+    if (/^image\//.test(f.type)) {
+      if (f.size > 8 * 1024 * 1024) { say("Imagem grande demais (limite 8 MB)."); return; }
+      try {
+        const url = await redimensionar(f, 1400);
+        setPrints((p) => [...p, { url, nome: f.name || `print-${p.length + 1}.png`, tipo: f.type }]);
+        say(`Print "${f.name || "colado"}" anexado. Pode mandar mais de um.`);
+      } catch { say("Nao consegui abrir essa imagem."); }
+      return;
+    }
+    if (f.size > 1024 * 1024) { say("Arquivo grande demais (limite 1 MB para texto)."); return; }
     try {
       const texto = await f.text();
       setDraft((d) => `${d}${d ? "\n\n" : ""}Arquivo "${f.name}":\n${texto.slice(0, 20000)}\n`);
@@ -874,6 +926,13 @@ export default function Home() {
                       );
                     })()}
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
+                    {message.anexos && message.anexos.length > 0 && (
+                      <div className="bubble-prints">
+                        {message.anexos.map((a, k) => (
+                          <img key={k} src={a.url} alt={a.nome} onClick={() => window.open(a.url, "_blank")} />
+                        ))}
+                      </div>
+                    )}
                     {message.clima && <ClimaCard dados={message.clima} />}
                     {message.permissao && (
                       <div className="perm-card">
@@ -927,11 +986,19 @@ export default function Home() {
                       />
                     )}
                     {message.image && !message.text ? null : (
-                      <RichText
-                        texto={message.text}
-                        vivo={busy && index === messages.length - 1 && message.role === "assistant"}
-                      />
+                      separarArtefatos(message.text || "").map((parte, pi) =>
+                        parte.tipo === "artefato" ? (
+                          <Artefato key={"a" + pi} spec={parte.spec} />
+                        ) : (
+                          <RichText
+                            key={"t" + pi}
+                            texto={parte.conteudo}
+                            vivo={busy && index === messages.length - 1 && message.role === "assistant"}
+                          />
+                        )
+                      )
                     )}
+                    {message.artefato && <Artefato spec={message.artefato} />}
                     {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (
                       <div className="tool-fontes">
                         <div className="fontes-chips">
@@ -1001,11 +1068,22 @@ export default function Home() {
       <AcaoSheet acao={acaoSheet} onFechar={fecharSheet} onEnviar={enviarTexto} />
 
       <form className="dock" onSubmit={enviar}>
+        {prints.length > 0 && (
+          <div className="dock-prints">
+            {prints.map((p2, i) => (
+              <span key={i} className="print-chip">
+                <img src={p2.url} alt={p2.nome} />
+                <button type="button" aria-label="remover" onClick={() => setPrints((l) => l.filter((_, k) => k !== i))}>×</button>
+              </span>
+            ))}
+            <small>{prints.length} print(s) · toque em enviar</small>
+          </div>
+        )}
         <div className="plus-wrap">
           <button type="button" className="dock-plus" aria-label="Mais" onClick={() => { setPlusOpen((v) => !v); setModelOpen(false); }}><IconPlus /></button>
           {plusOpen && (
             <div className="plus-menu">
-              <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); say("Envio de arquivos em construção — logo você anexa fotos e docs."); }}>📎 Adicionar fotos e arquivos</button>
+              <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}>📎 Anexar print ou arquivo</button>
               <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Gerar uma imagem"); }}>🖼 Criar imagem</button>
               <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Pesquisar na web agora"); }}>💡 Pensar</button>
               <button type="button" onClick={() => { setPlusOpen(false); setDraft("Investigue com atenção: "); }}>🔍 Investigar</button>
@@ -1024,7 +1102,7 @@ export default function Home() {
             </div>
           )}
         </div>
-        <input ref={fileRef} type="file" hidden onChange={onFile} accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
+        <input ref={fileRef} type="file" hidden onChange={onFile} accept="image/*,.txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
         <input
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
