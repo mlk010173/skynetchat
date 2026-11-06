@@ -49,6 +49,7 @@ const ICONES_PASSO = {
   clima: "☁",
   moeda: "¤",
   hora: "◔",
+  retomando: "↻",
   habilidade: "⟨⟩",
   memoria: "❑",
   infra: "⛭",
@@ -67,6 +68,7 @@ function rotuloDoPasso(ferramenta) {
     clima: "Consultando o clima",
     moeda: "Consultando a cotação",
     habilidade: "Usando a habilidade",
+    retomando: "Retomando o que eu estava fazendo",
     memoria: "Consultando a memória",
     infra: "Consultando a infraestrutura",
     hora: "Conferindo o horário",
@@ -107,6 +109,7 @@ export default function Home() {
   const [bellOpen, setBellOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [modelOpen, setModelOpen] = useState(false);
+  const [continuarId, setContinuarId] = useState(null);
   const [abaMotor, setAbaMotor] = useState("modo");
   const [habilidades, setHabilidades] = useState([]);
   const [habBusca, setHabBusca] = useState("");
@@ -243,7 +246,7 @@ export default function Home() {
     return () => clearInterval(t);
   }, [busy]);
 
-  const send = useCallback(async (event, textoDireto) => {
+  const send = useCallback(async (event, textoDireto, opcoes = {}) => {
     if (event) event.preventDefault();
     const text = (typeof textoDireto === "string" ? textoDireto : draft).trim();
     const anexos = prints.slice();
@@ -329,7 +332,7 @@ export default function Home() {
       if (util) conteudo = `${text}\n\nConteudo lido agora de ${alvoFinal}:\n${trecho.slice(0, 2400)}`;
     }
 
-    await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model }, {
+    await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar }, {
       onTool: (toolEv) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -621,15 +624,25 @@ export default function Home() {
     return send(null, texto);
   }, [send]);
 
+  // quando a autorização chega, o agente retoma sozinho o turno pendente
+  useEffect(() => {
+    if (!continuarId || busy) return;
+    const id = continuarId;
+    setContinuarId(null);
+    const t = setTimeout(() => { send(null, "continuar", { continuar: id }); }, 80);
+    return () => clearTimeout(t);
+  }, [continuarId, busy, send]);
+
   const autorizarPermissao = useCallback(async (perm, autorizar) => {
     if (!perm?.id) return;
     const r = await api("permissoes?action=decidir", { method: "POST", body: { id: perm.id, autorizar } });
     if (!r?.ok) { say(r?.error || "Não consegui registrar a decisão."); return; }
     if (!autorizar) { say("Pedido negado."); return; }
-    const ultimo = [...messages].reverse().find((m) => m.role === "user")?.text ?? "";
-    say("Autorizado. Executando…");
-    if (ultimo) setTimeout(() => enviarTexto(ultimo), 60);
-  }, [enviarTexto, messages, say]);
+    // retomada: o agente continua exatamente do ponto onde parou, sem repetir o pedido
+    setMessages((prev) => prev.map((m) => (m.permissao?.id === perm.id ? { ...m, permissao: { ...m.permissao, resolvido: true } } : m)));
+    say("Autorizado. Retomando de onde parei…");
+    setContinuarId(perm.id);
+  }, [say]);
 
   return (
     <div className="app">

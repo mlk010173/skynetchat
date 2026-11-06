@@ -30,7 +30,7 @@ export async function api(path, opts = {}) {
 }
 
 /** Chat em streaming SSE (resposta ao vivo, digitação em tempo real). */
-export async function streamChat({ conversationId, content, model }, handlers) {
+export async function streamChat({ conversationId, content, model, continuar }, handlers) {
   const session = await getSession();
   let res;
   try {
@@ -42,7 +42,7 @@ export async function streamChat({ conversationId, content, model }, handlers) {
         ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
       },
       // conversa nova: o campo vai ausente (null faz o servidor recusar)
-      body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), content, model }),
+      body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), ...(continuar ? { continuar } : {}), content, model }),
     });
   } catch {
     handlers.onError("Sem conexão com o servidor.");
@@ -147,7 +147,7 @@ let MODEL_LIST = [];
 export function setModelList(list) { MODEL_LIST = Array.isArray(list) ? list : []; }
 
 /** Chama streamChat e, se o modelo falhar sem produzir texto, tenta o proximo da reserva. */
-export async function streamChatAuto({ conversationId, content, model }, handlers) {
+export async function streamChatAuto({ conversationId, content, model, continuar }, handlers) {
   const { fallbackChain } = await import("./models.js");
   if (!MODEL_LIST.length) {
     try { const d = await api("models"); if (d?.ok && Array.isArray(d.models) && d.models.length) MODEL_LIST = d.models; } catch { /* segue com o escolhido */ }
@@ -160,7 +160,7 @@ export async function streamChatAuto({ conversationId, content, model }, handler
   for (const tentativa of chain) {
     let recebeuTexto = false;
     const r = await new Promise((resolve) => {
-      streamChat({ conversationId, content, model: tentativa }, {
+      streamChat({ conversationId, content, model: tentativa, continuar }, {
         onTool: (toolEv) => handlers.onTool?.(toolEv),
         onImage: (url) => handlers.onImage?.(url),
         onMidia: (m) => handlers.onMidia?.(m),

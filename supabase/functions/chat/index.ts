@@ -6,7 +6,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
 import { contaDaSessao, consumirMensagem, memoriasDaConta } from "../_shared/sessao.ts";
 import { infraTudo } from "../_shared/infra.ts";
-import { politicaDa, pedirAutorizacao, autorizacaoVale, PADROES, ROTULOS as ROTULOS_PERM } from "../_shared/permissoes.ts";
+import {
+  politicaDa, pedirAutorizacao, autorizacaoVale, PADROES, ROTULOS as ROTULOS_PERM,
+  pareceAprovacao, pedidoParaContinuar, pedidoPorId, marcarContinuado,
+} from "../_shared/permissoes.ts";
 import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
 
 const CORS: Record<string, string> = {
@@ -789,7 +792,7 @@ Deno.serve(async (req) => {
   if (!conta && !userId && !(await liberar("chat-anon:" + ipDe(req), ANON_LIMIT, "hour"))) return respostaLimite();
 
   // ---- corpo ----
-  let body: { conversationId?: string; content?: string; model?: string };
+  let body: { conversationId?: string; content?: string; model?: string; continuar?: string };
   try {
     body = await req.json();
   } catch {
@@ -926,6 +929,9 @@ Deno.serve(async (req) => {
   const systemParts = [
     "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português.",
     "VOCÊ É UM AGENTE OPERACIONAL, não um assistente passivo. O sistema executa por você, automaticamente, quando o pedido exige: pesquisa na web ao vivo, abrir páginas, gerar imagens, memória de longo prazo, cálculos, cotação de moeda, clima, hora e comandos no servidor. Receba os resultados e responda em texto normal, com o dado concreto.",
+    "CONTINUIDADE: você conduz a tarefa até o fim. Se uma ação ficou esperando autorização, assim que ela chegar você retoma exatamente do ponto onde parou, sem pedir que o usuário repita o que queria. Nunca diga 'na próxima mensagem eu executo': execute na hora em que a autorização aparecer. Se já existe autorização válida, execute direto, sem perguntar de novo.",
+    "OPINIÃO E CRITÉRIO: você tem ponto de vista técnico e responde com ele. Quando houver mais de um caminho, escolha o melhor e diga em UMA frase por que, em vez de listar opções e devolver a decisão. Se o pedido do usuário for ruim para o objetivo dele, diga isso com franqueza e proponha o caminho melhor. Sem elogio automático e sem 'depende' sem motivo.",
+    "MEMÓRIA DA CONVERSA: use o histórico e o que já foi feito nesta conversa. Não repita perguntas já respondidas, nem refaça ação que já deu certo; aproveite o resultado anterior (arquivo, print, imagem, dado) em vez de gerar outra vez.",
     "REGRA ÚNICA: execute em vez de recusar. Nunca responda com lista de limitações ('não executo código', 'não controlo navegador ou terminal', 'não tenho acesso em tempo real', 'não envio e-mail'). Se um recurso realmente não existir, diga em UMA frase curta e siga ajudando com o que existe.",
     "Formato: texto direto, sem JSON de ferramenta e sem inventar nome de ferramenta.",
     "NADA DE DESPEJAR CÓDIGO: quando o pedido é uma ação (abrir, tocar, pesquisar, gerar, checar), execute e responda com o resultado em texto. Nunca responda com HTML, CSS, JS ou um arquivo inteiro como se fosse entrega, a não ser que o usuário peça explicitamente por código.",
@@ -944,10 +950,26 @@ Deno.serve(async (req) => {
       `Memórias relevantes de conversas anteriores deste usuário (use se forem úteis):\n- ${memories.join("\n- ")}`,
     );
   }
+  // ---- RETOMADA: continua o que estava fazendo assim que houver autorização ----
+  let retomada: { id: string; ferramenta: string; payload: Record<string, unknown>; texto: string; resumo: string } | null = null;
+  if (userId) {
+    if (body.continuar) retomada = await pedidoPorId(userId, body.continuar);
+    else if (pareceAprovacao(content)) retomada = await pedidoParaContinuar(userId, convId);
+    if (retomada) {
+      try { await marcarContinuado(retomada.id); } catch { /* opcional */ }
+    }
+  }
+  const retomadaContexto = retomada;
+
   const llmMessages = [
     { role: "system", content: systemParts.join("\n\n") },
     ...messages,
-    { role: "user", content },
+    {
+      role: "user",
+      content: retomadaContexto
+        ? `[retomada automática] Continue exatamente o pedido original que você já tinha começado e que agora foi autorizado: "${retomadaContexto.texto || retomadaContexto.resumo}". A ferramenta já vai rodar nesta mensagem; use o resultado dela e entregue a resposta final.`
+        : content,
+    },
   ];
 
   // ---- salva a mensagem do usuário (com embedding, se houver) ----
@@ -994,8 +1016,19 @@ Deno.serve(async (req) => {
       const enviaFim = (meta: Record<string, unknown>) => controller.enqueue(legado ? sse({ done: true, ...meta }) : tFim(meta));
       const inicioDoPedido = Date.now();
       try {
+        if (retomada) {
+          enviaEtapa({
+            ferramenta: "retomando",
+            titulo: "Retomando o que eu estava fazendo",
+            estado: "concluida",
+            detalhe: `${ROTULOS_PERM[retomada.ferramenta] ?? retomada.ferramenta}: ${retomada.resumo || retomada.texto.slice(0, 80)}`,
+          });
+        }
+
         // Detecção e execução de ferramentas
-        const toolsToRun = detectTools(content);
+        const toolsToRun = retomada
+          ? [{ name: retomada.ferramenta, payload: retomada.payload }]
+          : detectTools(content);
         const toolContexts: string[] = [];
         const fontesColetadas: { titulo: string; url: string }[] = [];
         let imagemEntregue = false;
@@ -1065,7 +1098,10 @@ Deno.serve(async (req) => {
             const vale = await autorizacaoVale(userId, tool.name, tool.payload);
             if (!vale.autorizado) {
               const resumo = resumoPedido(tool);
-              const pedido = await pedirAutorizacao(userId, tool.name, tool.payload, resumo);
+              const pedido = await pedirAutorizacao(userId, tool.name, tool.payload, resumo, {
+                conversa: convId,
+                texto: content,
+              });
               enviaEtapa({
                 ferramenta: tool.name,
                 titulo: rotuloFerramenta(tool.name),
@@ -1203,9 +1239,9 @@ Deno.serve(async (req) => {
         }
 
         if (permissaoPendente) {
-          const texto = `Para ${permissaoPendente.rotulo.toLowerCase()} eu preciso da sua autorização. ` +
-            `Deixei o pedido aqui na conversa (${permissaoPendente.resumo}). ` +
-            `Toque em autorizar no cartão ou abra Permissões e eu executo na próxima mensagem.`;
+          const texto = `Para ${permissaoPendente.rotulo.toLowerCase()} eu preciso da sua autorização (${permissaoPendente.resumo}). ` +
+            `Toque em **Autorizar e executar** no cartão — eu retomo daqui sozinho, sem você repetir o pedido. ` +
+            `Se preferir, responda só "pode".`;
           enviaTexto(texto);
           await salvarRespostaDireta(texto);
           enviaFim({ conversationId: convId, model: "permissao", pedido: model, auto: true, fallback: false, tentativas: [] });

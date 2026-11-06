@@ -91,6 +91,7 @@ export async function pedirAutorizacao(
   ferramenta: string,
   payload: unknown,
   resumo: string,
+  extra: { conversa?: string | null; texto?: string | null } = {},
 ): Promise<{ id: string; politica: Politica } | null> {
   if (!dono) return null;
   const db = svc();
@@ -104,10 +105,26 @@ export async function pedirAutorizacao(
     .eq("estado", "pendente")
     .gt("expira_em", new Date().toISOString())
     .maybeSingle();
-  if (aberto?.id) return { id: aberto.id, politica: "critico" };
+  if (aberto?.id) {
+    if (extra.conversa || extra.texto) {
+      await db.from("acc_pedidos").update({
+        conversa_id: extra.conversa ?? null,
+        pedido_texto: (extra.texto ?? "").slice(0, 1200) || null,
+      }).eq("id", aberto.id);
+    }
+    return { id: aberto.id, politica: "critico" };
+  }
   const { data, error } = await db
     .from("acc_pedidos")
-    .insert({ dono, ferramenta, assinatura: sig, payload: payload ?? {}, resumo: resumo.slice(0, 240) })
+    .insert({
+      dono,
+      ferramenta,
+      assinatura: sig,
+      payload: payload ?? {},
+      resumo: resumo.slice(0, 240),
+      conversa_id: extra.conversa ?? null,
+      pedido_texto: (extra.texto ?? "").slice(0, 1200) || null,
+    })
     .select("id")
     .maybeSingle();
   if (error || !data?.id) return null;
@@ -204,4 +221,82 @@ export async function painel(dono: string) {
     })),
     pedidos: pedidos ?? [],
   };
+}
+
+
+// ---------------------------------------------------------------------------
+// RETOMADA: o agente continua o que estava fazendo depois da autorização
+// ---------------------------------------------------------------------------
+
+export type PedidoRetomada = {
+  id: string;
+  ferramenta: string;
+  payload: Record<string, unknown>;
+  texto: string;
+  resumo: string;
+};
+
+const FRASE_DE_APROVACAO = /^\s*(autorizo|autorizado|aprovado|pode(\s+(executar|continuar|ir|rodar|fazer|mandar))?|sim|ok|okay|vai|manda|mande|executa|execute|roda|libera|liberado|continu[ae]|continuar|continua|segue|prossiga|bora|confirma|confirmo)\b/i;
+
+export const pareceAprovacao = (texto: string) => FRASE_DE_APROVACAO.test(String(texto ?? ""));
+
+/** Pedido autorizado que ainda não foi executado (o que fazer ao continuar). */
+export async function pedidoPorId(dono: string, id: string): Promise<PedidoRetomada | null> {
+  if (!dono || !id) return null;
+  const { data } = await svc()
+    .from("acc_pedidos")
+    .select("id, ferramenta, payload, pedido_texto, resumo, estado")
+    .eq("id", id)
+    .eq("dono", dono)
+    .maybeSingle();
+  if (!data) return null;
+  if (data.estado !== "autorizado" && data.estado !== "pendente") return null;
+  if (data.estado === "pendente") return null; // ainda sem autorização
+  return {
+    id: data.id,
+    ferramenta: data.ferramenta,
+    payload: (data.payload ?? {}) as Record<string, unknown>,
+    texto: String(data.pedido_texto ?? ""),
+    resumo: String(data.resumo ?? ""),
+  };
+}
+
+/** Último pedido autorizado e não executado da conta (preferindo a mesma conversa). */
+export async function pedidoParaContinuar(
+  dono: string,
+  conversaId?: string | null,
+): Promise<PedidoRetomada | null> {
+  if (!dono) return null;
+  const db = svc();
+  const base = () =>
+    db
+      .from("acc_pedidos")
+      .select("id, ferramenta, payload, pedido_texto, resumo, conversa_id, continuado_em")
+      .eq("dono", dono)
+      .eq("estado", "autorizado")
+      .is("continuado_em", null)
+      .gt("expira_em", new Date().toISOString())
+      .order("decidido_em", { ascending: false })
+      .limit(5);
+  const { data } = conversaId
+    ? await base().eq("conversa_id", conversaId)
+    : await base();
+  const linha = (data ?? [])[0] ?? null;
+  if (linha) {
+    return {
+      id: linha.id,
+      ferramenta: linha.ferramenta,
+      payload: (linha.payload ?? {}) as Record<string, unknown>,
+      texto: String(linha.pedido_texto ?? ""),
+      resumo: String(linha.resumo ?? ""),
+    };
+  }
+  if (conversaId) return pedidoParaContinuar(dono, null);
+  return null;
+}
+
+/** Marca que aquele pedido já foi retomado (não repete sozinho). */
+export async function marcarContinuado(id: string) {
+  if (!id) return;
+  await svc().from("acc_pedidos").update({ continuado_em: new Date().toISOString() }).eq("id", id);
 }
