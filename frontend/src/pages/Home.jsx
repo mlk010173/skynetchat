@@ -97,8 +97,8 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [segundosAoVivo, setSegundosAoVivo] = useState(0);
   const [ph, setPh] = useState(0);
-  const navigate = useNavigate();
   const [logged, setLogged] = useState(false);
+  const navigate = useNavigate();
   const { papel: papelConta } = useAuth();
   const ehDev = papelConta === "dev";
   const [model, setModel] = useState("");
@@ -233,7 +233,7 @@ export default function Home() {
       say(novo ? "Modo agente 4.5 PRO ativado: ferramentas liberadas." : "Voltou para o 4.0 (só chat).");
       return novo;
     });
-  }, [say, send]);
+  }, [say]);
 
 
   useEffect(() => {
@@ -608,7 +608,7 @@ export default function Home() {
 
   const enviar = useCallback((event) => {
     const comando = parseCommand(draft);
-    // só os comandos que a interface resolve sozinha ficam aqui; o resto vai para o servidor
+    // só o que a interface resolve sozinha fica aqui; /terminal, /sandbox e desconhecidos vão ao servidor
     const LOCAIS = ["pesquisar", "abrir", "ferramentas"];
     if (comando && LOCAIS.includes(comando.nome)) { event.preventDefault(); rodarComando(comando); return; }
     return send(event);
@@ -639,7 +639,7 @@ export default function Home() {
     setMessages((prev) => prev.map((m) => (m.permissao?.id === perm.id ? { ...m, permissao: { ...m.permissao, resolvido: true } } : m)));
     say("Autorizado. Retomando de onde parei…");
     send(null, "continuar", { continuar: perm.id });
-  }, [say]);
+  }, [say, send]);
 
   return (
     <div className="app">
