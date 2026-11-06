@@ -609,7 +609,9 @@ export default function Home() {
 
   const enviar = useCallback((event) => {
     const comando = parseCommand(draft);
-    if (comando) { event.preventDefault(); rodarComando(comando); return; }
+    // só os comandos que a interface resolve sozinha ficam aqui; o resto vai para o servidor
+    const LOCAIS = ["pesquisar", "abrir", "ferramentas"];
+    if (comando && LOCAIS.includes(comando.nome)) { event.preventDefault(); rodarComando(comando); return; }
     return send(event);
   }, [draft, send, rodarComando]);
 
