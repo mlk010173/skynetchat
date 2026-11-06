@@ -507,29 +507,27 @@
   }
 
   async function discoveredSources(q) {
-    const out = [];
-    const wiki = await wikiSearch(q.slice(0, 120));
-    for (const w of wiki) {
-      const title = w.title;
-      out.push({
-        title,
-        url: `https://pt.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`,
+    const P = window.SKYPESQ;
+    if (P) {
+      try {
+        const lista = await P.web(q);
+        if (lista && lista.length) return lista;
+      } catch (e) {}
+    }
+    // sem rede: mantém as duas fontes enciclopédicas que respondem por CORS
+    try {
+      const j = await fetch(
+        'https://pt.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=4&srsearch=' +
+          encodeURIComponent(String(q).slice(0, 120))
+      ).then((r) => r.json());
+      return ((j.query && j.query.search) || []).map((w) => ({
+        title: w.title,
+        url: 'https://pt.wikipedia.org/wiki/' + encodeURIComponent(w.title.replace(/ /g, '_')),
         domain: 'pt.wikipedia.org',
-      });
+      }));
+    } catch (e) {
+      return [];
     }
-    for (const [domain, mk] of NEWS_DOMAINS) {
-      out.push({ title: `${q.slice(0, 70)} — ${domain}`, url: mk(q.slice(0, 90)), domain });
-    }
-    // intercala enciclopédia e imprensa para a lista não ficar homogênea
-    const wikiOut = out.filter((s) => s.domain === 'pt.wikipedia.org');
-    const newsOut = out.filter((s) => s.domain !== 'pt.wikipedia.org');
-    const mixed = [];
-    for (let i = 0; i < Math.max(wikiOut.length, newsOut.length); i++) {
-      if (wikiOut[i]) mixed.push(wikiOut[i]);
-      if (newsOut[i]) mixed.push(newsOut[i]);
-    }
-    const seen = new Set();
-    return mixed.filter((s) => (seen.has(s.url) ? false : seen.add(s.url)));
   }
 
   const PLAN = {
@@ -541,7 +539,7 @@
 
   function pickPlan(prompt, mode) {
     const p = (prompt || '').toLowerCase();
-    if (mode === 'Pesquisa' || /\b(pesquis|busque|procure|not[ií]cia|hoje|atual|fonte|quem [ée]|quando)\b/.test(p)) return 'research';
+    if (mode === 'Pesquisa' || /\b(pesquis|busque|procure|not[ií]cia|hoje|atual|fonte|quem [ée]|quando|v[ií]deo|youtube|instagram|insta|reels?|canal)\b/.test(p)) return 'research';
     if (/\b(c[oó]digo|program|html|css|javascript|script|site|p[aá]gina|fun[çc][aã]o)\b/.test(p)) return 'code';
     if (/\b(imagem|foto|desenh|arte)\b/.test(p)) return 'image';
     return 'quick';
@@ -617,17 +615,32 @@
     }
     emit({ type: 'thinking-complete', totalSteps: i });
 
-    let text =
-      plan === 'research'
-        ? answerFromSources(prompt, sources)
-        : plan === 'code'
-        ? `Aqui está uma página pronta para o seu pedido:\n\n\`\`\`html\n<!doctype html>\n<html lang="pt-BR">\n<title>${esc(prompt.slice(0, 40))}</title>\n<body style="font-family:system-ui;background:#0b0b0b;color:#f5f5f5;display:grid;place-items:center;height:100vh;margin:0">\n  <main style="text-align:center">\n    <h1 style="font-weight:600">${esc(prompt.slice(0, 60))}</h1>\n    <p id="out">0</p>\n    <button onclick="document.getElementById('out').textContent=+document.getElementById('out').textContent+1" style="padding:12px 20px;border-radius:12px;border:1px solid #333;background:#171717;color:#fff;cursor:pointer">Clique</button>\n  </main>\n</body>\n</html>\n\`\`\`\n\nBaixe o arquivo no cartão acima, abra no navegador e edite o que quiser.`
-        : `**${esc(prompt.slice(0, 90))}**\n\nResposta curta e direta: o clone roda 100% no navegador, com streaming e log de pensamento extraídos do app original. Ative o modo **Pesquisa** para ver o pipeline de fontes completo.`;
+    const q = String(prompt || '').replace(/\s+/g, ' ').trim();
+    const pergunta = /\?|\b(quem|o que|como|por que|porque|quando|onde|qual|quais|quanto|explica|defina)\b/i.test(q) && q.length > 8;
+    const resumoRapido = plan === 'quick' && pergunta && window.SKYPESQ ? await window.SKYPESQ.resumo(q).catch(() => null) : null;
 
-    // artefatos (notícias, clima ao vivo, galeria de prints) no modo demonstração
-    if (window.SKYNART && window.SKYNART.demoText && plan !== 'code') {
-      const art = window.SKYNART.demoText(prompt, sources, h.files);
-      if (art) text = art;
+    let text =
+      plan === 'code'
+        ? `Aqui está uma página pronta para o seu pedido:\n\n\`\`\`html\n<!doctype html>\n<html lang="pt-BR">\n<title>${esc(prompt.slice(0, 40))}</title>\n<body style="font-family:system-ui;background:#0b0b0b;color:#f5f5f5;display:grid;place-items:center;height:100vh;margin:0">\n  <main style="text-align:center">\n    <h1 style="font-weight:600">${esc(prompt.slice(0, 60))}</h1>\n    <p id="out">0</p>\n    <button onclick="document.getElementById('out').textContent=+document.getElementById('out').textContent+1" style="padding:12px 20px;border-radius:12px;border:1px solid #333;background:#171717;color:#fff;cursor:pointer">Clique</button>\n  </main>\n</body>\n</html>\n\`\`\`\n\nBaixe o arquivo no cartão acima, abra no navegador e edite o que quiser.`
+        : resumoRapido
+        ? `**${esc(resumoRapido.titulo)}**\n\n${esc(resumoRapido.texto)}\n\nQuer que eu aprofunde com fontes, vídeos ou notícias sobre isso?`
+        : plan === 'research'
+        ? answerFromSources(prompt, sources)
+        : `Sobre **${esc(q.slice(0, 90))}**: me diga o recorte que interessa (notícias de hoje, vídeos, perfis no Instagram, fontes técnicas) e eu busco na hora, sem intermediário.`;
+
+    // artefatos com dados reais (clima, prints, vídeos, Instagram, notícias, fontes)
+    if (window.SKYNART && window.SKYNART.build && plan !== 'code') {
+      const art = await window.SKYNART.build(prompt, sources, h.files);
+      if (art && art.text) {
+        text = art.text;
+        if (art.sources && art.sources.length) {
+          sources = art.sources.map((s2) => ({ ...s2, domain: s2.domain || hostOf(s2.url) }));
+          onSources(sources);
+          const sid = stepId();
+          emit({ type: 'step-start', stepId: sid, stepIndex: i++, stepType: 'search', searchQueries: [q.slice(0, 60)] });
+          emit({ type: 'step-end', stepId: sid, title: 'Resultados ao vivo', searchQueries: [q.slice(0, 60)], discoveredSources: sources });
+        }
+      }
     }
 
     emit({ type: 'text-start', id: uid(16), providerMetadata: { skynet: { replaceable: true } } });

@@ -7,12 +7,13 @@
 (() => {
   'use strict';
 
-  const KNOWN = new Set(['noticias', 'clima', 'fotos', 'tabela', 'grafico', 'html']);
-  const ALIAS = { news: 'noticias', weather: 'clima', gallery: 'fotos', table: 'tabela', chart: 'grafico', page: 'html' };
+  const KNOWN = new Set(['noticias', 'clima', 'fotos', 'tabela', 'grafico', 'html', 'videos', 'social', 'fontes']);
+  const ALIAS = { news: 'noticias', weather: 'clima', gallery: 'fotos', table: 'tabela', chart: 'grafico', page: 'html', youtube: 'videos', video: 'videos', instagram: 'social', ig: 'social', sources: 'fontes', pesquisa: 'fontes' };
   const climaCache = new Map();
 
   const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const safeUrl = (u) => (/^https?:\/\//i.test(String(u || '')) ? String(u) : '');
+  const hostOf = (u) => { try { return new URL(String(u)).hostname.replace(/^www\./, ''); } catch (e) { return ''; } };
 
   /* ------------------------------ ícones ----------------------------- */
   const P = {
@@ -26,6 +27,9 @@
     file: '<path d="M14 3v5h5"/><path d="M19 21H5V3h9l5 5v13Z"/>',
     chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     photo: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L7 20"/>',
+    play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5 16 12l-6 3.5Z"/>',
+    ig: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
   };
   const svg = (name, size = 18) =>
     `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.file}</svg>`;
@@ -54,8 +58,8 @@
   };
 
   /* ----------------------------- moldura ---------------------------- */
-  const KIND_LABEL = { noticias: 'Notícias', clima: 'Clima', fotos: 'Fotos', tabela: 'Tabela', grafico: 'Gráfico', html: 'Página' };
-  const KIND_ICON = { noticias: 'file', clima: 'suncloud', fotos: 'photo', tabela: 'chart', grafico: 'chart', html: 'file' };
+  const KIND_LABEL = { noticias: 'Notícias', clima: 'Clima', fotos: 'Fotos', tabela: 'Tabela', grafico: 'Gráfico', html: 'Página', videos: 'Vídeos', social: 'Instagram', fontes: 'Fontes' };
+  const KIND_ICON = { noticias: 'file', clima: 'suncloud', fotos: 'photo', tabela: 'chart', grafico: 'chart', html: 'file', videos: 'play', social: 'ig', fontes: 'search' };
 
   function shell(spec, body, opts = {}) {
     const kind = spec.type;
@@ -93,6 +97,81 @@
           : `<div class="art-news">${inner}</div>`;
       })
       .join('')}</div>`;
+    return shell(spec, body);
+  }
+
+  /* ----------------------------- vídeos ----------------------------- */
+  function renderVideos(spec) {
+    const itens = (spec.itens || spec.items || []).slice(0, 8);
+    if (!itens.length) return shell(spec, '<p class="art-empty">Nenhum vídeo encontrado para essa busca.</p>');
+    const body = `<div class="art-videos">${itens
+      .map((v) => {
+        const url = safeUrl(v.url || v.link) || 'https://www.youtube.com';
+        const thumb = safeUrl(v.thumb || v.thumbnail);
+        return `<a class="art-video" href="${esc(url)}" target="_blank" rel="noopener noreferrer">
+          <span class="art-video-thumb">
+            ${thumb ? `<img src="${esc(thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}
+            <span class="art-video-play">${svg('play', 26)}</span>
+            ${v.duracao || v.duration ? `<em>${esc(v.duracao || v.duration)}</em>` : ''}
+          </span>
+          <span class="art-video-info">
+            <b>${esc(v.titulo || v.title || '')}</b>
+            <small>${esc(v.canal || v.channel || 'YouTube')}</small>
+            ${v.meta ? `<small class="art-video-meta">${esc(v.meta)}</small>` : ''}
+          </span>
+        </a>`;
+      })
+      .join('')}</div>`;
+    return shell(spec, body);
+  }
+
+  /* ---------------------------- instagram --------------------------- */
+  function renderSocial(spec) {
+    const itens = (spec.itens || spec.items || []).slice(0, 6);
+    if (!itens.length) return shell(spec, '<p class="art-empty">Nenhum perfil ou post encontrado.</p>');
+    const body = `<div class="art-social">${itens
+      .map((it) => {
+        const url = safeUrl(it.url);
+        const user = String(it.usuario || it.usuario || '').replace(/^@/, '');
+        const embed = safeUrl(it.embed);
+        return `<article class="art-ig" data-ig="${esc(embed)}">
+          <header class="art-ig-head">
+            <span class="art-ig-avatar">${esc((user || 'IG').slice(0, 2).toUpperCase())}</span>
+            <span class="art-ig-id">
+              <b>${esc(user ? '@' + user : it.titulo || 'Instagram')}</b>
+              <small>${esc(it.tipo === 'perfil' ? 'perfil' : it.tipo === 'reel' ? 'reel' : 'publicação')}</small>
+            </span>
+          </header>
+          ${it.resumo ? `<p class="art-ig-res">${esc(it.resumo)}</p>` : ''}
+          <div class="art-ig-embed"></div>
+          <footer class="art-ig-foot">
+            ${embed ? '<button type="button" data-ig-load>Ver no chat</button>' : ''}
+            ${url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">Abrir no Instagram</a>` : ''}
+          </footer>
+        </article>`;
+      })
+      .join('')}</div>`;
+    return shell(spec, body);
+  }
+
+  /* ----------------------------- fontes ----------------------------- */
+  function renderFontes(spec) {
+    const itens = (spec.itens || spec.items || []).slice(0, 12);
+    if (!itens.length) return shell(spec, '<p class="art-empty">Nenhuma fonte reunida.</p>');
+    const body = `<ol class="art-src">${itens
+      .map((f, i) => {
+        const url = safeUrl(f.url || f.link);
+        const inner = `<span class="art-src-n">${i + 1}</span>
+          <span class="art-src-txt">
+            <b>${esc(f.titulo || f.title || '')}</b>
+            ${f.resumo || f.snippet ? `<small>${esc(f.resumo || f.snippet)}</small>` : ''}
+            <em>${esc(f.fonte || f.domain || hostOf(url))}</em>
+          </span>`;
+        return url
+          ? `<li><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${inner}</a></li>`
+          : `<li>${inner}</li>`;
+      })
+      .join('')}</ol>`;
     return shell(spec, body);
   }
 
@@ -268,6 +347,9 @@
   /* ---------------------------- montagem ---------------------------- */
   const RENDER = {
     noticias: renderNoticias,
+    videos: renderVideos,
+    social: renderSocial,
+    fontes: renderFontes,
     clima: renderClima,
     fotos: renderFotos,
     tabela: renderTabela,
@@ -325,6 +407,22 @@
 
   /* ------------------------- ações dos widgets ---------------------- */
   document.addEventListener('click', (ev) => {
+    const ig = ev.target.closest('[data-ig-load]');
+    if (ig) {
+      const card = ig.closest('.art-ig');
+      const src = card && card.getAttribute('data-ig');
+      const slot = card && card.querySelector('.art-ig-embed');
+      if (src && slot && !slot.querySelector('iframe')) {
+        slot.innerHTML = `<iframe src="${esc(src)}" loading="lazy" scrolling="no" allowtransparency="true" frameborder="0" title="Publicação do Instagram"></iframe>`;
+        ig.textContent = 'Fechar prévia';
+        ig.setAttribute('data-ig-close', '1');
+      } else if (slot) {
+        slot.innerHTML = '';
+        ig.textContent = 'Ver no chat';
+        ig.removeAttribute('data-ig-close');
+      }
+      return;
+    }
     const btn = ev.target.closest('[data-art-copy], [data-art-save], [data-art-open], [data-art-zoom]');
     if (!btn) return;
     const art = btn.closest('.art');
@@ -392,6 +490,141 @@
   /* -------------------- gerador de artefatos (demo) ----------------- */
   const block = (spec) => '\n\n```artefato\n' + JSON.stringify(spec) + '\n```';
 
+  const PESQ = window.SKYPESQ || null;
+  const tema = (t) => String(t || '').replace(/\s+/g, ' ').trim();
+
+  /* detecta o que a pessoa quer e devolve os dados reais */
+  async function build(prompt, sources, files) {
+    const bruto = String(prompt || '');
+    const p = bruto.toLowerCase();
+    const imgs = (files || []).filter((f) => f && f.dataUrl);
+
+    /* 1. prints anexados */
+    if (imgs.length) {
+      const spec = {
+        type: 'fotos',
+        titulo: imgs.length > 1 ? `${imgs.length} imagens recebidas` : 'Imagem recebida',
+        subtitulo: 'print enviado por você · amplie tocando',
+        imagens: imgs.map((f, i) => ({ url: f.dataUrl, legenda: f.name || `imagem ${i + 1}` })),
+      };
+      return {
+        text: `Recebi ${imgs.length > 1 ? 'as imagens' : 'a imagem'} e deixei em tamanho cheio no cartão acima. Toque para ampliar, ou peça o que quiser sobre o conteúdo: texto, layout, erro de tela, comparação.` + block(spec),
+        sources: [],
+      };
+    }
+
+    /* 2. clima ao vivo */
+    if (/clima|temperatura|previs|chuva|frio|calor|tempo em/.test(p)) {
+      const m = bruto.match(/\b(?:em|no|na|de|para)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ ]{2,28})/i);
+      const cidade = (m ? m[1] : 'São Paulo')
+        .replace(/\b(agora|hoje|amanh[ãa]|nessa?\s+semana|por\s+favor|aqui|pra(ia)?)\b.*$/i, '')
+        .trim()
+        .replace(/[?!.,]+$/, '') || 'São Paulo';
+      return {
+        text: `Puxei o clima de **${cidade}** agora, com previsão dos próximos dias.` +
+          block({ type: 'clima', titulo: `Clima · ${cidade}`, cidade, aoVivo: true }),
+        sources: [],
+      };
+    }
+
+    /* 3. vídeos do YouTube */
+    if (/v[ií]deo|youtube|assistir|canal|aula|tutorial em v[ií]deo/.test(p)) {
+      const q = tema(bruto.replace(/\b(v[ií]deos?|no youtube|do youtube|youtube)\b/gi, ' '));
+      const itens = PESQ ? await PESQ.videos(q || bruto).catch(() => []) : [];
+      if (itens.length) {
+        return {
+          text: `Achei ${itens.length} vídeos sobre **${tema(q) || tema(bruto)}** direto no YouTube. Cada cartão abre o vídeo no app.` +
+            block({
+              type: 'videos',
+              titulo: `Vídeos · ${tema(q).slice(0, 46) || 'YouTube'}`,
+              subtitulo: 'YouTube · resultados ao vivo',
+              itens,
+            }),
+          sources: itens.slice(0, 5).map((v) => ({ title: v.titulo, url: v.url, domain: 'youtube.com' })),
+        };
+      }
+      return {
+        text: `Não consegui falar com o índice do YouTube agora, então deixei a busca pronta: [abrir resultados de “${tema(q) || tema(bruto)}” no YouTube](https://www.youtube.com/results?search_query=${encodeURIComponent(tema(q) || bruto)}).`,
+        sources: [],
+      };
+    }
+
+    /* 4. Instagram */
+    if (/instagram|insta\b|reels?|perfil de|perfis de|post do|post da/.test(p)) {
+      const q = tema(bruto.replace(/\b(instagram|insta|reels?|perfis?|perfil|posts?|postagens?)\b/gi, ' '));
+      const itens = PESQ ? await PESQ.social(q || bruto).catch(() => []) : [];
+      if (itens.length) {
+        return {
+          text: `Encontrei ${itens.length} ${itens.length > 1 ? 'resultados' : 'resultado'} no Instagram para **${tema(q) || tema(bruto)}**. Dá para abrir a prévia de cada post aqui no chat.` +
+            block({
+              type: 'social',
+              titulo: `Instagram · ${tema(q).slice(0, 46) || 'resultados'}`,
+              subtitulo: 'perfis e publicações públicas',
+              itens,
+            }),
+          sources: itens.slice(0, 5).map((i) => ({ title: i.titulo || i.usuario, url: i.url, domain: 'instagram.com' })),
+        };
+      }
+      return {
+        text: `A busca pública do Instagram não devolveu resultados para **${tema(q) || tema(bruto)}** neste momento. O caminho direto: [explorar “${tema(q) || tema(bruto)}” no Instagram](https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(tema(q) || bruto)}).`,
+        sources: [],
+      };
+    }
+
+    /* 5. notícias de verdade */
+    if (/not[ií]cia|manchete|jornal|aconteceu|últimas|hoje no|news/.test(p)) {
+      const q = tema(bruto.replace(/(not[ií]cias?|manchetes?|últimas|ultimas|sobre|hoje|agora|quero|ver|me\s+mostre)/gi, ' ').replace(/\b(do|da|de|dos|das)\b/gi, ' '));
+      const alvo = tema(q) || tema(bruto);
+      const itens = PESQ ? await PESQ.noticias(alvo).catch(() => []) : [];
+      if (itens.length) {
+        const reais = itens.filter((i) => !i.fallback);
+        return {
+          text: `Levantei ${itens.length} publicações sobre **${alvo}**${reais.length ? ', com as mais recentes primeiro' : ''}. Cada linha abre a matéria no veículo.` +
+            block({
+              type: 'noticias',
+              titulo: `Notícias · ${alvo}`.slice(0, 64),
+              subtitulo: reais.length ? 'últimas publicações encontradas agora' : 'buscas atualizadas na fonte',
+              itens: itens.map((n) => ({
+                titulo: n.title || n.titulo,
+                fonte: n.domain || n.fonte,
+                resumo: n.snippet || n.resumo,
+                url: n.url,
+              })),
+            }),
+          sources: itens.slice(0, 6).map((n) => ({ title: n.title || n.titulo, url: n.url, domain: n.domain })),
+        };
+      }
+    }
+
+    /* 6. pesquisa aberta com fontes reais */
+    if (/fonte|pesquis|busque|procure|quem [ée]|o que [ée]|como funciona|por que|quando|onde|compare|explica/.test(p)) {
+      const lista = (sources && sources.length ? sources : PESQ ? await PESQ.web(bruto).catch(() => []) : []).slice(0, 8);
+      const res = PESQ ? await PESQ.resumo(bruto).catch(() => null) : null;
+      if (res || lista.length) {
+        let texto = '';
+        if (res) {
+          texto += `**${res.titulo}**\n\n${res.texto}\n\n`;
+        }
+        texto += `Reuni ${lista.length} fontes para **${tema(bruto).slice(0, 70)}**. Abra cada uma para conferir o original.`;
+        const spec = {
+          type: 'fontes',
+          titulo: `Fontes · ${tema(bruto).slice(0, 46)}`,
+          subtitulo: 'leitura feita agora, no navegador',
+          itens: lista.map((f) => ({
+            titulo: f.title || f.titulo,
+            resumo: f.snippet || f.resumo,
+            fonte: f.domain,
+            url: f.url,
+          })),
+        };
+        return { text: texto + block(spec), sources: lista };
+      }
+    }
+
+    return null;
+  }
+
+  /* versão síncrona antiga: só os casos que não dependem de rede */
   function demoText(prompt, sources, files) {
     const p = String(prompt || '').toLowerCase();
     const imgs = (files || []).filter((f) => f && f.dataUrl);
@@ -402,48 +635,16 @@
         subtitulo: 'print enviado por você · amplie tocando',
         imagens: imgs.map((f, i) => ({ url: f.dataUrl, legenda: f.name || `imagem ${i + 1}` })),
       };
-      return `Analisei ${imgs.length > 1 ? 'as imagens' : 'a imagem'} que você enviou. Toque para ampliar, ou peça o que quiser sobre o conteúdo (texto, layout, erro de tela, comparação).` + block(spec);
+      return `Recebi ${imgs.length > 1 ? 'as imagens' : 'a imagem'}. Toque para ampliar.` + block(spec);
     }
-    if (/clima|tempo|previs|temperatura|chuva|frio|calor/.test(p)) {
+    if (/clima|temperatura|previs|chuva|frio|calor/.test(p)) {
       const m = prompt.match(/\b(?:em|no|na|de|para)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ ]{2,28})/i);
       const cidade = (m ? m[1] : 'São Paulo')
-        .replace(/\b(agora|hoje|amanh[ãa]|nessa?\s+semana|por\s+favor|aqui|pra(?:ia)?)\b.*$/i, '')
+        .replace(/\b(agora|hoje|amanh[ãa]|nessa?\s+semana|por\s+favor|aqui|pra(ia)?)\b.*$/i, '')
         .trim()
         .replace(/[?!.,]+$/, '') || 'São Paulo';
       return `Buscando o clima de **${cidade}** ao vivo.` +
         block({ type: 'clima', titulo: `Clima · ${cidade}`, cidade, aoVivo: true });
-    }
-    if (/not[ií]cia|manchete|jornal|últimas|aconteceu|news/.test(p)) {
-      const tema = String(prompt).replace(/\s+/g, ' ').trim().slice(0, 60);
-      const q = encodeURIComponent(tema);
-      const fromSources = (sources || []).slice(0, 6).map((s) => ({
-        titulo: s.title,
-        fonte: s.domain,
-        data: 'agora',
-        url: s.url,
-      }));
-      const canais = [
-        ['Google Notícias', 'google', `https://news.google.com/search?q=${q}&hl=pt-BR&gl=BR`],
-        ['G1', 'g1.globo.com', `https://g1.globo.com/busca/?q=${q}`],
-        ['Folha de S.Paulo', 'folha.uol.com.br', `https://search.folha.uol.com.br/search?q=${q}`],
-        ['UOL Notícias', 'noticias.uol.com.br', `https://noticias.uol.com.br/busca.htm?query=${q}`],
-        ['BBC Brasil', 'bbc.com', `https://www.bbc.com/portuguese/topics/cz74k717pw5t`],
-        ['Poder360', 'poder360.com.br', `https://www.poder360.com.br/?s=${q}`],
-      ].map(([fonte, dominio, url]) => ({
-        titulo: `${tema} — ${fonte}`,
-        fonte: dominio,
-        data: 'abrir busca',
-        resumo: `Últimas publicações sobre “${tema}” em ${fonte}.`,
-        url,
-      }));
-      const itens = (fromSources.length ? fromSources : canais).slice(0, 6);
-      return `Montei o artefato de notícias sobre **${tema}**. Toque em cada item para abrir a fonte.` +
-        block({
-          type: 'noticias',
-          titulo: `Notícias · ${tema}`.slice(0, 64),
-          subtitulo: 'busca atualizada na fonte ao abrir · modo demonstração',
-          itens,
-        });
     }
     return null;
   }
@@ -476,19 +677,21 @@
       window.__artObs = obs; // referência viva: sem isso o observador pode ser coletado
     } catch (e) {}
 
-    // rede de segurança: pega re-render total da lista e streaming longo
-    let last = -1;
+    // rede de segurança: re-render total da lista, streaming longo e blocos órfãos
+    let last = '';
     const loop = () => {
       const host = document.querySelector('.chat-list') || document.body;
-      const sig = host.textContent.length;
-      if (sig !== last) { last = sig; schedule(); }
-      setTimeout(loop, 600);
+      const pres = host.querySelectorAll('pre').length;
+      const arts = host.querySelectorAll('.art').length;
+      const sig = host.textContent.length + ':' + pres + ':' + arts;
+      if (sig !== last || pres > 0) { last = sig; schedule(); }
+      setTimeout(loop, 700);
     };
-    setTimeout(loop, 600);
+    setTimeout(loop, 700);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 
-  window.SKYNART = { scan, demoText, render: mount, KNOWN };
+  window.SKYNART = { scan, demoText, build, render: mount, KNOWN };
 })();

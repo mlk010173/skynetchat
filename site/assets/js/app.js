@@ -455,21 +455,7 @@
     const prompt = (text || '').trim();
     const files = pendingFiles.slice();
     if ((!prompt && !files.length) || generating) return;
-    if (!S.logged) {
-      if ((S.guestUsed || 0) >= 3) {
-        try { localStorage.setItem('skynet-draft', prompt); } catch (err) {}
-        toast('Limite de convidado. Crie sua conta para continuar');
-        setTimeout(() => (location.href = 'login.html'), 900);
-        return;
-      }
-      S.guestUsed = (S.guestUsed || 0) + 1;
-      save();
-      toast('Modo convidado: ' + (3 - S.guestUsed) + ' restante(s)');
-    }
-    if (S.logged && !S.pro && S.credits <= 0) {
-      openPanel('pro');
-      return;
-    }
+    // sem limite de convidado, sem cota de mensagens: uso livre
 
     hideWelcome();
     ensureList();
@@ -505,8 +491,6 @@
     generating = true;
     abortCtrl = new AbortController();
     setComposerBusy(true);
-    if (!S.pro && S.logged) S.credits = Math.max(0, S.credits - 1);
-    renderCredits();
 
     const onText = (t) => { acc += t; ctrl.text(acc); };
     const onEvent = (ev) => {
@@ -712,9 +696,8 @@
 
   /* --------------------------- credits ------------------------------ */
   function renderCredits() {
-    const el = $$('span, div').find((e) => /^\s*\d+\/\d+\s*$/.test(e.textContent || '') && e.children.length === 0);
-    const safe = Math.max(0, Math.min(5, Number.isFinite(S.credits) ? S.credits : 5));
-    if (el) el.textContent = `${safe}/5`;
+    const el = $$('span, div').find((e) => /^\s*(\d+\/\d+|∞|ilimitado)\s*$/i.test(e.textContent || '') && e.children.length === 0);
+    if (el) el.textContent = 'ilimitado';
   }
 
   /* --------------------------- panels ------------------------------- */
