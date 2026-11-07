@@ -29,14 +29,21 @@ async function dono(req: Request): Promise<string | null> {
   const conta = await contaDaSessao(req);
   if (conta?.id) return conta.id;
   const auth = (req.headers.get("Authorization") ?? "").trim();
-  if (auth.startsWith("Bearer ") && auth.length > 30) {
-    const { data } = await svc().auth.getUser(auth.slice(7));
-    if (data?.user?.id) return data.user.id;
-    const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    if (chave && auth === `Bearer ${chave}`) {
-      const cabecalho = (req.headers.get("x-conta-id") ?? "").trim();
-      if (cabecalho) return cabecalho;
-    }
+  if (!auth.startsWith("Bearer ") || auth.length < 30) return null;
+  const token = auth.slice(7);
+
+  // 1) usuário logado (JWT do Supabase Auth)
+  const { data } = await svc().auth.getUser(token);
+  if (data?.user?.id) return data.user.id;
+
+  // 2) chamada interna (chat -> sandbox): o token precisa ser de service role de verdade.
+  // Em vez de comparar string com o env (a chave do projeto pode ser rotacionada),
+  // provamos o poder da chave chamando a Admin API: só service role consegue.
+  const cliente = createClient(Deno.env.get("SUPABASE_URL")!, token, { auth: { persistSession: false } });
+  const { error } = await cliente.auth.admin.listUsers({ page: 1, perPage: 1 });
+  if (!error) {
+    const cabecalho = (req.headers.get("x-conta-id") ?? "").trim();
+    if (cabecalho) return cabecalho;
   }
   return null;
 }
@@ -247,7 +254,7 @@ async function simples(conta: string, cwd: string, linha: string): Promise<{ ok:
 
 /** Executa a linha inteira: redirecionamentos > e >>, depois && e ; */
 async function executar(conta: string, cwdInicial: string, linhaBruta: string) {
-  const linha = String(linhaBruta ?? "").trim().slice(0, 800);
+  const linha = String(linhaBruta ?? "").trim().slice(0, 400000);
   if (!linha) return { ok: true, saida: "", cwd: cwdInicial };
   let cwd = cwdInicial;
   const saidas: string[] = [];

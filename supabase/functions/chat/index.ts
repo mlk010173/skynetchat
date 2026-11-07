@@ -366,14 +366,20 @@ function detectTools(text: string): DetectedTool[] {
   return uniqueTools;
 }
 
-async function callTool(tool: DetectedTool, conta: string | null = null) {
+async function callTool(tool: DetectedTool, conta: string | null = null, jwt: string | null = null) {
   if (tool.name === "sandbox") {
     const base = Deno.env.get("SUPABASE_URL")!;
     const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     try {
       const resposta = await fetch(`${base}/functions/v1/sandbox?action=exec`, {
         method: "POST",
-        headers: { "content-type": "application/json", apikey: chave, authorization: `Bearer ${chave}`, "x-conta-id": String(conta ?? "") },
+        headers: {
+          "content-type": "application/json",
+          apikey: chave,
+          // repassa quem chamou (JWT do usuário); sem JWT, usa service role + conta
+          authorization: jwt ? `Bearer ${jwt}` : `Bearer ${chave}`,
+          "x-conta-id": String(conta ?? ""),
+        },
         body: JSON.stringify({ cmd: String((tool.payload as any)?.cmd ?? ""), cwd: String((tool.payload as any)?.cwd ?? "") }),
       });
       const dados = await resposta.json();
@@ -753,6 +759,12 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
         : `A biblioteca de habilidades não respondeu a esse pedido (${String(data?.erro ?? "sem correspondência")}). Se for uma conta simples, resolva diretamente; senão diga o que faltou.`;
       break;
     }
+    case "sandbox": {
+      const saida = String(data.saida ?? "").slice(0, 4000) || "(sem saída)";
+      contextText = `SAÍDA REAL DO SANDBOX ISOLADO (pasta da conta, cwd "/${data.cwd ?? ""}"). ` +
+        `Reproduza estes dados exatamente como estão e não invente nada:\n${saida}`;
+      break;
+    }
     default: {
       contextText = `Resultado da ferramenta ${toolName}: ${JSON.stringify(data)}`;
     }
@@ -773,6 +785,7 @@ Deno.serve(async (req) => {
   let nickname: string | null = null;
   let papel: "dev" | "user" = "user";
   const authHeader = req.headers.get("Authorization") ?? "";
+  const jwtDoUsuario = /^Bearer\s+ey/i.test(authHeader) ? authHeader.slice(7) : null;
   if (authHeader.startsWith("Bearer ") && authHeader.length > 30) {
     const { data } = await svc.auth.getUser(authHeader.slice(7));
     userId = data?.user?.id ?? null;
@@ -877,9 +890,11 @@ Deno.serve(async (req) => {
   // ---- ROTEADOR AUTOMÁTICO (em paralelo com o resto: latência importa) ----
   // O cliente pede "auto" (ou "melhor", ou um id). O servidor monta a fila com base
   // em saúde, latência e prioridade; se o primeiro falhar ou demorar, o próximo assume.
+  // ferramenta em jogo = precisa acertar o conteúdo real, então nada de tier rápido
+  const ferramentasPrevistas = detectTools(content);
   const rotaP = pickChain(svc, body.model, {
-    // pedido curto não precisa do modelo mais forte: começa pelo tier rápido
-    rapido: content.length <= 180,
+    // pedido curto e sem ferramenta não precisa do modelo mais forte: começa pelo rápido
+    rapido: content.length <= 180 && ferramentasPrevistas.length === 0,
   });
   const rota = await rotaP;
   if (!rota.fila.length) {
@@ -1085,7 +1100,7 @@ Deno.serve(async (req) => {
         // Detecção e execução de ferramentas
         const toolsToRun = retomada
           ? [{ name: retomada.ferramenta, payload: retomada.payload }]
-          : detectTools(content);
+          : ferramentasPrevistas;
         const toolContexts: string[] = [];
         const fontesColetadas: { titulo: string; url: string }[] = [];
         let imagemEntregue = false;
@@ -1185,7 +1200,7 @@ Deno.serve(async (req) => {
 
           let toolResult: any;
           try {
-            toolResult = await callTool(tool, userId);
+            toolResult = await callTool(tool, userId ?? contaId, jwtDoUsuario);
           } catch (e) {
             toolResult = { ok: false, erro: `ferramenta falhou: ${String((e as Error)?.message ?? e).slice(0, 120)}` };
           }
@@ -1205,7 +1220,11 @@ Deno.serve(async (req) => {
               if (d?.ok) toolResult = { ok: true, url: d.data_url, provedor: d.provedor, modelo: d.modelo };
             } catch { /* segue com erro do agente */ }
           }
-          const { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
+          let { fontes, contextText } = processToolResult(tool.name, tool.payload, toolResult);
+          // sandbox: garante que a saída real chegue ao modelo (sem invenção)
+          if (tool.name === "sandbox" && (toolResult as any)?.saida) {
+            contextText = `SAÍDA REAL DO SANDBOX ISOLADO (pasta da conta):\n${String((toolResult as any).saida).slice(0, 4000)}\n\nResponda usando exatamente esses dados.`;
+          }
 
           if (toolResult && toolResult.ok) {
             if (tool.name === "print" && toolResult?.ok && toolResult.url) {
@@ -1344,7 +1363,9 @@ Deno.serve(async (req) => {
         }
 
         if (toolContexts.length > 0) {
-          systemParts.push(
+          // cuidado: o prompt enviado é partesFinal (versão enxuta); empurrar em systemParts
+          // fazia o contexto das ferramentas nunca chegar ao modelo
+          partesFinal.push(
             `CONTEXTO OBTIDO DAS FERRAMENTAS AO VIVO (${new Date().toISOString()}):\n${toolContexts.join("\n\n")}\n\nREQUISITO OBRIGATÓRIO: Responda ao usuário utilizando as informações fornecidas no contexto das ferramentas. Se houver fontes, cite-as explicitamente com seus nomes/links.`
           );
           llmMessages[0] = { role: "system", content: partesFinal.join("\n\n") };
