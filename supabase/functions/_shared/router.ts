@@ -149,7 +149,7 @@ function pontuacao(m: ModelInfo, h: HealthRow | undefined): number {
 export async function pickChain(
   svc: any,
   pedido: string | undefined,
-  opts: { apenasConhecidos?: boolean } = {},
+  opts: { apenasConhecidos?: boolean; rapido?: boolean } = {},
 ): Promise<{ fila: ModelInfo[]; pedido: string; auto: boolean }> {
   const todos = catalog().filter((m) => providerOf(m.provider));
   if (!todos.length) return { fila: [], pedido: pedido ?? "auto", auto: true };
@@ -164,10 +164,19 @@ export async function pickChain(
   const ordenado = [...base].sort((a, b) => pontuacao(b, h.get(b.id)) - pontuacao(a, h.get(a.id)));
 
   let fila = ordenado;
+
+  // MODO RÁPIDO: pedido curto começa pelos modelos leves/velozes e mantém os fortes
+  // como rede de segurança (se o leve falhar, o potente responde em seguida).
+  if (opts.rapido && (auto || pedidoLimpo === "melhor")) {
+    const leves = ordenado.filter((m) => m.tier === "rapido" || m.tier === "equilibrado");
+    const fortes = ordenado.filter((m) => m.tier !== "rapido" && m.tier !== "equilibrado");
+    if (leves.length) fila = [...leves, ...fortes];
+  }
+
   const pedidoValido = todos.find((m) => m.id.toLowerCase() === pedidoLimpo);
   if (pedidoValido) {
     fila = [pedidoValido, ...ordenado.filter((m) => m.id !== pedidoValido.id)];
-  } else if (pedidoLimpo === "melhor" || pedidoLimpo === "best") {
+  } else if ((pedidoLimpo === "melhor" || pedidoLimpo === "best") && !opts.rapido) {
     const fortes = ordenado.filter((m) => m.tier === "raciocinio" || m.tier === "potente");
     const resto = ordenado.filter((m) => m.tier !== "raciocinio" && m.tier !== "potente");
     fila = [...fortes, ...resto];

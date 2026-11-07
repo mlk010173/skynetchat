@@ -240,9 +240,15 @@ function detectTools(text: string): DetectedTool[] {
   }
 
   // 2. 'hoje/agora/atual/notíc.../pesquis.../quem é X atualmente' -> web_pesquisar
+  // (hora do dia é ferramenta local: não pode cair na pesquisa, que custa segundos)
+  const pedeHoraLocal = /\b(que horas|horas s[ãa]o|hora agora|hor[áa]rio de bras[íi]lia)\b/i.test(text);
+  const pedeCambio = /\b(cota[çc][ãa]o|c[âa]mbio|d[óo]lar|euro|bitcoin|btc|libra|peso|iene)\b/i.test(text);
   if (
-    /\b(hoje|agora|atual|atualmente|notíc|noticia|noticias|pesquis|pesquisa|pesquise|busca|buscar)\b/i.test(text) ||
-    /\bquem [eé]\b/i.test(text)
+    !pedeHoraLocal && !pedeCambio && (
+      /\b(notíc|noticia|noticias|pesquis|pesquisa|pesquise|busca|buscar)\b/i.test(text) ||
+      /\b(hoje|agora|atual|atualmente|últimas|ultimas|lan[çc]ou|cota[çc][ãa]o|pre[çc]o)\b[\s\S]{0,40}\b(not[íi]cia|novidade|vers[ãa]o|pre[çc]o|d[óo]lar|quem|qual|quando|onde)\b/i.test(text) ||
+      /\bquem [eé]\b[\s\S]{0,30}\b(atualmente|hoje)\b/i.test(text)
+    )
   ) {
     const limpa = text
       .replace(/^(por favor[, ]*)?(pesquise|pesquisar|pesquisa|busque|buscar|busca|procure|procurar)\s*(na web|no google|pra mim|para mim|e me diga)?[: ]*/i, "")
@@ -320,6 +326,12 @@ function detectTools(text: string): DetectedTool[] {
     }
   }
 
+  // 6z. sandbox isolado: "/sandbox <comando>"
+  const sbxMatch = text.match(/^\s*\/sandbox\s+([\s\S]+)$/i);
+  if (sbxMatch) {
+    tools.unshift({ name: "sandbox", payload: { cmd: sbxMatch[1].trim().slice(0, 600) } });
+  }
+
   // 7. terminal: SOMENTE com comando explicito "/terminal ..." ou "executar comando ..."
   const termMatch = text.match(/^\s*\/terminal\s+(.+)$/i) || text.match(/\bexecut(?:e|ar)\s+(?:o\s+)?comando\s+(.+)$/i);
   if (termMatch) {
@@ -348,6 +360,21 @@ function detectTools(text: string): DetectedTool[] {
 }
 
 async function callTool(tool: DetectedTool, conta: string | null = null) {
+  if (tool.name === "sandbox") {
+    const base = Deno.env.get("SUPABASE_URL")!;
+    const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    try {
+      const resposta = await fetch(`${base}/functions/v1/sandbox?action=exec`, {
+        method: "POST",
+        headers: { "content-type": "application/json", apikey: chave, authorization: `Bearer ${chave}`, "x-conta-id": String(conta ?? "") },
+        body: JSON.stringify({ cmd: String((tool.payload as any)?.cmd ?? ""), cwd: String((tool.payload as any)?.cwd ?? "") }),
+      });
+      const dados = await resposta.json();
+      return { ok: Boolean(dados?.ok), ...dados };
+    } catch (e) {
+      return { ok: false, erro: `sandbox falhou: ${String((e as Error)?.message ?? e).slice(0, 120)}` };
+    }
+  }
   if (tool.name === "habilidade") {
     const texto = String((tool.payload as any)?.texto ?? "");
     const base = Deno.env.get("SUPABASE_URL")!;
@@ -840,10 +867,14 @@ Deno.serve(async (req) => {
   }
   const baseUrl = (Deno.env.get("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/+$/, "");
 
-  // ---- ROTEADOR AUTOMÁTICO ----
+  // ---- ROTEADOR AUTOMÁTICO (em paralelo com o resto: latência importa) ----
   // O cliente pede "auto" (ou "melhor", ou um id). O servidor monta a fila com base
   // em saúde, latência e prioridade; se o primeiro falhar ou demorar, o próximo assume.
-  const rota = await pickChain(svc, body.model);
+  const rotaP = pickChain(svc, body.model, {
+    // pedido curto não precisa do modelo mais forte: começa pelo tier rápido
+    rapido: content.length <= 180,
+  });
+  const rota = await rotaP;
   if (!rota.fila.length) {
     return json({
       ok: false,
@@ -854,22 +885,25 @@ Deno.serve(async (req) => {
   const fila = rota.fila;
   const model = (body.model ?? "auto").trim() || "auto";
 
-  // ---- memória vetorial: embeddings da mensagem (melhor esforço) ----
+  // ---- memória vetorial: só vale a pena em pedido com contexto (custa ~300ms) ----
   const embedModel = Deno.env.get("SKYNET_EMBEDDING_MODEL") ?? "text-embedding-3-small";
-  let userEmbedding: number[] | null = null;
-  try {
-    const embRes = await fetch(`${baseUrl}/embeddings`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: embedModel, input: content.slice(0, 2000) }),
-    });
-    const embData = await embRes.json().catch(() => null);
-    if (embRes.ok && Array.isArray(embData?.data?.[0]?.embedding)) {
-      userEmbedding = embData.data[0].embedding;
-    }
-  } catch { /* memória é opcional — o chat continua sem ela */ }
+  const buscaVetorial = content.length >= 40
+    ? (async (): Promise<number[] | null> => {
+      try {
+        const embRes = await fetch(`${baseUrl}/embeddings`, {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: embedModel, input: content.slice(0, 2000) }),
+        });
+        const embData = await embRes.json().catch(() => null);
+        if (embRes.ok && Array.isArray(embData?.data?.[0]?.embedding)) return embData.data[0].embedding;
+      } catch { /* memória é opcional — o chat continua sem ela */ }
+      return null;
+    })()
+    : Promise.resolve(null);
 
   // ---- memórias relevantes de OUTRAS conversas (pgvector) ----
+  const userEmbedding = await buscaVetorial;
   let memories: string[] = [];
   if (userId && !contaId && userEmbedding) {
     try {
@@ -923,16 +957,19 @@ Deno.serve(async (req) => {
 
   // ---- contexto das últimas 30 mensagens + memórias ----
   const messages: { role: string; content: string }[] = [];
-  if (convId && (userId || contaId)) {
-    const { data: history } = await svc
+  const historicoP = convId && (userId || contaId)
+    ? svc
       .from("messages")
       .select("role, content")
       .eq("conversation_id", convId)
       .order("created_at", { ascending: false })
-      .limit(30);
-    if (history?.length) {
-      for (const m of history.reverse()) messages.push({ role: m.role, content: m.content });
-    }
+      .limit(30)
+    : Promise.resolve({ data: [] as { role: string; content: string }[] });
+  const minhasP = userId ? memoriasDaConta(userId) : Promise.resolve([] as string[]);
+  const [histResp, minhas] = await Promise.all([historicoP, minhasP]);
+  const history = (histResp as any)?.data as { role: string; content: string }[] | undefined;
+  if (history?.length) {
+    for (const m of history.reverse()) messages.push({ role: m.role, content: m.content });
   }
   const systemParts = [
     "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português.",
@@ -948,11 +985,13 @@ Deno.serve(async (req) => {
     "MÍDIA: o sistema tem player próprio (YouTube, Spotify, SoundCloud, Vimeo, MP4/MP3). Se o usuário pedir para tocar/abrir/colocar música, vídeo, filme ou playlist, o player é aberto automaticamente na conversa: confirme em UMA frase curta, com o título. Nunca responda apenas com o link.",
     "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com '-' para passos, tabelas curtas quando comparar coisas, ```linguagem para trechos de código, ![descrição](URL) para mostrar uma imagem e links de imagem/vídeo (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
   ];
-  if (nickname) systemParts.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
-  if (userId) {
-    const minhas = await memoriasDaConta(userId);
-    if (minhas.length) memories = [...minhas, ...memories];
-  }
+  // pedido curto não precisa do manual inteiro: menos tokens na entrada, primeira palavra mais rápida
+  const promptEnxuto = content.length <= 60;
+  const partesFinal = promptEnxuto
+    ? systemParts.filter((_, i) => [0, 2, 5, 6].includes(i))
+    : systemParts;
+  if (nickname) partesFinal.push(`O apelido do usuário é "${nickname}". Trate-o por esse nome quando for natural.`);
+  if (minhas?.length) memories = [...minhas, ...memories];
   if (memories.length) {
     systemParts.push(
       `Memórias relevantes de conversas anteriores deste usuário (use se forem úteis):\n- ${memories.join("\n- ")}`,
@@ -969,8 +1008,10 @@ Deno.serve(async (req) => {
   }
   const retomadaContexto = retomada;
 
+  // teto de saída proporcional ao pedido: resposta curta termina antes
+  const limiteSaida = content.length <= 60 ? 260 : content.length <= 200 ? 512 : 1024;
   const llmMessages = [
-    { role: "system", content: systemParts.join("\n\n") },
+    { role: "system", content: partesFinal.join("\n\n") },
     ...messages,
     {
       role: "user",
@@ -1298,7 +1339,7 @@ Deno.serve(async (req) => {
           systemParts.push(
             `CONTEXTO OBTIDO DAS FERRAMENTAS AO VIVO (${new Date().toISOString()}):\n${toolContexts.join("\n\n")}\n\nREQUISITO OBRIGATÓRIO: Responda ao usuário utilizando as informações fornecidas no contexto das ferramentas. Se houver fontes, cite-as explicitamente com seus nomes/links.`
           );
-          llmMessages[0] = { role: "system", content: systemParts.join("\n\n") };
+          llmMessages[0] = { role: "system", content: partesFinal.join("\n\n") };
         }
 
         // Abre o stream em um modelo específico, resolvendo provedor e chave.
@@ -1314,7 +1355,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               model: mid,
               messages: llmMessages,
-              max_tokens: 1024,
+              max_tokens: limiteSaida,
               temperature: 0.7,
               stream: true,
             }),
