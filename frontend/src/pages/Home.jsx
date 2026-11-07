@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import MediaPlayer from "../media.jsx";
 import ClimaCard from "../clima.jsx";
 import { NavegadorAoVivo } from "../artefato.jsx";
-import { criarWidget, carregarWidgets, salvarWidgets } from "../widgets/registry.js";
+import { chaveStorage, criarWidget, carregarWidgets, daSpec, porPalavras, salvarWidgets } from "../widgets/registry.js";
 import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
@@ -100,8 +100,11 @@ export default function Home() {
   const [ph, setPh] = useState(0);
   const [logged, setLogged] = useState(false);
   const navigate = useNavigate();
-  const { papel: papelConta } = useAuth();
+  const { usuario: contaAtual, papel: papelConta } = useAuth();
   const ehDev = papelConta === "dev";
+  // id do usuário atual em ref: o widget precisa ir para a mesma chave que o painel lê
+  const usuarioRef = useRef(contaAtual || null);
+  useEffect(() => { usuarioRef.current = contaAtual || null; }, [contaAtual]);
   const [model, setModel] = useState("");
   // 4.0 = roteamento rápido · 4.5 Pro = roteador pede o modelo mais forte
   const [modo, setModo] = useState(() => localStorage.getItem("skynet-modo") || "4.5");
@@ -425,12 +428,22 @@ export default function Home() {
         return copy;
       }),
       onWidget: (spec) => setMessages((prev) => {
-        const novo = criarWidget(spec?.tipo || "texto", {});
-        const atual = carregarWidgets();
-        salvarWidgets([...atual, novo]);
+        // monta o widget a partir do pedido (tipo + config reais) e grava na chave do painel
+        const doPedido = spec?.pedido ? porPalavras(spec.pedido) : null;
+        const daSpecSegura = doPedido ? null : daSpec(spec);
+        const novo = doPedido
+          || (daSpecSegura?.ok ? daSpecSegura.widget : null)
+          || criarWidget(spec?.tipo || "texto", { titulo: spec?.titulo });
+        const marca = { tipo: novo?.tipo || spec?.tipo, titulo: novo?.titulo || spec?.titulo || "Widget" };
+        if (novo) {
+          const chave = chaveStorage(usuarioRef.current?.id);
+          const atual = carregarWidgets(chave);
+          salvarWidgets(chave, [...atual, novo]);
+          marca.salvo = true;
+          marca.total = atual.length + 1;
+        }
         const copy = [...prev];
         const last = copy[copy.length - 1];
-        const marca = { tipo: spec?.tipo, titulo: spec?.titulo || novo.titulo };
         if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", widgetCriado: marca }); return copy; }
         copy[copy.length - 1] = { ...last, widgetCriado: marca };
         return copy;
@@ -982,9 +995,13 @@ export default function Home() {
                     {message.print && <NavegadorAoVivo alvo={message.print.alvo} inicial={message.print.url} provedor={message.print.provedor} />}
                     {message.widgetCriado && (
                       <a className="criado-card" href="#/widgets">
-                        <b>Widget criado</b>
+                        <b>{message.widgetCriado.salvo ? "Widget salvo no painel" : "Widget pronto"}</b>
                         <span>{message.widgetCriado.titulo}</span>
-                        <em>Abrir painel →</em>
+                        <em>
+                          {message.widgetCriado.salvo
+                            ? `Abrir painel (${message.widgetCriado.total}) →`
+                            : "Abrir painel →"}
+                        </em>
                       </a>
                     )}
                     {message.arquivo && (

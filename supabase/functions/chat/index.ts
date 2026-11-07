@@ -1378,8 +1378,15 @@ Deno.serve(async (req) => {
             }
             if (tool.name === "widget" && toolResult?.ok) {
               entregaDireta = {
-                quadro: { tipo: "widget", spec: { tipo: toolResult.tipo, titulo: toolResult.titulo } },
-                texto: `Criei o **${toolResult.titulo}**. Ele já foi salvo no seu painel de widgets.`,
+                quadro: {
+                  tipo: "widget",
+                  spec: {
+                    tipo: toolResult.tipo,
+                    titulo: toolResult.titulo,
+                    pedido: String((toolResult as Record<string, unknown>).pedido ?? ""),
+                  },
+                },
+                texto: `Criei o **${toolResult.titulo}** e já mandei para o seu painel de widgets.`,
               };
             }
             if (tool.name === "arquivo" && toolResult?.ok) {
