@@ -67,21 +67,91 @@ export function StatusBody({ config, tick }) {
 
 /* ---------- métricas com gráfico ---------- */
 
+const CODIGO_CLIMA = (c) => {
+  const n = Number(c);
+  if ([0].includes(n)) return "céu limpo";
+  if ([1, 2].includes(n)) return "parcialmente nublado";
+  if (n === 3) return "nublado";
+  if ([45, 48].includes(n)) return "nevoeiro";
+  if (n >= 51 && n <= 57) return "garoa";
+  if (n >= 61 && n <= 67) return "chuva";
+  if (n >= 71 && n <= 77) return "neve";
+  if (n >= 80 && n <= 82) return "pancadas de chuva";
+  if (n >= 95) return "tempestade";
+  return "tempo estável";
+};
+
+/** Monta o formato que o ClimaCard desenha a partir do open-meteo. */
+async function climaAberto(cidade) {
+  const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cidade)}&count=1&language=pt&format=json`).then((r) => r.json());
+  const local = geo?.results?.[0];
+  if (!local) return null;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${local.latitude}&longitude=${local.longitude}`
+    + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code"
+    + "&hourly=temperature_2m,precipitation_probability,wind_speed_10m"
+    + "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1";
+  const d = await fetch(url).then((r) => r.json());
+  if (!d?.current) return null;
+  const horas = (d.hourly?.time ?? []).slice(0, 24).map((hora, i) => ({
+    hora: String(hora).slice(11, 16),
+    temp: Number(d.hourly.temperature_2m?.[i]),
+    chuva: Number(d.hourly.precipitation_probability?.[i] ?? 0),
+    vento: Number(d.hourly.wind_speed_10m?.[i] ?? 0),
+  })).filter((h) => Number.isFinite(h.temp));
+  return {
+    ok: true,
+    cidade: local.name,
+    pais: local.country_code,
+    agora: {
+      temp: Math.round(d.current.temperature_2m),
+      sensacao: Math.round(d.current.apparent_temperature),
+      umidade: Math.round(d.current.relative_humidity_2m),
+      vento: Math.round(d.current.wind_speed_10m),
+      descricao: CODIGO_CLIMA(d.current.weather_code),
+    },
+    hoje: { min: Math.round(d.daily?.temperature_2m_min?.[0]), max: Math.round(d.daily?.temperature_2m_max?.[0]) },
+    horas,
+  };
+}
+
 export function ClimaBody({ config, tick }) {
   const cidade = config?.cidade || "São Paulo";
   const [dados, setDados] = useState(null);
   const [erro, setErro] = useState("");
   const carregar = useCallback(async () => {
     setErro("");
+    // 1) open-meteo: dado aberto, com horas para o gráfico
+    const aberto = await climaAberto(cidade).catch(() => null);
+    if (aberto) { setDados(aberto); return; }
+    // 2) plano B: a ponte do agente (sem horas, só o resumo)
     const r = await api("agent", { method: "POST", body: { tool: "clima", payload: { cidade } } }).catch(() => null);
-    const d = r?.resultado ?? r;
-    if (d && (d.agora || d.temperatura_c || d.cidade)) { setDados(d); return; }
-    setErro(r?.error || "não consegui consultar o clima agora");
+    const b = r?.resultado ?? r;
+    if (b?.cidade) {
+      const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : undefined);
+      setDados({
+        ok: true,
+        cidade: b.cidade,
+        agora: { temp: num(b.temperatura_c), sensacao: num(b.sensacao_c), umidade: num(b.umidade), vento: num(b.vento_kmh), descricao: b.descricao },
+        hoje: { min: num(b.min), max: num(b.max) },
+        horas: [],
+      });
+      return;
+    }
+    setErro(b?.error || "não consegui consultar o clima agora");
   }, [cidade]);
   useEffect(() => { carregar(); }, [carregar, tick]);
   if (erro) return <p className="wg-erro">{erro}</p>;
   if (!dados) return <Skeleton linhas={3} />;
-  return <ClimaCard dados={dados} />;
+  return (
+    <>
+      {!dados.horas?.length && (
+        <p className="wg-clima-linha">
+          {[dados.agora?.temp !== undefined ? `${dados.agora.temp}°C` : null, dados.agora?.descricao, dados.agora?.sensacao !== undefined ? `sensação ${dados.agora.sensacao}°C` : null, dados.agora?.umidade !== undefined ? `umidade ${dados.agora.umidade}%` : null].filter(Boolean).join(" · ")}
+        </p>
+      )}
+      <ClimaCard dados={dados} />
+    </>
+  );
 }
 
 export function MetricasBody({ config, tick }) {
