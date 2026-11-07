@@ -8,7 +8,11 @@ export default function ClimaCard({ dados }) {
   const agora = dados?.agora ?? {};
   const hoje = dados?.hoje ?? {};
 
-  const serie = horas.map((h) => (modo === "temp" ? h.temp : modo === "chuva" ? h.chuva : h.vento));
+  // só valores numéricos entram no gráfico: dado faltando virava "NaN" e quebrava o SVG
+  const serie = horas
+    .map((h) => (modo === "temp" ? h.temp : modo === "chuva" ? h.chuva : h.vento))
+    .map((v) => (typeof v === "number" && Number.isFinite(v) ? v : null));
+  const temSerie = serie.length > 1 && serie.every((v) => v !== null);
   const min = Math.min(...serie, 0);
   const max = Math.max(...serie, 1);
   const L = 320, A = 110, P = 8;
@@ -17,8 +21,14 @@ export default function ClimaCard({ dados }) {
     const y = A - P - ((v - min) / Math.max(1, max - min)) * (A - 2 * P);
     return [x, y];
   };
-  const linha = serie.map((v, i) => `${i === 0 ? "M" : "L"}${ponto(v, i).join(",")}`).join(" ");
-  const area = `${linha} L${ponto(serie[serie.length - 1] ?? 0, serie.length - 1)[0]},${A - P} L${P},${A - P} Z`;
+  const segura = (v, i) => {
+    const [x, y] = ponto(v, i);
+    return [Number.isFinite(x) ? x : P, Number.isFinite(y) ? y : A / 2];
+  };
+  const linha = temSerie ? serie.map((v, i) => `${i === 0 ? "M" : "L"}${segura(v, i).join(",")}`).join(" ") : "";
+  const area = temSerie
+    ? `${linha} L${segura(serie[serie.length - 1], serie.length - 1)[0]},${A - P} L${P},${A - P} Z`
+    : "";
   const destaque = ativo >= 0 ? horas[ativo] : null;
   const cor = modo === "temp" ? "#ff5757" : modo === "chuva" ? "#38bdf8" : "#a3e635";
   const unidade = modo === "temp" ? "°C" : modo === "chuva" ? "%" : " km/h";
