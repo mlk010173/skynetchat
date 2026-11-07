@@ -235,13 +235,16 @@ function detectTools(text: string): DetectedTool[] {
     tools.unshift({ name: "print", payload: { url: link.replace(/[.,;]$/, "") } });
   }
 
+  // 1c. pedido de widget/painel tem prioridade: senão "crie um widget de notícias" vira busca
+  const pedeWidget = /\b(cria|criar|monta|montar|adiciona|coloca|gera|gerar|quero)\b[\s\S]{0,24}\b(widget|painel|card)\b/i.test(text);
+
   // 1d. "toca X", "abre o youtube e toca Y", "coloca uma playlist", link de música -> midia
   const linkMidiaDireta = text.match(/https?:\/\/\S+\.(?:mp3|m4a|wav|ogg|opus|mp4|webm|flac)(?:\?\S*)?/i)?.[0] ?? "";
   const pedeMidia =
     /\b(toca|toque|tocar|coloca|colocar|escuta|escutar|ouvir|assistir|assiste|bota|botar|reproduz\w*|play)\b[\s\S]{0,48}?\b(m[uú]sica|som|playlist|[aá]lbum|v[ií]deo|clipe|filme|trilha|podcast|lofi|youtube|spotify|soundcloud|deezer|[aá]udio)\b/i.test(text) ||
     /\b(youtube\.com|youtu\.be|open\.spotify\.com|soundcloud\.com|vimeo\.com)\b/i.test(text) ||
     Boolean(linkMidiaDireta);
-  if (pedeMidia) {
+  if (pedeMidia && !pedeWidget) {
     const provedor = linkMidiaDireta
       ? "arquivo"
       : /spotify/i.test(text) ? "spotify" : /soundcloud/i.test(text) ? "soundcloud" : /vimeo/i.test(text) ? "vimeo" : "youtube";
@@ -263,7 +266,7 @@ function detectTools(text: string): DetectedTool[] {
   const pedeHoraLocal = /\b(que horas|horas s[ãa]o|hora agora|hor[áa]rio de bras[íi]lia)\b/i.test(text);
   const pedeCambio = /\b(cota[çc][ãa]o|c[âa]mbio|d[óo]lar|euro|bitcoin|btc|libra|peso|iene)\b/i.test(text);
   if (
-    !pedeHoraLocal && !pedeCambio && (
+    !pedeHoraLocal && !pedeCambio && !pedeWidget && (
       /\b(notíc|noticia|noticias|pesquis|pesquisa|pesquise|busca|buscar)\b/i.test(text) ||
       /\b(hoje|agora|atual|atualmente|últimas|ultimas|lan[çc]ou|cota[çc][ãa]o|pre[çc]o)\b[\s\S]{0,40}\b(not[íi]cia|novidade|vers[ãa]o|pre[çc]o|d[óo]lar|quem|qual|quando|onde)\b/i.test(text) ||
       /\bquem [eé]\b[\s\S]{0,30}\b(atualmente|hoje)\b/i.test(text)
