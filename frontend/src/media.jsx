@@ -33,7 +33,8 @@ export function embedDeMidia(url) {
   if (p === "soundcloud") return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff4d4d&hide_related=true&show_comments=false`;
   if (p === "youtube") {
     const id = String(url).match(/(?:v=|youtu\.be\/|live\/|shorts\/|embed\/)([\w-]{11})/)?.[1];
-    return id ? `https://www.youtube.com/embed/${id}` : "";
+    // autoplay: o clique em "enviar" conta como gesto do usuário e libera o som
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1&playsinline=1&rel=0&modestbranding=1&enablejsapi=1` : "";
   }
   if (p === "twitch") {
     const canal = String(url).match(/twitch\.tv\/([\w]+)/i)?.[1];
@@ -78,6 +79,30 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
   const [texto, setTexto] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
+  const [precisaToque, setPrecisaToque] = useState(false);
+  const frameRef = useRef(null);
+  const caixaRef = useRef(null);
+
+  // ao abrir o player, leva ele para a tela (no celular ele nascia abaixo do campo de texto)
+  useEffect(() => {
+    if (!atual.embed || compacto) return;
+    const alvo = caixaRef.current;
+    if (!alvo) return;
+    const t = setTimeout(() => alvo.scrollIntoView({ behavior: "smooth", block: "center" }), 220);
+    // se em 3,5s o vídeo não começou, oferece o toque (navegador pode ter bloqueado o som)
+    const t2 = setTimeout(() => setPrecisaToque(true), 3500);
+    return () => { clearTimeout(t); clearTimeout(t2); };
+  }, [atual.embed, compacto]);
+
+  const tocarComSom = useCallback(() => {
+    const f = frameRef.current;
+    try {
+      f?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: [] }), "*");
+      f?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "unMute", args: [] }), "*");
+      f?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "setVolume", args: [100] }), "*");
+    } catch { /* iframe de outro domínio: o botão de abrir resolve */ }
+    setPrecisaToque(false);
+  }, []);
   const [lista, setLista] = useState([]);
   const caixa = useRef(null);
 
@@ -115,19 +140,20 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
     }
     return (
       <iframe
+        ref={frameRef}
         className="mp-frame"
         src={atual.embed}
         title={atual.titulo || "player"}
         style={altura ? { height: `${altura}px` } : undefined}
         allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
-        loading="lazy"
+        loading="eager"
       />
     );
   }, [atual, altura, ehArquivo, ehAudio, ehHls]);
 
   return (
-    <section className={`mp ${compacto ? "mp-compacto" : ""}`} aria-label="Player de mídia">
+    <section ref={caixaRef} className={`mp ${compacto ? "mp-compacto" : ""}`} aria-label="Player de mídia">
       <header className="mp-top">
         <span className="mp-badge">{atual.provedor}</span>
         <p className="mp-titulo" title={atual.titulo}>{atual.titulo || "player pronto"}</p>
@@ -141,6 +167,18 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
           <p>Escolha o serviço e diga o que tocar. O player abre aqui dentro, sem sair da conversa.</p>
         </div>
       )}
+
+      {precisaToque && atual.embed && /youtube|vimeo/.test(atual.provedor) ? (
+        <button type="button" className="mp-toque" onClick={tocarComSom}>
+          ▶ Tocar com som
+        </button>
+      ) : null}
+
+      {!atual.embed && atual.url ? (
+        <a className="mp-toque" href={atual.url} target="_blank" rel="noopener noreferrer">
+          ▶ Abrir e tocar no {atual.provedor}
+        </a>
+      ) : null}
 
       <div className="mp-busca">
         <div className="mp-chips">

@@ -659,7 +659,15 @@ export default function Home() {
           const data = await api(`conversations?id=${id}`);
           if (data.ok && Array.isArray(data.messages)) {
             convIdRef.current = id;
-            setMessages(data.messages.map((m) => ({ role: m.role, text: m.content })));
+            setMessages(data.messages.map((m) => {
+              const midia = m.payload?.midia;
+              const quadro = m.payload?.quadro;
+              return {
+                role: m.role,
+                text: m.content,
+                ...(midia ? { midia } : quadro?.tipo === "clima" ? { clima: quadro.dados } : {}),
+              };
+            }));
             setOpen(false);
           } else say("Não foi possível abrir a conversa.");
         }}

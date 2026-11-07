@@ -378,6 +378,66 @@ function detectTools(text: string): DetectedTool[] {
   return uniqueTools;
 }
 
+
+/** Embed pronto para tocar: autoplay liberado, sem tela de "clique para ouvir". */
+function embedPronto(provedor: string, embed: string): string {
+  const e = String(embed || "");
+  if (!e) return "";
+  if (provedor === "youtube" && /youtube\.com\/embed\//.test(e)) {
+    const u = new URL(e);
+    u.searchParams.set("autoplay", "1");
+    u.searchParams.set("playsinline", "1");
+    u.searchParams.set("rel", "0");
+    u.searchParams.set("modestbranding", "1");
+    u.searchParams.set("enablejsapi", "1");
+    return u.toString();
+  }
+  if (provedor === "vimeo" && /player\.vimeo\.com/.test(e)) {
+    const u = new URL(e);
+    u.searchParams.set("autoplay", "1");
+    u.searchParams.set("muted", "0");
+    return u.toString();
+  }
+  return e;
+}
+
+/** Confere no oEmbed se o vídeo aceita tocar embutido (evita player preto "indisponível"). */
+async function aceitaEmbed(url: string): Promise<boolean> {
+  const id = String(url || "").match(/(?:v=|youtu\.be\/|live\/|shorts\/|embed\/)([\w-]{11})/)?.[1];
+  if (!id) return true; // não é YouTube: segue o fluxo normal
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 2500);
+    const r = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}&format=json`, { signal: ctrl.signal });
+    clearTimeout(t);
+    return r.ok;
+  } catch {
+    return true; // falha de rede não pode impedir de tocar
+  }
+}
+
+/** Quadro de mídia final: embed com autoplay e aviso quando o vídeo não incorpora. */
+async function prepararMidia(midia: Record<string, unknown>) {
+  const provedor = String(midia?.provedor ?? "youtube");
+  const url = String(midia?.url ?? "");
+  let embed = String(midia?.embed ?? "");
+  let aviso = String(midia?.aviso ?? "");
+  const youtube = provedor === "youtube" || /(youtube\.com|youtu\.be)/i.test(url);
+  if (youtube && url && !(await aceitaEmbed(url))) {
+    aviso = "Esse vídeo não deixa tocar embutido, então deixei o link aberto.";
+    embed = "";
+  }
+  return {
+    provedor,
+    url,
+    embed: embed ? embedPronto(provedor, embed) : "",
+    titulo: String(midia?.titulo ?? ""),
+    aviso,
+    // quando não há embed, o player vira botão "abrir no YouTube"
+    semEmbed: !embed,
+  };
+}
+
 async function callTool(tool: DetectedTool, conta: string | null = null, jwt: string | null = null) {
   if (tool.name === "sandbox") {
     const base = Deno.env.get("SUPABASE_URL")!;
@@ -1126,7 +1186,7 @@ Deno.serve(async (req) => {
   // ---- respostas entregues por caminho direto (clima, widget, arquivo, midia, print, imagem) ----
   // Antes esses caminhos enviavam o texto e fechavam o stream sem gravar a resposta:
   // a conversa ficava com a pergunta do usuario e nenhuma resposta no historico.
-  const salvarRespostaDireta = async (texto: string) => {
+  const salvarRespostaDireta = async (texto: string, extra?: Record<string, unknown>) => {
     if (!userId || !convId) return;
     const limpo = String(texto ?? "").trim();
     if (!limpo) return;
@@ -1134,6 +1194,7 @@ Deno.serve(async (req) => {
       conversation_id: convId,
       role: "assistant",
       content: limpo.slice(0, 4000),
+      ...(extra ? { payload: extra } : {}),
     });
   };
 
@@ -1306,7 +1367,8 @@ Deno.serve(async (req) => {
             }
             if (tool.name === "midia" && toolResult?.embed) {
               midiaTocando = toolResult;
-              controller.enqueue(tDados({ tipo: "midia", provedor: toolResult.provedor, url: toolResult.url, embed: toolResult.embed, titulo: toolResult.titulo, aviso: toolResult.aviso }));
+              const quadroMidia = await prepararMidia(toolResult);
+              controller.enqueue(tDados({ tipo: "midia", ...quadroMidia }));
             }
             if (tool.name === "clima" && toolResult?.ok) {
               entregaDireta = {
@@ -1401,7 +1463,7 @@ Deno.serve(async (req) => {
         if (entregaDireta) {
           controller.enqueue(tDados(entregaDireta.quadro));
           enviaTexto(entregaDireta.texto);
-          await salvarRespostaDireta(entregaDireta.texto);
+          await salvarRespostaDireta(entregaDireta.texto, { quadro: entregaDireta.quadro });
           enviaFim({ conversationId: convId, model: entregaDireta.quadro.tipo, pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;
@@ -1409,9 +1471,12 @@ Deno.serve(async (req) => {
 
         if (midiaTocando) {
           const titulo = String(midiaTocando.titulo || "").slice(0, 90);
-          const textoMidia = `${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Tocando agora${titulo ? `: **${titulo}**` : ""} (${midiaTocando.provedor}). O player está na conversa.`;
+          const temPlayer = Boolean(midiaTocando.embed);
+          const textoMidia = temPlayer
+            ? `${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Tocando agora${titulo ? `: **${titulo}**` : ""} (${midiaTocando.provedor}). O player está na conversa — se o som não entrar sozinho, toque em ▶.`
+            : `${midiaTocando.aviso ? midiaTocando.aviso + " " : ""}Achei${titulo ? `: **${titulo}**` : ""} no ${midiaTocando.provedor}, mas esse conteúdo não permite tocar aqui dentro. Use "abrir no site" no cartão.`;
           enviaTexto(textoMidia);
-          await salvarRespostaDireta(textoMidia);
+          await salvarRespostaDireta(textoMidia, { midia: midiaTocando });
           enviaFim({ conversationId: convId, model: "midia", pedido: model, auto: true, fallback: false, tentativas: [] });
           controller.close();
           return;

@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   if (req.method === "GET") {
     const { data: messages, error } = await svc
       .from("messages")
-      .select("role, content, created_at")
+      .select("role, content, created_at, payload")
       .eq("conversation_id", id)
       .order("created_at", { ascending: true })
       .limit(500);
