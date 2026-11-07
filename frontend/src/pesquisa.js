@@ -33,8 +33,41 @@ const host = (u) => {
 const clean = (s) => String(s || '').replace(/\*\*|__|`/g, '').replace(/\s+/g, ' ').trim();
 
 /* ---------------------------------------------------- leitor com CORS */
-async function reader(target) {
-  return timed('https://r.jina.ai/' + target, 15000);
+/* O leitor é um serviço compartilhado: se dispararmos muitas buscas ao mesmo
+   tempo ele responde 429. Fila com 2 em paralelo + retry com espera crescente. */
+const fila = [];
+let ativos = 0;
+const MAX_PARALELO = 2;
+
+function naFila(executar) {
+  return new Promise((resolve, reject) => {
+    fila.push({ executar, resolve, reject });
+    proximo();
+  });
+}
+
+function proximo() {
+  while (ativos < MAX_PARALELO && fila.length) {
+    const tarefa = fila.shift();
+    ativos++;
+    tarefa.executar()
+      .then(tarefa.resolve, tarefa.reject)
+      .finally(() => { ativos--; proximo(); });
+  }
+}
+
+async function reader(target, tentativa = 1) {
+  return naFila(async () => {
+    try {
+      return await timed('https://r.jina.ai/' + target, 15000);
+    } catch (e) {
+      const msg = String(e && e.message || '');
+      const podeRepetir = tentativa < 3 && /429|403|50[0-9]|HTTP 4|abort/i.test(msg);
+      if (!podeRepetir) throw e;
+      await new Promise((r) => setTimeout(r, 500 * tentativa));
+      return reader(target, tentativa + 1);
+    }
+  });
 }
 
 function decodeDDG(u) {

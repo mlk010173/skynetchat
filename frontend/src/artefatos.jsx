@@ -3,6 +3,7 @@
 // pede notícias, vídeos, Instagram, fontes ou clima.
 import { useEffect, useMemo, useState } from "react";
 import { clima, noticias, resumo, social, videos, web } from "./pesquisa.js";
+import { pesquisarProfundo, relatorio } from "./agente.js";
 import "./artefatos.css";
 
 const limpar = (t) => String(t == null ? "" : t).replace(/\s+/g, " ").trim();
@@ -109,20 +110,46 @@ function Social({ spec }) {
 
 function Fontes({ spec }) {
   const itens = spec.itens || [];
+  const [aberto, setAberto] = useState({});
   return (
     <ol className="art-fontes">
-      {itens.map((f, i) => (
-        <li key={i}>
-          <a href={url(f.url)} target="_blank" rel="noopener noreferrer">
-            <span className="art-fonte-num">{i + 1}</span>
-            <span className="art-fonte-corpo">
-              <b>{limpar(f.titulo)}</b>
-              <small>{host(f.url)}</small>
-              {f.resumo ? <span className="art-fonte-resumo">{limpar(f.resumo)}</span> : null}
-            </span>
-          </a>
-        </li>
-      ))}
+      {itens.map((f, i) => {
+        const dominio = host(f.url);
+        return (
+          <li key={i} className={f.primeiraMao ? "primeira-mao" : ""}>
+            <div className="art-fonte">
+              <span className="art-fonte-num">{i + 1}</span>
+              <span className="art-fonte-corpo">
+                <a className="art-fonte-titulo" href={url(f.url)} target="_blank" rel="noopener noreferrer">
+                  <img
+                    className="art-favicon"
+                    src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=64`}
+                    alt=""
+                    loading="lazy"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <b>{limpar(f.titulo)}</b>
+                </a>
+                <span className="art-fonte-meta">
+                  <em>{dominio}</em>
+                  {f.primeiraMao ? <span className="art-selo-mini">lida na íntegra</span> : null}
+                  {f.ramos && f.ramos.length > 1 ? <span className="art-selo-mini">{f.ramos.length} frentes</span> : null}
+                </span>
+                {f.excerto ? (
+                  <>
+                    <p className={"art-fonte-excerto" + (aberto[i] ? " aberto" : "")}>{limpar(f.excerto)}</p>
+                    <button type="button" className="art-fonte-mais" onClick={() => setAberto((a) => ({ ...a, [i]: !a[i] }))}>
+                      {aberto[i] ? "recolher trecho" : "ler trecho da fonte"}
+                    </button>
+                  </>
+                ) : f.resumo ? (
+                  <p className="art-fonte-excerto">{limpar(f.resumo)}</p>
+                ) : null}
+              </span>
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -216,7 +243,26 @@ function Grafico({ spec }) {
   );
 }
 
+function Pesquisa({ spec }) {
+  const etapas = spec.etapas || [];
+  return (
+    <ol className="art-etapas">
+      {etapas.map((e, i) => (
+        <li key={i} className={e.estado || ""}>
+          <span className="art-etapa-ponto" />
+          <span className="art-etapa-txt">
+            <b>{e.titulo}</b>
+            {e.detalhe ? <small>{e.detalhe}</small> : null}
+          </span>
+        </li>
+      ))}
+      {spec.carregando ? <li className="rodando"><span className="art-etapa-ponto" /><span className="art-etapa-txt"><b>buscando…</b></span></li> : null}
+    </ol>
+  );
+}
+
 const TIPOS = {
+  pesquisa: { icone: "fonte", selo: "pesquisa", corpo: Pesquisa },
   noticias: { icone: "news", selo: "notícias", corpo: Noticias },
   videos: { icone: "video", selo: "vídeos", corpo: Videos },
   social: { icone: "insta", selo: "instagram", corpo: Social },
@@ -261,53 +307,82 @@ export async function montarArtefato(pedido, opcoes = {}) {
   const bruto = String(pedido || "");
   const p = norm(bruto);
   const imagens = (opcoes.imagens || []).filter(Boolean);
+  const aoPasso = opcoes.aoPasso || (() => {});
+  const etapas = [];
+  const passo = (e) => {
+    const anterior = etapas.findIndex((x) => x.titulo === e.titulo);
+    const item = { titulo: e.titulo, detalhe: e.detalhe || "" };
+    if (anterior >= 0) etapas[anterior] = item;
+    else etapas.push(item);
+    aoPasso({ etapas: etapas.slice(), carregando: e.etapa !== "fim" });
+  };
 
   if (imagens.length) {
-    return {
+    return [{
       tipo: "fotos",
       titulo: imagens.length > 1 ? `${imagens.length} imagens recebidas` : "Print recebido",
       subtitulo: "toque para ampliar",
       imagens: imagens.map((im, i) => ({ url: im.url || im, legenda: im.nome || `imagem ${i + 1}` })),
-    };
+    }];
   }
+
   if (/clima|temperatura|previsao|chuva|frio|calor/.test(p)) {
     const m = bruto.match(/\b(?:em|no|na|de|para)\s+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ ]{2,28})/i);
     const cidade = (m ? m[1] : "São Paulo").replace(/\b(agora|hoje|amanha|nessa semana|por favor)\b.*$/i, "").trim() || "São Paulo";
     const dados = await clima(cidade);
-    return { tipo: "clima", titulo: `Clima · ${cidade}`, subtitulo: dados ? dados.local : "buscando…", dados, rodape: "Open-Meteo · ao vivo" };
+    return [{ tipo: "clima", titulo: `Clima · ${cidade}`, subtitulo: dados ? dados.local : "buscando…", dados, rodape: "Open-Meteo · ao vivo" }];
   }
-  if (/video|youtube|assistir|canal/.test(p)) {
-    const q = tema(bruto, ["video", "videos", "youtube", "assistir", "canal"]);
-    const itens = await videos(q || bruto);
-    if (!itens.length) return null;
-    return { tipo: "videos", titulo: `Vídeos · ${q || bruto}`, subtitulo: "YouTube · busca ao vivo", itens, rodape: `${itens.length} resultados agora` };
-  }
-  if (/instagram|insta\b|reels?|perfil|perfis/.test(p)) {
-    const q = tema(bruto, ["instagram", "insta", "reels", "reel", "perfil", "perfis"]);
-    const itens = await social(q || bruto);
-    if (!itens.length) return null;
-    return { tipo: "social", titulo: `Instagram · ${q || bruto}`, subtitulo: "perfis e posts públicos", itens, rodape: "abre no Instagram" };
-  }
-  if (/noticia|manchete|jornal|ultimas|aconteceu|hoje no mundo/.test(p)) {
+
+  const querVideos = /video|youtube|assistir|canal/.test(p);
+  const querSocial = /instagram|insta\b|reels?|perfil|perfis/.test(p);
+  const querNoticia = /noticia|manchete|jornal|ultimas|aconteceu/.test(p);
+  const precisaDossie = querVideos || querSocial || querNoticia ||
+    /fonte|pesquis|busque|procure|quem |o que |como |por que |quando |onde |qual |explica|compare|sobre/.test(p);
+
+  if (!precisaDossie) return null;
+
+  if (querNoticia && !querVideos && !querSocial) {
     const q = tema(bruto, ["noticia", "noticias", "manchete", "manchetes", "jornal", "ultimas"]);
-    const itens = await noticias(q || bruto);
-    if (!itens.length) return null;
-    return { tipo: "noticias", titulo: `Notícias · ${q || bruto}`, subtitulo: "publicações recentes", itens };
+    passo({ etapa: "coleta", titulo: "Buscando notícias", detalhe: q || bruto });
+    const itens = await noticias(q || bruto).catch(() => []);
+    if (itens.length) {
+      passo({ etapa: "fim", titulo: "Notícias reunidas", detalhe: `${itens.length} publicações` });
+      return [
+        { tipo: "noticias", titulo: `Notícias · ${q || bruto}`, subtitulo: "publicações recentes", itens },
+        {
+          tipo: "fontes",
+          titulo: "De onde veio",
+          subtitulo: "veículos consultados",
+          itens: itens.map((n) => ({ titulo: n.title || n.titulo, url: n.url, resumo: n.snippet, primeiraMao: false })),
+        },
+      ];
+    }
   }
-  if (/fonte|pesquis|busque|procure|quem |o que |como |por que |quando |onde |qual |explica|compare/.test(p)) {
-    const q = tema(bruto);
-    const itens = await web(q || bruto);
-    if (!itens.length) return null;
-    const dados = await resumo(q || bruto);
-    return {
+
+  const dossie = await pesquisarProfundo(bruto, {
+    aoPasso: (e) => passo(e),
+    querVideos,
+    querSocial,
+  }).catch(() => null);
+
+  if (!dossie) return null;
+  const specs = [];
+  if (querVideos && dossie.videos.length) {
+    specs.push({ tipo: "videos", titulo: `Vídeos · ${dossie.plano.nucleo}`, subtitulo: "YouTube · busca ao vivo", itens: dossie.videos, rodape: `${dossie.videos.length} resultados agora` });
+  }
+  if (querSocial && dossie.social.length) {
+    specs.push({ tipo: "social", titulo: `Instagram · ${dossie.plano.nucleo}`, subtitulo: "perfis e posts públicos", itens: dossie.social, rodape: "abre no Instagram" });
+  }
+  if (dossie.fontes.length) {
+    specs.push({
       tipo: "fontes",
-      titulo: `Fontes · ${q || bruto}`,
-      subtitulo: dados ? `resumo: ${dados.titulo}` : "pesquisa na web",
-      itens,
-      rodape: `${itens.length} referências agora`,
-    };
+      titulo: `Dossiê · ${dossie.plano.nucleo}`.slice(0, 60),
+      subtitulo: `${dossie.fontes.length} fontes · ${dossie.fontes.filter((f) => f.primeiraMao).length} lidas na íntegra`,
+      itens: dossie.fontes.map((f) => ({ titulo: f.titulo, url: f.url, resumo: f.snippet, excerto: f.excerto, primeiraMao: f.primeiraMao, ramos: f.ramos })),
+      rodape: `pesquisa em ${dossie.plano.ramos.length} frentes · ${new Date(dossie.quando).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+    });
   }
-  return null;
+  return specs.length ? specs : null;
 }
 
 /** Quebra o texto em partes de texto e blocos ```artefato``` prontos para render. */
@@ -331,8 +406,14 @@ export function separarArtefatos(texto) {
 }
 
 /** Texto curto que acompanha o widget, citando as fontes quando existem. */
-export function resumoDoArtefato(spec) {
+export function resumoDoArtefato(entrada) {
+  const spec = Array.isArray(entrada) ? entrada[0] : entrada;
   if (!spec) return "";
+  if (Array.isArray(entrada) && entrada.length > 1) {
+    const f = entrada.find((x) => x.tipo === "fontes");
+    const n = (f?.itens || []).length;
+    return n ? `Reuni ${n} fontes e ${entrada.length - 1} painel(is) de apoio.` : "Painéis de apoio prontos.";
+  }
   const n = (spec.itens || []).length;
   if (spec.tipo === "videos") return `Encontrei ${n} vídeos no YouTube agora.`;
   if (spec.tipo === "social") return `Localizei ${n} perfis e publicações públicas no Instagram.`;

@@ -268,17 +268,39 @@ export default function Home() {
     ]);
     setBusy(true);
 
-    // artefato ao vivo: monta em paralelo com a resposta (não depende do backend)
-    montarArtefato(text, { imagens: anexos })
-      .then((spec) => {
-        if (!spec) return;
+    // pesquisa em segundo plano: roda junto com a resposta e atualiza o painel ao vivo
+    const aoPasso = (estado) => {
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.mid === mid);
+        if (idx < 0) return prev;
+        const alvoMsg = prev[idx];
+        const copy = [...prev];
+        copy[idx] = {
+          ...alvoMsg,
+          estadoPesquisa: estado,
+          artefatos: [{ tipo: "pesquisa", titulo: "Pesquisa em segundo plano", subtitulo: estado.carregando ? "rodando agora" : "concluída", etapas: estado.etapas, carregando: estado.carregando }, ...(alvoMsg.artefatos || []).filter((a) => a.tipo !== "pesquisa")],
+        };
+        return copy;
+      });
+    };
+
+    montarArtefato(text, { imagens: anexos, aoPasso })
+      .then((specs) => {
         setMessages((prev) => {
           const idx = prev.findIndex((m) => m.mid === mid);
           if (idx < 0) return prev;
           const alvoMsg = prev[idx];
-          if (alvoMsg.artefato || /```artefat/i.test(alvoMsg.text || "")) return prev;
+          if (/```artefat/i.test(alvoMsg.text || "")) return prev;
           const copy = [...prev];
-          copy[idx] = { ...alvoMsg, text: alvoMsg.text || resumoDoArtefato(spec), artefato: spec };
+          if (!specs || !specs.length) {
+            copy[idx] = { ...alvoMsg, artefatos: (alvoMsg.artefatos || []).filter((a) => a.tipo !== "pesquisa") };
+            return copy;
+          }
+          copy[idx] = {
+            ...alvoMsg,
+            text: alvoMsg.text || resumoDoArtefato(specs),
+            artefatos: specs,
+          };
           return copy;
         });
       })
@@ -1043,7 +1065,9 @@ export default function Home() {
                         )
                       )
                     )}
-                    {message.artefato && <Artefato spec={message.artefato} />}
+                    {(message.artefatos || (message.artefato ? [message.artefato] : [])).map((spec, ai) => (
+                      <Artefato key={"art" + ai} spec={spec} />
+                    ))}
                     {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (
                       <div className="tool-fontes">
                         <div className="fontes-chips">
