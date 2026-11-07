@@ -26,6 +26,7 @@ export const PADROES: Record<string, Politica> = {
   imagem: "leve",
   widget: "leve",
   arquivo: "leve",
+  crm: "livre",   // consulta read-only do CRM
   mcp: "critico",   // comandos via MCP sempre pedem autorização
   // mexe no servidor
   terminal: "critico",
@@ -49,6 +50,7 @@ export const ROTULOS: Record<string, string> = {
   imagem: "Gerar imagem",
   widget: "Criar widget",
   arquivo: "Gerar arquivo",
+  crm: "Consultar o CRM",
   mcp: "Usar ferramenta MCP",
   terminal: "Executar comando no servidor",
   deploy: "Publicar/deploy",

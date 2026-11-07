@@ -11,7 +11,7 @@ import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
   { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens"] },
-  { titulo: "Ferramentas", itens: ["Codex", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
+  { titulo: "Ferramentas", itens: ["Codex", "CRM", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
   { titulo: "Crescer", itens: ["Indique e Ganhe", "Monetize com SKYNETchat", "Conversas em grupo"] },
   { titulo: "Descobrir", itens: ["Conheça o SKYNETchat", "Prompts", "Suporte", "Atualizações"] },
 ];
@@ -24,6 +24,7 @@ const items = [
   { label: "Imagens", tag: "BETA", desc: "Gere e explore imagens com IA", icon: IconImage },
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
   { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
+  { label: "CRM", tag: "NOVO", desc: "Contatos, pipeline e atividades", icon: IconUsers },
   { label: "Permissões", tag: "NOVO", desc: "Autorize o que o SKYNET executa", icon: IconServer },
   { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
   { label: "Automações", tag: "REAL", desc: "Central de automações e agendamentos", icon: IconZap },
@@ -222,6 +223,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "Codex") { navigate("/codex"); onClose(); }
     else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
     else if (label === "Permissões") { navigate("/permissoes"); onClose(); }
+    else if (label === "CRM") { navigate("/crm"); onClose(); }
     else if (label === "Automações") setView("automations");
     else if (label === "E-mail") setView("email");
     else if (label === "Memória") setView("memoria");

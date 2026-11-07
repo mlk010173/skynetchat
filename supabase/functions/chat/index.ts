@@ -56,6 +56,7 @@ const ROTULOS: Record<string, string> = {
   politicos: "Abrir painel de políticos",
   memoria: "Memória",
   infra: "Consultar infraestrutura",
+  crm: "Consultar o CRM",
   mcp: "Usar ferramenta MCP",
   habilidade: "Usar habilidade",
 };
@@ -98,6 +99,10 @@ function resumirResultado(nome: string, r: unknown): string {
   if (nome === "widget") return `widget de ${d.tipo} pronto`;
   if (nome === "arquivo") return `${d.nome} (${d.bytes} bytes)`;
   if (nome === "github") return d.ok ? `${d.repo}: ${d.commits?.length ?? 0} commits, ${d.estrelas} estrelas` : String(d.erro ?? "sem dados");
+  if (nome === "crm") {
+    const m = d.metricas ?? {};
+    return `pipeline ${Number(m.pipeline ?? 0).toLocaleString("pt-BR")} · ${m.negócios_abertos ?? 0} abertos · ${m.contatos ?? 0} contatos · ${m.atividades_hoje ?? 0} hoje`.slice(0, 160);
+  }
   if (nome === "mcp") {
     return `${d.ferramenta ?? "mcp"}: ${String(d.texto ?? d.erro ?? "").replace(/\s+/g, " ").slice(0, 150)}`;
   }
@@ -157,6 +162,13 @@ function detectTools(text: string): DetectedTool[] {
       /\b(status|sa[uú]de|diagn[oó]stico|autodiagn[oó]stico)\b[\s\S]{0,24}\b(sistema|site|servidor|skynet|voc[eê])\b/i.test(text) ||
       /\b(est[aá] (no ar|online|fora do ar)|tudo funcionando|como voc[eê] est[aá])\b/i.test(text)) {
     tools.push({ name: "sistema", payload: { pedido: text.slice(0, 120) } });
+  }
+
+  // 1g. CRM: resumo do pipeline, contatos e negócios
+  if (/\b(crm|pipeline|funil|leads?)\b/i.test(text) ||
+      (/\b(contatos?|neg[oó]cios?|oportunidades?)\b/i.test(text) && /\b(quantos?|quais|lista|resumo|como est[aá]|buscar?|procurar?)\b/i.test(text))) {
+    const busca = text.match(/\b(?:contato|contatos|procure|buscar? por)\s+(?:de\s+|do\s+|da\s+)?([A-Za-zÀ-ÿ0-9 .-]{2,40})/i)?.[1]?.trim() ?? "";
+    tools.push({ name: "crm", payload: { acao: busca ? "buscar" : "resumo", busca, pedido: text.slice(0, 160) } });
   }
 
   // 1f. MCP: pedir para usar uma ferramenta do servidor MCP do SKYNET
@@ -474,6 +486,23 @@ async function callTool(tool: DetectedTool, conta: string | null = null, jwt: st
     });
     return r;
   }
+  if (tool.name === "crm") {
+    const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+    const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!conta) return { ok: false, erro: "o CRM precisa de uma conta logada" };
+    const acao = String(tool.payload?.acao ?? "resumo");
+    const busca = String(tool.payload?.busca ?? "").trim();
+    const caminho = acao === "buscar" && busca
+      ? `crm?recurso=contatos&busca=${encodeURIComponent(busca)}`
+      : "crm?recurso=painel";
+    const r = await fetch(`${base}/functions/v1/${caminho}`, {
+      headers: { Authorization: `Bearer ${chave}`, apikey: chave, "x-conta-id": String(conta) },
+      signal: AbortSignal.timeout(20000),
+    });
+    const corpo = await r.json().catch(() => null);
+    if (!r.ok || !corpo?.ok) return { ok: false, erro: String(corpo?.error ?? `CRM respondeu ${r.status}`).slice(0, 160) };
+    return { ok: true, acao, busca: busca || null, ...corpo };
+  }
   if (tool.name === "mcp") {
     const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
     const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -771,6 +800,24 @@ ${saida.slice(0, 1500) || "(vazia)"}` +
         (erroSaida ? `\nSTDERR:
 ${erroSaida.slice(0, 400)}` : "") +
         `\nREQUISITO OBRIGATÓRIO: responda usando exatamente essa saída. Não recalcule, não invente outro valor.`;
+      break;
+    }
+    case "crm": {
+      const m = data.metricas ?? {};
+      const linhas: string[] = [
+        `Pipeline aberto: ${Number(m.pipeline ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}`,
+        `Ponderado: ${Number(m.ponderado ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} · ticket médio ${Number(m.ticket_medio ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}`,
+        `Ganho acumulado: ${Number(m.ganho_total ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} · conversão ${m.conversao ?? 0}%`,
+        `Contatos: ${m.contatos ?? 0} (${m.novos_7d ?? 0} novos em 7 dias) · atividades hoje ${m.atividades_hoje ?? 0} · atrasadas ${m.atividades_atrasadas ?? 0}`,
+      ];
+      if (Array.isArray(data.por_etapa)) linhas.push(`Por etapa: ${data.por_etapa.map((e: any) => `${e.etapa}=${e.quantidade}`).join(", ")}`);
+      if (Array.isArray(data.contatos) && data.contatos.length) {
+        linhas.push(`Contatos: ${data.contatos.slice(0, 8).map((c: any) => `${c.nome}${c.empresa ? ` (${c.empresa})` : ""}`).join("; ")}`);
+      }
+      if (Array.isArray(data.negocios) && data.negocios.length) {
+        linhas.push(`Negócios: ${data.negocios.slice(0, 8).map((n: any) => `${n.titulo} [${n.etapa}] ${Number(n.valor ?? 0).toLocaleString("pt-BR")}`).join("; ")}`);
+      }
+      contextText = `CRM DO SKYNET (dados reais da conta):\n${linhas.join("\n")}\nREQUISITO: use esses números exatamente; não invente contatos nem valores.`;
       break;
     }
     case "mcp": {
