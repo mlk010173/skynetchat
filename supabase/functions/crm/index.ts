@@ -54,12 +54,14 @@ async function painel(db: ReturnType<typeof svc>, id: string) {
   const fimDia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1).toISOString();
   const seteDias = new Date(hoje.getTime() - 7 * 864e5).toISOString();
 
-  const [negocios, contatos, ativHoje, ativAtrasadas, novos] = await Promise.all([
+  const em7dias = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 7).toISOString();
+  const [negocios, contatos, ativHoje, ativAtrasadas, novos, ativProximas] = await Promise.all([
     db.from("crm_negocios").select("id, titulo, etapa, valor, probabilidade, previsao, contato_id, atualizado_em").eq("dono", id).order("atualizado_em", { ascending: false }).limit(200),
     db.from("crm_contatos").select("id, nome, empresa, email, telefone, ultimo_contato, atualizado_em").eq("dono", id).order("atualizado_em", { ascending: false }).limit(200),
     db.from("crm_atividades").select("id, titulo, tipo, quando, contato_id, negocio_id").eq("dono", id).eq("concluida", false).gte("quando", inicioDia).lt("quando", fimDia).order("quando").limit(50),
     db.from("crm_atividades").select("id, titulo, tipo, quando, contato_id, negocio_id").eq("dono", id).eq("concluida", false).lt("quando", inicioDia).order("quando").limit(50),
     db.from("crm_contatos").select("id", { count: "exact", head: true }).eq("dono", id).gte("criado_em", seteDias),
+    db.from("crm_atividades").select("id, titulo, tipo, quando, contato_id, negocio_id").eq("dono", id).eq("concluida", false).gte("quando", fimDia).lt("quando", em7dias).order("quando").limit(50),
   ]);
 
   const lista = negocios.data ?? [];
@@ -85,6 +87,7 @@ async function painel(db: ReturnType<typeof svc>, id: string) {
       novos_7d: novos.count ?? 0,
       atividades_hoje: ativHoje.data?.length ?? 0,
       atividades_atrasadas: ativAtrasadas.data?.length ?? 0,
+      atividades_proximas: ativProximas.data?.length ?? 0,
       ponderado: abertos.reduce((s, n) => s + Number(n.valor ?? 0) * (Number(n.probabilidade ?? 0) / 100), 0),
     },
     por_etapa: porEtapa,
@@ -92,6 +95,7 @@ async function painel(db: ReturnType<typeof svc>, id: string) {
     contatos: contatos.data ?? [],
     hoje: ativHoje.data ?? [],
     atrasadas: ativAtrasadas.data ?? [],
+    proximas: ativProximas.data ?? [],
   };
 }
 

@@ -127,7 +127,7 @@ export default function Crm() {
           ["Ganho", dinheiro(m.ganho_total), "negócios fechados"],
           ["Conversão", `${m.conversao ?? 0}%`, "ganhos sobre decididos"],
           ["Contatos", m.contatos ?? 0, `${m.novos_7d ?? 0} novos em 7 dias`],
-          ["Hoje", m.atividades_hoje ?? 0, `${m.atividades_atrasadas ?? 0} atrasadas`],
+          ["Hoje", m.atividades_hoje ?? 0, `${m.atividades_atrasadas ?? 0} atrasadas · ${m.atividades_proximas ?? 0} à frente`],
         ].map(([rotulo, valor, nota]) => (
           <div className="crm-tile" key={rotulo}>
             <span>{rotulo}</span>
@@ -240,7 +240,7 @@ export default function Crm() {
 
       {!carregando && aba === "atividades" && (
         <section className="crm-atividades" aria-label="Atividades">
-          {[["Atrasadas", painel?.atrasadas ?? []], ["Hoje", painel?.hoje ?? []]].map(([titulo, lista]) => (
+          {[["Atrasadas", painel?.atrasadas ?? []], ["Hoje", painel?.hoje ?? []], ["Próximos 7 dias", painel?.proximas ?? []]].map(([titulo, lista]) => (
             <div key={titulo} className="crm-grupo-ativ">
               <h2>{titulo} <small>{lista.length}</small></h2>
               {lista.length === 0 && <p className="crm-coluna-vazia">nada por aqui</p>}
