@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SUPA_ANON, SUPA_URL } from "./lib.js";
 import { HlsPlayer } from "./widgets/avancado.jsx";
+import PlayerYoutube, { buscarPrevia, idDoYoutube } from "./widgets/youtube.jsx";
 
 const PROVEDORES = [
   { id: "youtube", rotulo: "YouTube" },
@@ -80,6 +81,7 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState("");
   const [precisaToque, setPrecisaToque] = useState(false);
+  const [previa, setPrevia] = useState(null);
   const frameRef = useRef(null);
   const caixaRef = useRef(null);
 
@@ -148,8 +150,21 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
   const ehArquivo = /\.(mp3|mp4|m4a|ogg|wav|webm)(\?|$)/i.test(atual.url || "");
   const ehAudio = ehArquivo && /\.(mp3|m4a|ogg|wav)(\?|$)/i.test(atual.url || "");
 
+  const idYt = atual.provedor === "youtube" ? idDoYoutube(atual.url || atual.embed) : "";
+
+  const liberarPlanoB = useCallback(() => {
+    setPrevia((atualPrevia) => atualPrevia || { carregando: true });
+    buscarPrevia(atual.titulo || atual.url)
+      .then((r) => setPrevia(r || { vazio: true }))
+      .catch(() => setPrevia({ vazio: true }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atual.titulo, atual.url]);
+
   const midia = useMemo(() => {
     if (ehHls && atual.url) return <HlsPlayer src={atual.url} titulo={atual.titulo} />;
+    if (idYt) {
+      return <PlayerYoutube videoId={idYt} titulo={atual.titulo} aoFalhar={liberarPlanoB} aoTocar={() => setPrecisaToque(false)} />;
+    }
     if (!atual.embed) return null;
     if (ehArquivo) {
       return ehAudio
@@ -186,10 +201,33 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
         </div>
       )}
 
-      {precisaToque && atual.embed && /youtube|vimeo/.test(atual.provedor) ? (
+      {previa?.carregando ? (
+        <p className="yt-aviso">Procurando uma prévia que toque aqui…</p>
+      ) : null}
+
+      {previa?.url ? (
+        <div className="mp-previa">
+          <p className="mp-previa-rotulo">
+            ▶ {previa.titulo} <span>({previa.fonte})</span>
+          </p>
+          <audio className="mp-audio" src={previa.url} controls autoPlay preload="auto" />
+        </div>
+      ) : null}
+
+      {previa?.vazio ? (
+        <p className="yt-aviso">Também não encontrei prévia em áudio. Toque em "abrir no site" para ouvir no YouTube.</p>
+      ) : null}
+
+      {precisaToque && !idYt && atual.embed && /vimeo/.test(atual.provedor) ? (
         <button type="button" className="mp-toque" onClick={tocarComSom}>
           ▶ Tocar com som
         </button>
+      ) : null}
+
+      {/spotify|soundcloud/.test(atual.provedor) && atual.embed ? (
+        <p className="mp-dica">
+          Toque no ▶ dentro do player do {atual.provedor} para ouvir — esses serviços sempre exigem um toque.
+        </p>
       ) : null}
 
       {!atual.embed && atual.url ? (
