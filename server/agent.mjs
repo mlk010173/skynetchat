@@ -51,6 +51,8 @@ const COMANDOS = {
   ls: "ls", pwd: "pwd", df: "df", free: "free", uptime: "uptime",
   node: "node", python3: "python3", git: "git",
   cat: "cat", head: "head", tail: "tail", grep: "grep", wc: "wc",
+  hostname: "hostname", uname: "uname", id: "id", whoami: "whoami",
+  nproc: "nproc", date: "date", lsb_release: "lsb_release", tree: "tree",
 };
 const PROIBIDO = /[;&|`$><\n\r\\'"*?~]/;
 

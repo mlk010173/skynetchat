@@ -26,7 +26,7 @@ export const PADROES: Record<string, Politica> = {
   imagem: "leve",
   widget: "leve",
   arquivo: "leve",
-  mcp: "leve",
+  mcp: "critico",   // comandos via MCP sempre pedem autorização
   // mexe no servidor
   terminal: "critico",
   deploy: "critico",

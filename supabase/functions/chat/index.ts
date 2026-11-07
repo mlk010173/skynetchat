@@ -625,9 +625,12 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
   let contextText = "";
 
   if (!data || !data.ok) {
+    const motivo = String(data?.erro ?? data?.error ?? data?.mensagem ?? "sem resposta").slice(0, 200);
     return {
       fontes: [],
-      contextText: `Ferramenta ${toolName}: pesquisa indisponível agora.`,
+      contextText:
+        `A ferramenta ${toolName} falhou e NÃO produziu resultado: ${motivo}. ` +
+        `Explique o motivo ao usuário em uma frase, sem inventar dados, e ofereça uma alternativa.`,
     };
   }
 
@@ -1147,7 +1150,10 @@ Deno.serve(async (req) => {
             entrada: JSON.stringify(tool.payload).slice(0, 240),
           });
           // ---- permissões: livre roda direto, leve pede uma vez por dia, crítico pede sempre ----
-          const politica = papel === "dev" ? "livre" : await politicaDa(userId ?? "", tool.name);
+          // dev não pede autorização para ações leves, mas comando (terminal) e MCP
+          // continuam pedindo SEMPRE: são execução no servidor e chamada externa.
+          const base = await politicaDa(userId ?? "", tool.name);
+          const politica = papel === "dev" && base === "leve" ? "livre" : base;
           if (politica === "bloqueado") {
             enviaEtapa({
               ferramenta: tool.name,
@@ -1157,7 +1163,11 @@ Deno.serve(async (req) => {
             });
             continue;
           }
-          if (politica === "critico" || politica === "leve") {
+          // se esta execução veio do clique em "Autorizar", a autorização JÁ existe:
+          // marcarContinuado() muda o pedido para "continuado" e, sem esta checagem,
+          // o portão pedia autorização de novo e nada rodava.
+          const veioDeRetomada = Boolean(retomada && retomada.ferramenta === tool.name);
+          if ((politica === "critico" || politica === "leve") && !veioDeRetomada) {
             if (!userId) {
               enviaEtapa({
                 ferramenta: tool.name,
