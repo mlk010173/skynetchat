@@ -104,6 +104,8 @@ export async function streamChat({ conversationId, content, model, continuar }, 
               handlers.onArquivo({ nome: it.nome, mime: it.mime, conteudo: it.conteudo });
             } else if (it.tipo === "midia" && handlers.onMidia) {
               handlers.onMidia({ provedor: it.provedor, url: it.url, embed: it.embed, titulo: it.titulo, aviso: it.aviso });
+            } else if (it.tipo === "print" && handlers.onPrint) {
+              handlers.onPrint({ alvo: it.alvo, url: it.url, provedor: it.provedor });
             } else if (it.tipo === "imagem" && handlers.onImage) {
               handlers.onImage(String(it.url ?? it.imagem ?? ""));
             } else if (it.tipo === "raciocinio" && handlers.onReason) {
@@ -164,6 +166,7 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onTool: (toolEv) => handlers.onTool?.(toolEv),
         onImage: (url) => handlers.onImage?.(url),
         onMidia: (m) => handlers.onMidia?.(m),
+        onPrint: (p) => handlers.onPrint?.(p),
         onClima: (d) => handlers.onClima?.(d),
         onWidget: (s) => handlers.onWidget?.(s),
         onArquivo: (a) => handlers.onArquivo?.(a),

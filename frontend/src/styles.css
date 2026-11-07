@@ -742,3 +742,35 @@ button { font-family: inherit; color: inherit; }
 }
 .bubble-prints { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .bubble-prints img { width: 104px; height: 78px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; }
+/* ---------- artefatos de interface ---------- */
+.art { margin-top: 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.02); animation: wgEntra .32s ease both; }
+.art-topo { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.03); }
+.art-selo { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: #ff8a8a; background: rgba(255,77,77,.14); border: 1px solid rgba(255,77,77,.3); padding: 2px 7px; border-radius: 999px; }
+.art-nome { font-size: 10px; color: #8b8b8b; letter-spacing: .1em; }
+.art-acoes { margin-left: auto; display: flex; gap: 4px; }
+.art-acoes button { width: 24px; height: 22px; border-radius: 7px; border: 1px solid rgba(255,255,255,.12); background: none; color: #b9b9b9; font-size: 11px; cursor: pointer; }
+.art-acoes button:hover { color: #fff; border-color: rgba(255,77,77,.45); }
+.art-tela { background: #0b0b0c; }
+.art-frame { display: block; width: 100%; height: 380px; border: 0; background: #0b0b0c; }
+.art-frame.art-cheio { height: calc(100vh - 120px); border-radius: 12px; }
+.art-codigo { margin: 0; max-height: 340px; overflow: auto; padding: 12px; font-size: 11.5px; line-height: 1.55; color: #cfcfcf; background: #0b0b0c; }
+.art-nota { margin: 0; padding: 6px 10px; font-size: 10px; color: #6f6f6f; }
+.art-overlay { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.9); display: flex; padding: 2vh 2vw; animation: wgEntra .2s ease both; }
+.art-overlay-caixa { position: relative; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.art-fechar { align-self: flex-end; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.06); color: #fff; border-radius: 999px; padding: 5px 12px; font-size: 11px; cursor: pointer; }
+
+/* ---------- navegador ao vivo ---------- */
+.nav-ao-vivo { margin-top: 10px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; overflow: hidden; background: rgba(0,0,0,.35); animation: wgEntra .3s ease both; }
+.nav-quadro { display: block; width: 100%; max-height: 460px; object-fit: cover; object-position: top center; background: #0b0b0c; }
+.nav-vazio { display: grid; place-items: center; height: 180px; font-size: 11.5px; color: #7d7d7d; }
+.nav-topo { display: flex; align-items: center; gap: 6px; padding: 7px 9px; border-top: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
+.nav-selo { font-size: 9.5px; letter-spacing: .12em; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); color: #9a9a9a; }
+.nav-selo.ligado { color: #ff8a8a; border-color: rgba(255,77,77,.45); background: rgba(255,77,77,.12); animation: aoVivoPulso 2s infinite; }
+.nav-alvo { flex: 1; min-width: 90px; font-size: 11px; color: #b9b9b9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-topo button, .nav-topo select { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: #cfcfcf; border-radius: 8px; font: inherit; font-size: 11px; padding: 3px 8px; cursor: pointer; }
+.nav-topo button:hover { color: #fff; border-color: rgba(255,77,77,.5); }
+.nav-nota { margin: 0; padding: 0 9px 7px; font-size: 10px; color: #6f6f6f; }
+.nav-cheio { position: fixed; inset: 0; z-index: 95; background: rgba(0,0,0,.92); display: flex; padding: 2vh 2vw; }
+.nav-cheio-caixa { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.nav-cheio .nav-quadro { max-height: calc(100vh - 160px); object-fit: contain; }
+@media (prefers-reduced-motion: reduce) { .art, .nav-ao-vivo { animation: none; } .nav-selo.ligado { animation: none; } }

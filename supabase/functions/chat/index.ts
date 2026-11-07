@@ -207,6 +207,13 @@ function detectTools(text: string): DetectedTool[] {
     tools.unshift({ name: "imagem", payload: { prompt: (prompt || text).slice(0, 400) } });
   }
 
+  // 1d-bis. "mostra o navegador ao vivo", "vê esse site em tempo real" -> print ao vivo
+  const pedeNavegador = /\b(navegador|browser)\b[\s\S]{0,20}\b(ao vivo|tempo real)\b|\b(mostra|abre|exibe)\b[\s\S]{0,18}\b(ao vivo|tempo real)\b/i.test(text);
+  if (pedeNavegador) {
+    const linkN = text.match(/https?:\/\/\S+/)?.[0] ?? text.match(/\b((?:[a-z0-9-]+\.)+(?:com|com\.br|net|org|io|dev|app|br)(?:\/[^\s,]*)?)\b/i)?.[0] ?? "example.com";
+    tools.unshift({ name: "print", payload: { url: linkN.replace(/[.,;]$/, "") } });
+  }
+
   // 1e. "manda um print da tela", "captura o site X", "tira um print" -> print
   const pedePrint =
     /\b(print|screenshot|captura\w*|foto da tela|tela do site|capturar a tela)\b/i.test(text) &&
@@ -983,7 +990,8 @@ Deno.serve(async (req) => {
     "INFRAESTRUTURA: você consulta ao vivo Supabase (projeto, funções, contagens do banco), Vercel (projeto, último deploy, HTTP do site) e Render (saúde do agente) com a ferramenta 'infra'. Quando pedirem status, deploy ou números, use o dado real e cite a plataforma.",
     "MEMÓRIA: quando o usuário pedir para lembrar de algo, guarde com a ferramenta 'memoria' (ação salvar) e confirme em uma frase. Quando ele perguntar o que você sabe, consulte (ação buscar) e responda só o que estiver guardado, sem inventar.",
     "MÍDIA: o sistema tem player próprio (YouTube, Spotify, SoundCloud, Vimeo, MP4/MP3). Se o usuário pedir para tocar/abrir/colocar música, vídeo, filme ou playlist, o player é aberto automaticamente na conversa: confirme em UMA frase curta, com o título. Nunca responda apenas com o link.",
-    "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com '-' para passos, tabelas curtas quando comparar coisas, ```linguagem para trechos de código, ![descrição](URL) para mostrar uma imagem e links de imagem/vídeo (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
+    "ARTEFATO DE INTERFACE: quando o pedido for criar interface, tela, dashboard, painel, site, jogo ou qualquer artefato visual, responda com UM bloco ```html completo e autossuficiente (CSS e JS dentro), precedido de uma frase curta. A tela transforma esse bloco em interface rodando e nunca mostra o código cru. Não devolva HTML fora do bloco.",
+    "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com "-" para passos, tabelas curtas quando comparar coisas, blocos com linguagem para trechos de código, imagem em markdown para mostrar figura, e links de vídeo/áudio (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
   ];
   // pedido curto não precisa do manual inteiro: menos tokens na entrada, primeira palavra mais rápida
   const promptEnxuto = content.length <= 60;
@@ -1202,7 +1210,7 @@ Deno.serve(async (req) => {
           if (toolResult && toolResult.ok) {
             if (tool.name === "print" && toolResult?.ok && toolResult.url) {
               capturaEntregue = toolResult;
-              controller.enqueue(tDados({ tipo: "imagem", url: toolResult.url, legenda: `Print de ${toolResult.alvo}` }));
+              controller.enqueue(tDados({ tipo: "print", url: toolResult.url, alvo: toolResult.alvo, provedor: toolResult.provedor }));
             }
             if (tool.name === "midia" && toolResult?.embed) {
               midiaTocando = toolResult;

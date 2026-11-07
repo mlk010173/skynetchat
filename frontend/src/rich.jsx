@@ -1,6 +1,7 @@
 // Renderização rica das respostas: transforma o texto em blocos visuais.
 // Suporta imagem, galeria, vídeo (YouTube/Vimeo/MP4), áudio, código, links e destaque.
 import { useMemo, useState } from "react";
+import { ArtefatoFrame } from "./artefato.jsx";
 
 const RE_CODIGO = /```([a-z0-9+#-]*)\n?([\s\S]*?)```/gi;
 const RE_IMG_MD = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi;
@@ -65,8 +66,15 @@ function linhaComLinks(texto, chave) {
   return partes;
 }
 
+const LINGUAGENS_DE_INTERFACE = ["html", "htm", "svg", "xhtml"];
+
 function BlocoCodigo({ linguagem, codigo }) {
   const [copiado, setCopiado] = useState(false);
+  const l = String(linguagem || "").toLowerCase();
+  // código de interface vira artefato rodando; nunca despejamos HTML cru na tela
+  if (LINGUAGENS_DE_INTERFACE.includes(l) && String(codigo).length > 240) {
+    return <ArtefatoFrame html={codigo} linguagem={l === "svg" ? "svg" : "html"} />;
+  }
   return (
     <div className="rich-code">
       <div className="rich-code-top">

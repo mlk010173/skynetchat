@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MediaPlayer from "../media.jsx";
 import ClimaCard from "../clima.jsx";
+import { NavegadorAoVivo } from "../artefato.jsx";
 import { criarWidget, carregarWidgets, salvarWidgets } from "../widgets/registry.js";
 import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
@@ -384,6 +385,13 @@ export default function Home() {
           toolQuando: toolEv.quando || last.toolQuando,
           toolErro: toolEv.status === "falhou" ? (toolEv.erro || "pesquisa indisponível agora") : last.toolErro,
         };
+        return copy;
+      }),
+      onPrint: (p) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", print: p }); return copy; }
+        copy[copy.length - 1] = { ...last, print: p };
         return copy;
       }),
       onImage: (url) => setMessages((prev) => {
@@ -963,6 +971,7 @@ export default function Home() {
                         </div>
                       </div>
                     )}
+                    {message.print && <NavegadorAoVivo alvo={message.print.alvo} inicial={message.print.url} provedor={message.print.provedor} />}
                     {message.widgetCriado && (
                       <a className="criado-card" href="#/widgets">
                         <b>Widget criado</b>
