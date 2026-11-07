@@ -85,13 +85,14 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
 
   // ao abrir o player, leva ele para a tela (no celular ele nascia abaixo do campo de texto)
   useEffect(() => {
-    if (!atual.embed || compacto) return;
+    if (!atual.embed) return;
     const alvo = caixaRef.current;
-    if (!alvo) return;
-    const t = setTimeout(() => alvo.scrollIntoView({ behavior: "smooth", block: "center" }), 220);
-    // se em 3,5s o vídeo não começou, oferece o toque (navegador pode ter bloqueado o som)
-    const t2 = setTimeout(() => setPrecisaToque(true), 3500);
-    return () => { clearTimeout(t); clearTimeout(t2); };
+    const t = !compacto && alvo
+      ? setTimeout(() => alvo.scrollIntoView({ behavior: "smooth", block: "center" }), 220)
+      : null;
+    // o navegador bloqueia som em iframe sem toque: oferece o botão já de saída
+    const t2 = setTimeout(() => setPrecisaToque(true), 1800);
+    return () => { if (t) clearTimeout(t); clearTimeout(t2); };
   }, [atual.embed, compacto]);
 
   const tocarComSom = useCallback(() => {
