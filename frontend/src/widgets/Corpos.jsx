@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, askOnce, SUPA_URL, SUPA_ANON } from "../lib.js";
 import MediaPlayer from "../media.jsx";
 import { ImagemIaBody, Lightbox } from "./avancado.jsx";
+import ClimaCard from "../clima.jsx";
 
 /* ---------- utilidades ---------- */
 
@@ -65,6 +66,23 @@ export function StatusBody({ config, tick }) {
 }
 
 /* ---------- métricas com gráfico ---------- */
+
+export function ClimaBody({ config, tick }) {
+  const cidade = config?.cidade || "São Paulo";
+  const [dados, setDados] = useState(null);
+  const [erro, setErro] = useState("");
+  const carregar = useCallback(async () => {
+    setErro("");
+    const r = await api("agent", { method: "POST", body: { tool: "clima", payload: { cidade } } }).catch(() => null);
+    const d = r?.resultado ?? r;
+    if (d && (d.agora || d.temperatura_c || d.cidade)) { setDados(d); return; }
+    setErro(r?.error || "não consegui consultar o clima agora");
+  }, [cidade]);
+  useEffect(() => { carregar(); }, [carregar, tick]);
+  if (erro) return <p className="wg-erro">{erro}</p>;
+  if (!dados) return <Skeleton linhas={3} />;
+  return <ClimaCard dados={dados} />;
+}
 
 export function MetricasBody({ config, tick }) {
   const [serie, setSerie] = useState([]);

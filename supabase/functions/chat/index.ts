@@ -235,8 +235,12 @@ function detectTools(text: string): DetectedTool[] {
     tools.unshift({ name: "print", payload: { url: link.replace(/[.,;]$/, "") } });
   }
 
-  // 1c. pedido de widget/painel tem prioridade: senão "crie um widget de notícias" vira busca
-  const pedeWidget = /\b(cria|criar|monta|montar|adiciona|coloca|gera|gerar|quero)\b[\s\S]{0,24}\b(widget|painel|card)\b/i.test(text);
+  // 0. pedido de widget/painel manda em tudo: sem isso "crie um widget de clima" vira previsão do tempo
+  const pedeWidget = /\b(cria|crie|criar|monta|monte|montar|adiciona|adicione|coloca|coloque|gera|gere|gerar|quero|queria|faz|fa[cç]a|p[oõ]e|inclui|inclua)\b[\s\S]{0,28}\b(widget|painel|card)\b/i.test(text);
+  if (pedeWidget) {
+    tools.push({ name: "widget", payload: { pedido: text.slice(0, 200) } });
+    return tools;
+  }
 
   // 1d. "toca X", "abre o youtube e toca Y", "coloca uma playlist", link de música -> midia
   const linkMidiaDireta = text.match(/https?:\/\/\S+\.(?:mp3|m4a|wav|ogg|opus|mp4|webm|flac)(?:\?\S*)?/i)?.[0] ?? "";
@@ -321,7 +325,11 @@ function detectTools(text: string): DetectedTool[] {
       let c = String(s || "").replace(/\.\s*$/, "").trim();
       const lixo = /^(hoje|agora|amanh[aã]|esta|est[aá]|faz|o|a|os|as|em|de|do|da|para|no|na|tempo|clima)\s+/i;
       for (let i = 0; i < 6 && lixo.test(c); i++) c = c.replace(lixo, "").trim();
-      return c.replace(/\s+(?:hoje|agora)\s*$/i, "").trim();
+      return c
+        .replace(/\s+(?:no|na|em|para|pra)\s+(?:meu\s+)?(?:painel|widget|card|tela|conversa|in[ií]cio)\b.*$/i, "")
+        .replace(/\s+(?:como|de)\s+(?:widget|painel|card)\b.*$/i, "")
+        .replace(/\s+(?:hoje|agora)\s*$/i, "")
+        .trim();
     };
     tools.push({ name: "clima", payload: { cidade: limparCidade(cidade) || "São Paulo" } });
   }
@@ -1376,7 +1384,24 @@ Deno.serve(async (req) => {
             if (tool.name === "clima" && toolResult?.ok) {
               entregaDireta = {
                 quadro: { tipo: "clima", dados: toolResult },
-                texto: `Clima em **${toolResult.cidade}** agora: ${toolResult.agora?.temp}°C, ${toolResult.agora?.descricao}. Hoje fica entre ${toolResult.hoje?.min}°C e ${toolResult.hoje?.max}°C, com até ${toolResult.hoje?.chuva_max ?? 0}% de chance de chuva. O gráfico interativo está na conversa.`,
+                texto: (() => {
+                  const r = toolResult as Record<string, any>;
+                  const agora = r.agora ?? {};
+                  const hoje = r.hoje ?? {};
+                  const temp = r.temperatura_c ?? agora.temp;
+                  const desc = r.descricao ?? agora.descricao ?? "tempo estável";
+                  const sens = r.sensacao_c ?? agora.sensacao;
+                  const umid = r.umidade ?? agora.umidade;
+                  const vento = r.vento_kmh ?? agora.vento;
+                  const partes = [];
+                  if (temp !== undefined && temp !== null && temp !== "") partes.push(`${temp}°C`);
+                  partes.push(String(desc));
+                  if (sens !== undefined && sens !== null && sens !== "") partes.push(`sensação de ${sens}°C`);
+                  if (umid !== undefined && umid !== null && umid !== "") partes.push(`umidade ${umid}%`);
+                  if (vento !== undefined && vento !== null && vento !== "") partes.push(`vento ${vento} km/h`);
+                  const faixa = (hoje.min !== undefined && hoje.max !== undefined) ? ` Hoje fica entre ${hoje.min}°C e ${hoje.max}°C.` : "";
+                  return `Clima em **${r.cidade ?? "sua cidade"}** agora: ${partes.join(", ")}.${faixa} O gráfico interativo está na conversa.`;
+                })(),
               };
             }
             if (tool.name === "widget" && toolResult?.ok) {

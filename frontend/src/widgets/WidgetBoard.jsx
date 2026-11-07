@@ -7,7 +7,7 @@ import {
   intervaloValido, listaTipos, porPalavras, promptDoWidget, salvarWidgets,
 } from "./registry.js";
 import {
-  GaleriaBody, GithubBody, ImagemBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
+  ClimaBody, GaleriaBody, GithubBody, ImagemBody, IaBody, MetricasBody, MidiaBody, NoticiasBody, StatusBody, TerminalBody, TextoBody, VideoBody,
 } from "./Corpos.jsx";
 import { useAuth } from "../auth.jsx";
 
@@ -53,6 +53,7 @@ function CorpoDoWidget({ widget, tick, pedirAprovacao, notificar, atualizarConfi
   const c = widget.config || {};
   switch (widget.tipo) {
     case "status": return <StatusBody config={c} tick={tick} />;
+    case "clima": return <ClimaBody config={c} tick={tick} />;
     case "metricas": return <MetricasBody config={c} tick={tick} />;
     case "noticias": return <NoticiasBody config={c} tick={tick} />;
     case "github": return <GithubBody config={c} tick={tick} />;

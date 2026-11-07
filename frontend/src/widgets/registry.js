@@ -10,6 +10,15 @@ export const TIPOS = {
     tamanho: { cols: 2, linhas: 3 },
     atualizarAgora: 60,
   },
+  clima: {
+    nome: "Clima ao vivo",
+    desc: "Temperatura, chuva e vento da cidade, com gráfico",
+    icone: "☁",
+    critico: false,
+    padrao: { cidade: "São Paulo" },
+    tamanho: { cols: 2, linhas: 3 },
+    atualizarAgora: 600,
+  },
   metricas: {
     nome: "Gráfico de métricas",
     desc: "Série temporal de um número qualquer",
@@ -183,6 +192,7 @@ export function promptDoWidget(descricao) {
 export function porPalavras(descricao) {
   const d = String(descricao || "").toLowerCase();
   const regras = [
+    ["clima", /(clima|temperatura|previs[aã]o|chuva|vento|umidade|tempo em)/],
     ["metricas", /(gr[aá]fico|lat[eê]ncia|m[eé]trica|s[eé]rie|tempo de resposta|desempenho)/],
     ["noticias", /(not[ií]cia|manchete|jornal|aconteceu|news)/],
     ["github", /(github|reposit[oó]rio|repo|commit|pull request|c[oó]digo-fonte)/],
@@ -198,6 +208,17 @@ export function porPalavras(descricao) {
   const achado = regras.find(([, re]) => re.test(d));
   const tipo = achado ? achado[0] : "status";
   const config = { ...TIPOS[tipo].padrao };
+  if (tipo === "clima") {
+    const c = String(descricao).match(/(?:clima|tempo|previs[ãa]o|temperatura)\s*(?:em|de|para|no|na|do|da)?\s*([A-Za-zÀ-ÿ'\s]{3,40})/i);
+    if (c) {
+      config.cidade = c[1]
+        .replace(/\b(no|na|em|para|pra)\s+(meu\s+)?(painel|widget|card|tela|conversa|in[ií]cio)\b.*$/i, "")
+        .replace(/\b(como|de)\s+(widget|painel|card)\b.*$/i, "")
+        .replace(/\b(hoje|agora|ao vivo)\b.*$/i, "")
+        .trim()
+        .slice(0, 60) || "São Paulo";
+    }
+  }
   if (tipo === "noticias") config.consulta = String(descricao).slice(0, 120);
   if (tipo === "github" && /([\w.-]+\/[\w.-]+)/.test(descricao)) config.repo = descricao.match(/([\w.-]+\/[\w.-]+)/)[1];
   if (tipo === "video") {
