@@ -97,7 +97,20 @@ function BlocoCodigo({ linguagem, codigo }) {
 import { embedDeMidia } from "./media.jsx";
 
 export default function RichText({ texto = "", vivo = false }) {
+  // fallback: se o modelo devolver um documento HTML solto (sem cerca), vira artefato também
+  const textoOriginal = String(texto || "");
+  const htmlCru = (() => {
+    const bruto = textoOriginal;
+    if (bruto.length < 400) return "";
+    const m = bruto.match(/(<!doctype html[\s\S]*<\/html>|<html[\s>][\s\S]*<\/html>)/i);
+    if (!m) return "";
+    if (/```\s*(html|htm|svg)/i.test(bruto)) return "";
+    return m[1];
+  })();
+  const textoVisivel = htmlCru ? String(texto).replace(htmlCru, "").trim() : texto;
   const blocos = useMemo(() => {
+    // quando o documento HTML virou artefato, ele sai do texto (nunca mostramos HTML cru)
+    const texto = htmlCru ? "" : textoOriginal;
     const saida = [];
     let cursor = 0;
     let chave = 0;
@@ -147,7 +160,7 @@ export default function RichText({ texto = "", vivo = false }) {
     }
     empurrarTexto(texto.slice(cursor));
     return saida;
-  }, [texto]);
+  }, [texto, textoOriginal, htmlCru]);
 
   const embedDeMidiaSeguro = (url) => {
     try {
@@ -161,6 +174,7 @@ export default function RichText({ texto = "", vivo = false }) {
 
   return (
     <div className={`rich${vivo ? " vivo" : ""}`}>
+      {htmlCru ? <ArtefatoFrame html={htmlCru} /> : null}
       {blocos.map((b) => {
         if (b.tipo === "codigo") return <BlocoCodigo key={b.chave} linguagem={b.linguagem} codigo={b.codigo} />;
         if (b.tipo === "figura") {

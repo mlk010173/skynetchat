@@ -106,6 +106,9 @@ export async function streamChat({ conversationId, content, model, continuar }, 
               handlers.onMidia({ provedor: it.provedor, url: it.url, embed: it.embed, titulo: it.titulo, aviso: it.aviso });
             } else if (it.tipo === "print" && handlers.onPrint) {
               handlers.onPrint({ alvo: it.alvo, url: it.url, provedor: it.provedor });
+            } else if (it.tipo === "imagem" && (it.alvo || /^print de/i.test(String(it.legenda || ""))) && handlers.onPrint) {
+              const alvo = it.alvo || String(it.legenda || "").replace(/^print de\s*/i, "").trim();
+              handlers.onPrint({ alvo, url: it.url, provedor: it.provedor });
             } else if (it.tipo === "imagem" && handlers.onImage) {
               handlers.onImage(String(it.url ?? it.imagem ?? ""));
             } else if (it.tipo === "raciocinio" && handlers.onReason) {
