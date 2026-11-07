@@ -762,6 +762,22 @@ function processToolResult(toolName: string, payload: Record<string, any>, data:
         : `A biblioteca de habilidades não respondeu a esse pedido (${String(data?.erro ?? "sem correspondência")}). Se for uma conta simples, resolva diretamente; senão diga o que faltou.`;
       break;
     }
+    case "terminal": {
+      const cmd = String(payload?.cmd ?? payload?.comando ?? "").trim();
+      const saida = String(data.saida ?? "").trim();
+      const erroSaida = String(data.erro_saida ?? "").trim();
+      contextText = `COMANDO REAL EXECUTADO NO SERVIDOR: ${cmd}\nSAÍDA:
+${saida.slice(0, 1500) || "(vazia)"}` +
+        (erroSaida ? `\nSTDERR:
+${erroSaida.slice(0, 400)}` : "") +
+        `\nREQUISITO OBRIGATÓRIO: responda usando exatamente essa saída. Não recalcule, não invente outro valor.`;
+      break;
+    }
+    case "mcp": {
+      contextText = `RESULTADO REAL DA FERRAMENTA MCP ${data.ferramenta ?? ""}:\n${String(data.texto ?? "").slice(0, 1500)}` +
+        `\nREQUISITO: use esse resultado como está, sem inventar.`;
+      break;
+    }
     case "sandbox": {
       const saida = String(data.saida ?? "").slice(0, 4000) || "(sem saída)";
       contextText = `SAÍDA REAL DO SANDBOX ISOLADO (pasta da conta, cwd "/${data.cwd ?? ""}"). ` +
