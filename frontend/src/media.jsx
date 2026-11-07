@@ -95,13 +95,30 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
     return () => { if (t) clearTimeout(t); clearTimeout(t2); };
   }, [atual.embed, compacto]);
 
+  // O toque é gesto do usuário: recarregar o embed com autoplay aqui dentro
+  // é o caminho que o navegador aceita para liberar som (postMessage sozinho é ignorado).
   const tocarComSom = useCallback(() => {
     const f = frameRef.current;
     try {
       f?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: [] }), "*");
       f?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "unMute", args: [] }), "*");
-      f?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "setVolume", args: [100] }), "*");
-    } catch { /* iframe de outro domínio: o botão de abrir resolve */ }
+    } catch { /* iframe de outro domínio: o reload abaixo resolve */ }
+    setAtual((a) => {
+      if (!a.embed) return a;
+      try {
+        const u = new URL(a.embed);
+        u.searchParams.set("autoplay", "1");
+        u.searchParams.delete("mute");
+        if (/youtube\.com/.test(u.host)) {
+          u.searchParams.set("enablejsapi", "1");
+          u.searchParams.set("origin", location.origin);
+        }
+        u.searchParams.set("_tocar", String(Date.now()));
+        return { ...a, embed: u.toString() };
+      } catch {
+        return a;
+      }
+    });
     setPrecisaToque(false);
   }, []);
   const [lista, setLista] = useState([]);
