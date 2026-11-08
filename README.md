@@ -119,3 +119,13 @@ O repositório é autodocumentado para agentes de IA trabalharem nele com segura
 - **CELEBRO.md** — protocolo de raciocínio profundo: ciclo observar→orientar→decidir→agir, análise de causa raíz e arquivo de casos reais resolvidos.
 - **SKILL.md** — catálogo de habilidades: navegador automático (Playwright E2E), pesquisa avançada, terminal/CMD, MCP (mcp.json incluído), DevTools e checklists de entrega.
 - **tests/e2e-login.mjs** — E2E real contra produção: `npm run e2e` (1ª vez: `npx playwright install chromium`).
+
+## Baixar o app (Android)
+
+APK assinado, modo app (janela nativa do site, sem barra de endereço):
+
+**[skynet-1.0.0.apk](https://github.com/mlk010173/skynetchat/releases/download/android-v1.0.0/skynet-1.0.0.apk)**
+
+- Pacote `ai.skynet.chat` · Android 7+ (minSdk 24) · 2,5 MB
+- Código da casca Android em [`android/`](android/) com instruções de build
+- O site continua publicado só no GitHub Pages: https://mlk010173.github.io/skynetchat/
