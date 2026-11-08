@@ -1295,7 +1295,7 @@ export default function Home() {
                         <div className="fontes-chips">
                           {message.fontes.map((f, i) => (
                             <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" className="fonte-chip" title={f.titulo}>
-                              <IconGlobe width={12} height={12} />
+                              <FavReal url={f.url} titulo={f.titulo} size={13} />
                               <span>{f.titulo || f.url}</span>
                             </a>
                           ))}
