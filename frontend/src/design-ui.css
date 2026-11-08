@@ -1932,3 +1932,7 @@
   .lem-busca { margin-left: 0; width: 100%; }
   .so-desktop { display: none; }
 }
+
+.lem-sino { position: relative; color: var(--muted, #a3a3a3); text-decoration: none; font-size: 17px; }
+.lem-sino.tem-atraso { color: var(--red, #e11d2a); }
+.lem-sino-n { position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px; border-radius: 999px; background: var(--red, #e11d2a); color: #fff; font: 700 9.5px/15px inherit; text-align: center; }

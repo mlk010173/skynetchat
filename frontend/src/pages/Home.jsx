@@ -114,7 +114,21 @@ export default function Home() {
   // id do usuário atual em ref: o widget precisa ir para a mesma chave que o painel lê
   const usuarioRef = useRef(contaAtual || null);
   useEffect(() => { usuarioRef.current = contaAtual || null; }, [contaAtual]);
+
+  // lembretes atrasados: o app cobra sozinho, sem depender do chat
+  useEffect(() => {
+    if (!logged) { setAtrasados(0); return undefined; }
+    let vivo = true;
+    const conferir = async () => {
+      const r = await api("lembretes?estado=vencidos").catch(() => null);
+      if (vivo && r?.ok) setAtrasados(r.lembretes?.length ?? 0);
+    };
+    conferir();
+    const t = setInterval(conferir, 120000);
+    return () => { vivo = false; clearInterval(t); };
+  }, [logged]);
   const [model, setModel] = useState("");
+  const [atrasados, setAtrasados] = useState(0);
   // 4.0 = roteamento rápido · 4.5 Pro = roteador pede o modelo mais forte
   const [modo, setModo] = useState(() => localStorage.getItem("skynet-modo") || "4.5");
   const trocarModo = (m) => { setModo(m); localStorage.setItem("skynet-modo", m); setModel(m === "4.5" ? "melhor" : "auto"); };
@@ -857,6 +871,14 @@ export default function Home() {
         >
           ↓
         </button>
+        <a
+          className={`icon-btn lem-sino${atrasados ? " tem-atraso" : ""}`}
+          href="#/lembretes"
+          aria-label={atrasados ? `${atrasados} lembrete(s) atrasado(s)` : "Lembretes"}
+          title={atrasados ? `${atrasados} lembrete(s) atrasado(s)` : "Lembretes"}
+        >
+          ◷{atrasados ? <b className="lem-sino-n">{atrasados}</b> : null}
+        </a>
         <button
           type="button"
           className={`motor${modelOpen ? " aberto" : ""}`}
