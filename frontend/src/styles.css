@@ -914,3 +914,36 @@ button { font-family: inherit; color: inherit; }
 .barra-agente button { background: none; border: 0; padding: 0; color: #b9b9b9; font-size: 11px; cursor: pointer; text-decoration: underline dotted; }
 .barra-agente button:hover { color: #fff; }
 .barra-sep { opacity: .4; }
+
+/* marca SKYNET */
+.marca { display: inline-flex; align-items: center; gap: 7px; }
+.marca svg { display: block; }
+.marca-palavra { font-weight: 800; letter-spacing: .12em; color: #f2f2f2; font-size: inherit; }
+.marca-palavra span { color: var(--red); }
+[data-theme="white"] .marca-palavra { color: #141414; }
+
+/* barra de ações da mensagem */
+.acoes-msg { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.acoes-msg button {
+  background: none; border: 1px solid transparent; color: #8d8d8d; font-size: 11.5px;
+  padding: 3px 7px; border-radius: 7px; cursor: pointer; line-height: 1.3;
+}
+.acoes-msg button:hover { border-color: #2e2e2e; color: #efefef; background: #161616; }
+.acoes-voto { display: inline-flex; gap: 2px; margin-left: 2px; padding-left: 6px; border-left: 1px solid #242424; }
+.acoes-voto button.on { color: #ef4444; border-color: #3a1f1f; background: #17100f; }
+[data-theme="white"] .acoes-msg button { color: #5f5f5f; }
+[data-theme="white"] .acoes-msg button:hover { color: #111; border-color: #d9d9d9; background: #f4f4f4; }
+
+/* arrastar e soltar + contador do campo */
+.stage-arrastando::after {
+  content: "solte para anexar";
+  position: fixed; inset: 14px; border: 2px dashed rgba(239, 68, 68, .55); border-radius: 20px;
+  display: grid; place-items: center; color: #ef4444; font-size: 13px; letter-spacing: .08em;
+  text-transform: uppercase; background: rgba(239, 68, 68, .06); pointer-events: none; z-index: 40;
+}
+.dock-contador {
+  position: absolute; right: 10px; bottom: 8px; font-size: 10px; color: #6f6f6f;
+  font-variant-numeric: tabular-nums; pointer-events: none;
+}
+.dock-contador b { color: #f59e0b; font-weight: 600; }
+.dock { position: relative; }

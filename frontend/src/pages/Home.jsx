@@ -23,6 +23,8 @@ import RichText from "../rich.jsx";
 import { Artefato, montarArtefato, resumoDoArtefato, separarArtefatos } from "../artefatos.jsx";
 import { lerConfig, assinarConfig } from "../agente-config.js";
 import Paleta from "../components/Paleta.jsx";
+import { Logotipo, Simbolo, aplicarFavicon } from "../components/Marca.jsx";
+import AcoesMensagem from "../components/AcoesMensagem.jsx";
 import { baixarArquivo, paraMarkdown } from "../habilidades.js";
 import { camadaDeComportamento } from "../comportamento.js";
 import { lerMemoria, memoriaParaPrompt } from "../memoria.js";
@@ -178,6 +180,7 @@ export default function Home() {
     return () => window.removeEventListener("skynet:sugestao", aoSugerir);
   }, []);
   useEffect(() => { const t = setInterval(() => setPh((p) => (p + 1) % PLACEHOLDERS.length), 6000); return () => clearInterval(t); }, []);
+  useEffect(() => { aplicarFavicon(document.documentElement.dataset.theme === "white" ? "#b91c1c" : "#ef4444"); }, []);
 
   useEffect(() => { getSession().then((s) => setLogged(!!s)); }, []);
 
@@ -738,6 +741,21 @@ export default function Home() {
   }, [exportarConversa, say]);
 
   const fileRef = useRef(null);
+  const [arrastando, setArrastando] = useState(false);
+  const onFileRef = useRef(null);
+
+  // arrastar e soltar: mesma rotina do botão de anexo
+  const aoSoltar = useCallback((ev) => {
+    ev.preventDefault();
+    setArrastando(false);
+    const arquivos = [...(ev.dataTransfer?.files || [])];
+    if (!arquivos.length) return;
+    arquivos.slice(0, 8).forEach((f) => {
+      const falso = { target: { files: [f], value: "" } };
+      onFileRef.current?.(falso);
+    });
+    say(`${arquivos.length} arquivo(s) recebido(s).`);
+  }, [say]);
   const onFile = useCallback(async (event) => {
     const f = event.target.files?.[0];
     event.target.value = "";
@@ -758,6 +776,7 @@ export default function Home() {
       say(`Arquivo "${f.name}" anexado ao rascunho.`);
     } catch { say("Nao consegui ler esse arquivo (use texto)."); }
   }, [say]);
+  onFileRef.current = onFile;
 
   const rodarComando = useCallback(async (comando) => {
     setDraft("");
@@ -897,8 +916,10 @@ export default function Home() {
           aria-expanded={modelOpen}
           onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}
         >
-          <span className="motor-selo" aria-hidden="true" />
-          <span className="motor-nome">SKYNET</span>
+          <span className="motor-selo" aria-hidden="true">
+            <Simbolo tamanho={17} cor="var(--red)" />
+          </span>
+          <span className="motor-nome"><Logotipo tamanho={20} /></span>
           <span className="motor-tag">{modo === "4.5" ? "agente" : "rápido"}</span>
           <span className="motor-modelo">{labelFor(model)}</span>
           <IconChevron className="chev" width={15} height={15} />
@@ -1032,7 +1053,13 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="stage" ref={stageRef}>
+      <main
+        className={"stage" + (arrastando ? " stage-arrastando" : "")}
+        ref={stageRef}
+        onDragOver={(e) => { e.preventDefault(); if (!arrastando) setArrastando(true); }}
+        onDragLeave={(e) => { if (e.currentTarget === e.target) setArrastando(false); }}
+        onDrop={aoSoltar}
+      >
           <section className="modo-barra" aria-label="Modo de operação">
             <div className="modo-switch">
               {[["4.0", "Chat simples"], ["4.5", "Pro · agente"]].map(([v, rotulo]) => (
@@ -1313,7 +1340,18 @@ export default function Home() {
                     <span className="bubble-actions">
                       {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
                       {message.role === "user" && !busy && <button type="button" onClick={() => comecarEdicao(index)}>Editar</button>}
-                      {!busy && <button type="button" onClick={() => { navigator.clipboard?.writeText(message.text); say(message.role === "user" ? "Mensagem copiada." : "Resposta copiada."); }}>Copiar</button>}
+                      {!busy && (
+                        <AcoesMensagem
+                          id={`m${message.id || index}`}
+                          texto={message.text}
+                          papel={message.role}
+                          say={say}
+                          aoRegenerar={message.role === "assistant" ? () => {
+                            const anterior = [...messages].slice(0, index).reverse().find((m) => m.role === "user");
+                            if (anterior?.text) { setDraft(anterior.text); say("Pedido de volta no campo. Ajuste e envie."); }
+                          } : null}
+                        />
+                      )}
                       {message.role === "assistant" && message.text && (
                         <button type="button" onClick={async () => { say("Gerando voz local…"); const r = await voz.falar(message.text); say(r.ok ? `Falando (${r.motor}).` : `Voz indisponível: ${r.erro}`); }}>Ouvir</button>
                       )}
@@ -1420,6 +1458,11 @@ export default function Home() {
           placeholder={PLACEHOLDERS[ph]}
           aria-label="Mensagem"
         />
+        {draft.length > 0 && (
+          <span className="dock-contador" aria-live="polite">
+            {draft.length > 1200 ? <b>{draft.length}</b> : draft.length}
+          </span>
+        )}
         {listening ? (
           <span className="rec-ui" aria-label="Gravando áudio">
             <b className="rec-dot" /><span className="rec-time">{String(Math.floor(micSecs / 60)).padStart(2, "0")}:{String(micSecs % 60).padStart(2, "0")}</span>
