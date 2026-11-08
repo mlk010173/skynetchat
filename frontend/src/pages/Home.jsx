@@ -1133,7 +1133,12 @@ export default function Home() {
                               {message.passos.map((p, i) => (
                                 <li key={i} className={`trilha-passo ${p.estado}`}>
                                   <span className="trilha-marca" aria-hidden="true">
-                                    <span className="trilha-icone">{ICONES_PASSO[p.ferramenta] || "•"}</span>
+                                    <span className="trilha-icone">
+                                      {(() => {
+                                        const marca = marcaDe(`${p.ferramenta || ""} ${p.titulo || ""} ${p.detalhe || ""}`);
+                                        return marca ? <Marca slug={marca} size={13} /> : (ICONES_PASSO[p.ferramenta] || "•");
+                                      })()}
+                                    </span>
                                   </span>
                                   <div className="trilha-corpo">
                                     <div className="trilha-linha">

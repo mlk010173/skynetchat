@@ -11,9 +11,12 @@ import {
   IconServer,
 } from "../components/Icons.jsx";
 import { api } from "../lib.js";
+import { Marca, marcaDe } from "../marcas.jsx";
 
-/** Map icons by integration ID */
-function getIcon(id) {
+/** Logo real quando o serviço é conhecido, senão o ícone genérico. */
+function getIcon(id, nome) {
+  const marca = marcaDe(`${id} ${nome || ""}`);
+  if (marca) return function LogoMarca(props) { return <Marca slug={marca} size={props?.width || 18} />; };
   switch (id) {
     case "agente":
       return IconServer;
@@ -164,7 +167,7 @@ export default function Integracoes() {
       ) : (
         <div style={{ display: "grid", gap: "12px", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", marginBottom: "20px" }}>
           {integracoes.map((item) => {
-            const IconComponent = getIcon(item.id);
+            const IconComponent = getIcon(item.id, item.nome || item.motor);
             const isTestingThis = testingId === item.id || (loading && testingId === null);
 
             return (
