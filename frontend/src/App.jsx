@@ -14,6 +14,7 @@ import Ferramentas from "./pages/Ferramentas.jsx";
 import Permissoes from "./pages/Permissoes.jsx";
 import Crm from "./pages/Crm.jsx";
 import Sandbox from "./pages/Sandbox.jsx";
+import Lembretes from "./pages/Lembretes.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./auth.jsx";
 
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/permissoes" element={<Permissoes />} />
         <Route path="/crm" element={<Crm />} />
         <Route path="/codex" element={<Sandbox />} />
+        <Route path="/lembretes" element={<Lembretes />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/integracoes" element={<Integracoes />} />
         {/* rotas que exigem conta */}

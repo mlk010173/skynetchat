@@ -480,6 +480,16 @@ export default function Home() {
         copy[copy.length - 1] = { ...last, clima: dados };
         return copy;
       }),
+      onLembrete: (dados) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") {
+          copy.push({ role: "assistant", text: "", lembrete: dados, passos: [], fontes: [], ts: Date.now() });
+          return copy;
+        }
+        copy[copy.length - 1] = { ...last, lembrete: dados };
+        return copy;
+      }),
       onWidget: (spec) => setMessages((prev) => {
         // monta o widget a partir do pedido (tipo + config reais) e grava na chave do painel
         const doPedido = spec?.pedido ? porPalavras(spec.pedido) : null;
@@ -825,6 +835,30 @@ export default function Home() {
         </button>
         <button
           type="button"
+          className="icon-btn so-desktop"
+          onClick={() => {
+            const linhas = [`# SKYNET · ${new Date().toLocaleDateString("pt-BR")}`, ""];
+            for (const m of messages) {
+              if (!m.text?.trim()) continue;
+              linhas.push(`## ${m.role === "assistant" ? "SKYNET" : "Você"} — ${new Date(m.ts || Date.now()).toLocaleString("pt-BR")}`);
+              linhas.push(String(m.text).trim(), "");
+            }
+            if (linhas.length <= 2) { say("Nada para exportar nesta conversa ainda."); return; }
+            const blob = new Blob([linhas.join("\n")], { type: "text/markdown" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `skynet-${new Date().toISOString().slice(0, 10)}.md`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            say("Conversa exportada em Markdown.");
+          }}
+          aria-label="Exportar conversa"
+          title="Exportar conversa em .md"
+        >
+          ↓
+        </button>
+        <button
+          type="button"
           className={`motor${modelOpen ? " aberto" : ""}`}
           aria-label="Motor, modelo e habilidades do agente"
           aria-expanded={modelOpen}
@@ -1125,6 +1159,20 @@ export default function Home() {
                       </div>
                     )}
                     {message.print && <NavegadorAoVivo alvo={message.print.alvo} inicial={message.print.url} provedor={message.print.provedor} />}
+                    {message.lembrete && (
+                      <a className="lem-mini" href="#/lembretes">
+                        <span className="lem-mini-ico" aria-hidden="true">◷</span>
+                        <span className="lem-mini-txt">
+                          <b>{message.lembrete.titulo}</b>
+                          <small>
+                            {message.lembrete.quando
+                              ? new Date(message.lembrete.quando).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                              : "sem horário"}
+                            {" · abrir lembretes →"}
+                          </small>
+                        </span>
+                      </a>
+                    )}
                     {message.widgetCriado && (
                       <a className="criado-card" href="#/widgets">
                         <b>{message.widgetCriado.salvo ? "Widget salvo no painel" : "Widget pronto"}</b>

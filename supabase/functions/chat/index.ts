@@ -235,6 +235,14 @@ function detectTools(text: string): DetectedTool[] {
     tools.unshift({ name: "print", payload: { url: link.replace(/[.,;]$/, "") } });
   }
 
+  // 0b. lembretes: "me lembre de X às 8", "meus lembretes", "o que tenho hoje"
+  const listarLembretes = /\b(meus\s+lembretes|minhas\s+tarefas|o\s+que\s+(eu\s+)?tenho|tenho\s+para\s+hoje|lembretes\s+de\s+hoje)\b/i.test(text);
+  const pedeLembrete = /\b(lembr(ar|a|e|ete|etes)|avis(e|ar)|n[ãa]o\s+esque[cç]a)\b/i.test(text);
+  if (listarLembretes || pedeLembrete) {
+    tools.push({ name: "lembrete", payload: { pedido: text.slice(0, 300), listar: listarLembretes && !/lembr(ar|a|e)\s+(de|que|para)\b/i.test(text) } });
+    return tools;
+  }
+
   // 0. pedido de widget/painel manda em tudo: sem isso "crie um widget de clima" vira previsão do tempo
   const pedeWidget = /\b(cria|crie|criar|monta|monte|montar|adiciona|adicione|coloca|coloque|gera|gere|gerar|quero|queria|faz|fa[cç]a|p[oõ]e|inclui|inclua)\b[\s\S]{0,28}\b(widget|painel|card)\b/i.test(text);
   if (pedeWidget) {
@@ -449,7 +457,119 @@ async function prepararMidia(midia: Record<string, unknown>) {
   };
 }
 
+
+/**
+ * Interpreta "amanhã às 8", "daqui a 2 horas", "segunda 9h", "12/11 18:30" em pt-BR.
+ * Tudo é calculado no relógio de São Paulo (-03:00, sem horário de verão desde 2019)
+ * para o horário não sair três horas errado quando o servidor roda em UTC.
+ */
+const FUSO_SP = -3 * 3600 * 1000;
+
+function quandoDoPedido(texto: string): string | null {
+  const t = " " + String(texto || "").toLowerCase().normalize("NFC").replace(/\s+/g, " ") + " ";
+  const agoraReal = new Date();
+  // "agora" no relógio de São Paulo, lido com getUTC*
+  const relogio = new Date(agoraReal.getTime() + FUSO_SP);
+  const isoSP = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:00-03:00`;
+  };
+  const maisTarde = (ms: number) => isoSP(new Date(agoraReal.getTime() + ms + FUSO_SP));
+
+  const daqui = t.match(/daqui\s+a\s+(\d{1,3})\s*(min|minuto|minutos|h|hora|horas|dia|dias)/);
+  if (daqui) {
+    const n = Number(daqui[1]);
+    const mult = /dia/.test(daqui[2]) ? 864e5 : /min/.test(daqui[2]) ? 6e4 : 36e5;
+    return maisTarde(n * mult);
+  }
+  const emN = t.match(/\bem\s+(\d{1,3})\s*(min|minuto|minutos|hora|horas)\b/);
+  if (emN) return maisTarde(Number(emN[1]) * (/min/.test(emN[2]) ? 6e4 : 36e5));
+
+  // hora explícita: "às 8", "as 08:30", "15h", "15:45"
+  let hora = -1, minuto = 0;
+  const comMarcador = t.match(/(?:[àa]s)\s+(\d{1,2})(?:[:h](\d{2}))?/);
+  const comH = t.match(/\b(\d{1,2})h(\d{2})?\b/);
+  const comDois = t.match(/\b(\d{1,2}):(\d{2})\b/);
+  if (comMarcador) { hora = Number(comMarcador[1]); minuto = Number(comMarcador[2] ?? 0); }
+  else if (comH) { hora = Number(comH[1]); minuto = Number(comH[2] ?? 0); }
+  else if (comDois) { hora = Number(comDois[1]); minuto = Number(comDois[2]); }
+
+  const dia = new Date(relogio.getTime());
+  let temDia = false;
+  if (/depois de amanh[ãa]/.test(t)) { dia.setUTCDate(dia.getUTCDate() + 2); temDia = true; }
+  else if (/\bamanh[ãa]\b/.test(t)) { dia.setUTCDate(dia.getUTCDate() + 1); temDia = true; }
+  else if (/\bhoje\b/.test(t)) { temDia = true; }
+  else {
+    const dias = ["domingo", "segunda", "ter[çc]a", "quarta", "quinta", "sexta", "s[áa]bado"];
+    for (let i = 0; i < dias.length; i++) {
+      if (new RegExp(`\\b${dias[i]}\\b`).test(t)) {
+        let delta = (i - dia.getUTCDay() + 7) % 7;
+        if (delta === 0) delta = 7;
+        dia.setUTCDate(dia.getUTCDate() + delta);
+        temDia = true;
+        break;
+      }
+    }
+  }
+  const data = t.match(/\b(\d{1,2})[\/](\d{1,2})(?:[\/](\d{2,4}))?\b/);
+  if (data) {
+    const ano = data[3] ? Number(data[3].length === 2 ? "20" + data[3] : data[3]) : dia.getUTCFullYear();
+    dia.setUTCFullYear(ano, Number(data[2]) - 1, Number(data[1]));
+    temDia = true;
+  }
+
+  if (hora >= 0 && hora <= 23) {
+    dia.setUTCHours(hora, Math.min(59, minuto), 0, 0);
+    if (!temDia && dia.getTime() <= relogio.getTime()) dia.setUTCDate(dia.getUTCDate() + 1);
+    return isoSP(dia);
+  }
+  if (temDia) { dia.setUTCHours(9, 0, 0, 0); return isoSP(dia); }
+  return null;
+}
+
+/** Fala com a função lembretes como se fosse o próprio usuário. */
+async function chamarLembretes(caminho: string, jwt: string | null, conta: string | null, corpo?: unknown) {
+  const base = Deno.env.get("SUPABASE_URL")!;
+  const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const headers: Record<string, string> = { "content-type": "application/json", apikey: chave };
+  if (jwt) headers.authorization = `Bearer ${jwt}`;
+  else { headers.authorization = `Bearer ${chave}`; if (conta) headers["x-conta-id"] = conta; }
+  const r = await fetch(`${base}/functions/v1/lembretes${caminho}`, {
+    method: corpo === undefined ? "GET" : "POST",
+    headers,
+    ...(corpo === undefined ? {} : { body: JSON.stringify(corpo) }),
+  });
+  return await r.json().catch(() => ({ ok: false, error: "sem resposta do serviço de lembretes" }));
+}
+
 async function callTool(tool: DetectedTool, conta: string | null = null, jwt: string | null = null) {
+  if (tool.name === "lembrete") {
+    const pedido = String((tool.payload as Record<string, unknown>)?.pedido ?? "").trim();
+    const listar = Boolean((tool.payload as Record<string, unknown>)?.listar);
+    if (listar) {
+      const r = await chamarLembretes("?estado=abertos", jwt, conta);
+      return { ok: r?.ok !== false, acao: "listar", lembretes: r?.lembretes ?? [], resumo: r?.resumo ?? {}, erro: r?.error };
+    }
+    const quando = quandoDoPedido(pedido);
+    const titulo = String(pedido)
+      .replace(/^(por favor[, ]*)?(me\s+)?(lembr(ar|a|e|ete)|avis(e|ar)|n[ãa]o\s+esque[cç]a)(\s+(de|que|para))?\s*/i, "")
+      // \b não serve em "amanhã" (o acento não é letra para a regex do JS),
+      // então o corte é pelo marcador de tempo seguido de espaço/fim
+      .replace(/\s+(?:(?:[àa]s?|pelas?)\s*\d{1,2}(?:[:h]\d{2})?|amanh[ãa]|hoje|depois de amanh[ãa]|daqui\s+a\s+\d+\s*\w+|em\s+\d+\s*\w+|(?:domingo|segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado)(?:-feira)?|\d{1,2}\s*(?:h|horas)\b|dia\s+\d{1,2}|\d{1,2}[\/]\d{1,2}(?:[\/]\d{2,4})?)(?=[\s,.;:]|$)[\s\S]*$/i, "")
+      .replace(/\s+(?:dia|de|para|no|na|[àa]s?)\s*$/i, "")
+      .replace(/[\s,;]+$/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 140);
+    const r = await chamarLembretes("?acao=criar", jwt, conta, {
+      titulo: titulo || pedido.slice(0, 140),
+      detalhe: pedido.slice(0, 300),
+      quando,
+      origem: "chat",
+    });
+    return { ok: Boolean(r?.ok), acao: "criar", lembrete: r?.lembrete ?? null, quando, erro: r?.error };
+  }
+
   if (tool.name === "sandbox") {
     const base = Deno.env.get("SUPABASE_URL")!;
     const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -896,6 +1016,20 @@ ${erroSaida.slice(0, 400)}` : "") +
         `\nREQUISITO: use esse resultado como está, sem inventar.`;
       break;
     }
+    case "lembrete": {
+      const l = (data.lembrete ?? {}) as Record<string, any>;
+      if (data.acao === "listar") {
+        const lista = (data.lembretes ?? []) as Record<string, any>[];
+        contextText = lista.length
+          ? `LEMBRETES ABERTOS (${lista.length}):\n${lista.map((x) => `- ${x.titulo}${x.quando ? ` · ${new Date(x.quando).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : " · sem data"}`).join("\n")}`
+          : "Nenhum lembrete em aberto.";
+      } else {
+        contextText = l?.id
+          ? `LEMBRETE SALVO: "${l.titulo}"${l.quando ? ` para ${new Date(l.quando).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}. Ele já está no painel de lembretes.`
+          : `Não consegui salvar o lembrete: ${data.erro ?? "motivo desconhecido"}`;
+      }
+      break;
+    }
     case "sandbox": {
       const saida = String(data.saida ?? "").slice(0, 4000) || "(sem saída)";
       contextText = `SAÍDA REAL DO SANDBOX ISOLADO (pasta da conta, cwd "/${data.cwd ?? ""}"). ` +
@@ -1141,6 +1275,7 @@ Deno.serve(async (req) => {
     "NADA DE DESPEJAR CÓDIGO: quando o pedido é uma ação (abrir, tocar, pesquisar, gerar, checar), execute e responda com o resultado em texto. Nunca responda com HTML, CSS, JS ou um arquivo inteiro como se fosse entrega, a não ser que o usuário peça explicitamente por código.",
     "INFRAESTRUTURA: você consulta ao vivo Supabase (projeto, funções, contagens do banco), Vercel (projeto, último deploy, HTTP do site) e Render (saúde do agente) com a ferramenta 'infra'. Quando pedirem status, deploy ou números, use o dado real e cite a plataforma.",
     "MEMÓRIA: quando o usuário pedir para lembrar de algo, guarde com a ferramenta 'memoria' (ação salvar) e confirme em uma frase. Quando ele perguntar o que você sabe, consulte (ação buscar) e responda só o que estiver guardado, sem inventar.",
+    "LEMBRETES: você cria lembretes de verdade no painel do usuário (ferramenta lembrete). Quando ele pedir para lembrar de algo, confirme em UMA frase com o horário; não prometa aviso por WhatsApp/e-mail se ele não pediu isso.",
     "MÍDIA: o sistema tem player próprio (YouTube, Spotify, SoundCloud, Vimeo, MP4/MP3). Se o usuário pedir para tocar/abrir/colocar música, vídeo, filme ou playlist, o player é aberto automaticamente na conversa: confirme em UMA frase curta, com o título. Nunca responda apenas com o link.",
     "ARTEFATO DE INTERFACE: quando o pedido for criar interface, tela, dashboard, painel, site, jogo ou qualquer artefato visual, responda com UM bloco ```html completo e autossuficiente (CSS e JS dentro), precedido de uma frase curta. A tela transforma esse bloco em interface rodando e nunca mostra o código cru. Não devolva HTML fora do bloco.",
     "INTERFACE RICA: a tela renderiza markdown e widgets. Use **negrito** para o essencial, listas com "-" para passos, tabelas curtas quando comparar coisas, blocos com linguagem para trechos de código, imagem em markdown para mostrar figura, e links de vídeo/áudio (.mp4, YouTube, Vimeo, .mp3) em linha própria, que viram player. Não invente URL de mídia: use só as que vieram das ferramentas ou que você tem certeza que existem.",
@@ -1403,6 +1538,20 @@ Deno.serve(async (req) => {
                   return `Clima em **${r.cidade ?? "sua cidade"}** agora: ${partes.join(", ")}.${faixa} O gráfico interativo está na conversa.`;
                 })(),
               };
+            }
+            if (tool.name === "lembrete" && toolResult?.ok) {
+              const l = (toolResult.lembrete ?? {}) as Record<string, any>;
+              if (toolResult.acao === "listar") {
+                // lista: deixa o modelo conversar, mas com os dados na mão
+              } else if (l?.id) {
+                const quandoTxt = l.quando
+                  ? new Date(l.quando).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                  : "sem horário";
+                entregaDireta = {
+                  quadro: { tipo: "lembrete", dados: l },
+                  texto: `Anotado: **${String(l.titulo ?? "").slice(0, 90)}** — ${quandoTxt}. Está no seu painel de lembretes.`,
+                };
+              }
             }
             if (tool.name === "widget" && toolResult?.ok) {
               entregaDireta = {

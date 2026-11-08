@@ -11,7 +11,7 @@ import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
   { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens"] },
-  { titulo: "Ferramentas", itens: ["Codex", "CRM", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
+  { titulo: "Ferramentas", itens: ["Codex", "CRM", "Lembretes", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
   { titulo: "Crescer", itens: ["Indique e Ganhe", "Monetize com SKYNETchat", "Conversas em grupo"] },
   { titulo: "Descobrir", itens: ["Conheça o SKYNETchat", "Prompts", "Suporte", "Atualizações"] },
 ];
@@ -25,6 +25,7 @@ const items = [
   { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
   { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
   { label: "CRM", tag: "NOVO", desc: "Contatos, pipeline e atividades", icon: IconUsers },
+  { label: "Lembretes", tag: "NOVO", desc: "O que o chat anota para você não esquecer", icon: IconBell },
   { label: "Permissões", tag: "NOVO", desc: "Autorize o que o SKYNET executa", icon: IconServer },
   { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
   { label: "Automações", tag: "REAL", desc: "Central de automações e agendamentos", icon: IconZap },
@@ -44,6 +45,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   const [view, setView] = useState("menu");
   const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState([]);
+  const [buscaConv, setBuscaConv] = useState("");
 
   // Estados do E-mail
   const [emailSubView, setEmailSubView] = useState("list"); // list, read, draft
@@ -199,11 +201,12 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   const [termOutput, setTermOutput] = useState("");
   const [termMs, setTermMs] = useState(null);
 
-  const loadConvs = useCallback(async () => {
+  const loadConvs = useCallback(async (busca = "") => {
     if (!logged) { setConvs([]); return; }
     const session = await getSession();
     if (!session) return;
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/conversations`, {
+    const q = busca.trim() ? `?q=${encodeURIComponent(busca.trim().slice(0, 80))}` : "";
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/conversations${q}`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     const data = await res.json().catch(() => null);
@@ -224,6 +227,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
     else if (label === "Permissões") { navigate("/permissoes"); onClose(); }
     else if (label === "CRM") { navigate("/crm"); onClose(); }
+    else if (label === "Lembretes") { navigate("/lembretes"); onClose(); }
     else if (label === "Automações") setView("automations");
     else if (label === "E-mail") setView("email");
     else if (label === "Memória") setView("memoria");
@@ -669,10 +673,24 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               <span className="di-text"><span className="di-title">Voltar ao menu</span></span>
             </button>
             <p className="panel-title">HISTÓRICO</p>
+            {logged ? (
+              <form
+                className="hist-busca"
+                onSubmit={(e) => { e.preventDefault(); loadConvs(buscaConv); }}
+              >
+                <input
+                  value={buscaConv}
+                  onChange={(e) => { setBuscaConv(e.target.value); if (!e.target.value.trim()) loadConvs(""); }}
+                  placeholder="buscar no conteúdo das conversas"
+                  aria-label="Buscar conversas"
+                />
+                <button type="submit" aria-label="Buscar">buscar</button>
+              </form>
+            ) : null}
             {!logged ? (
               <p className="panel-msg">Faça login para ver suas conversas salvas.</p>
             ) : convs.length === 0 ? (
-              <p className="panel-msg">Nenhuma conversa salva ainda.</p>
+              <p className="panel-msg">{buscaConv.trim() ? `Nada encontrado para "${buscaConv.trim()}".` : "Nenhuma conversa salva ainda."}</p>
             ) : (
               convs.map((c) => (
                 <button

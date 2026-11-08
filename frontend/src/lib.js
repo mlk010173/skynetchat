@@ -98,6 +98,8 @@ export async function streamChat({ conversationId, content, model, continuar }, 
               handlers.onPermissao({ id: it.id, ferramenta: it.ferramenta, rotulo: it.rotulo, politica: it.politica, resumo: it.resumo });
             } else if (it.tipo === "clima" && handlers.onClima) {
               handlers.onClima(it.dados ?? it);
+            } else if (it.tipo === "lembrete" && handlers.onLembrete) {
+              handlers.onLembrete(it.dados ?? it);
             } else if (it.tipo === "widget" && handlers.onWidget) {
               handlers.onWidget(it.spec ?? it);
             } else if (it.tipo === "arquivo" && handlers.onArquivo) {
