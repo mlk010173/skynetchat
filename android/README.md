@@ -5,7 +5,7 @@ endereço e sem abas. O site continua publicado só no GitHub Pages; este projet
 casca Android dele.
 
 - Pacote: `ai.skynet.chat` (debug: `ai.skynet.chat.debug`)
-- Site carregado: `https://mlk010173.github.io/skynetchat/` (constante `SKYNET_URL` em
+- Site carregado: `https://skynetchat-xi.vercel.app/` (constante `SKYNET_URL` em
   `app/build.gradle.kts`)
 - minSdk 24 · targetSdk 34 · Kotlin + WebView (AndroidX)
 

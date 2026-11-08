@@ -16,7 +16,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         // site oficial agora vive no GitHub Pages
-        buildConfigField("String", "SKYNET_URL", "\"https://mlk010173.github.io/skynetchat/\"")
+        buildConfigField("String", "SKYNET_URL", "\"https://skynetchat-xi.vercel.app/\"")
     }
 
     signingConfigs {

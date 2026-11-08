@@ -5,7 +5,7 @@
 // Segurança:
 //  - código de 12 dígitos guardado em AES-256-GCM (chave no secret CODE_ENC_KEY);
 //  - sessão = token opaco de 32 bytes, revogável;
-//  - e-mail sai por fila com limite diário do plano free (5/dia por conta);
+//  - e-mail sai por fila com limite de 5/dia POR CONTA e teto global de 200/dia;
 //  - respostas de recuperação são sempre neutras (não revelam se o e-mail existe).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
@@ -161,7 +161,8 @@ const publico = (c: Record<string, unknown>) => ({
 });
 
 // ---------- e-mail (fila + limite diário) ----------
-const LIMITE_DIA_FREE = 5;
+const LIMITE_DIA_CONTA = 5;   // por conta (ou por destinatário, quando não há conta)
+const TETO_GLOBAL_DIA = 200;  // proteção do domínio: nunca mais que isso no dia inteiro
 
 async function enviarEmail(
   svc: ReturnType<typeof db>,
@@ -169,12 +170,21 @@ async function enviarEmail(
 ) {
   const inicioDia = new Date();
   inicioDia.setUTCHours(0, 0, 0, 0);
-  const { count } = await svc
+
+  // limite individual: conta a conta (antes era o projeto inteiro, o que travava todo mundo)
+  let daConta = svc
     .from("email_outbox")
     .select("id", { count: "exact", head: true })
     .gte("created_at", inicioDia.toISOString());
-  const usados = count ?? 0;
-  const estourou = usados >= LIMITE_DIA_FREE;
+  daConta = opts.accountId ? daConta.eq("account_id", opts.accountId) : daConta.eq("to_email", opts.to);
+  const { count: usadosConta } = await daConta;
+
+  const { count: usadosGlobais } = await svc
+    .from("email_outbox")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", inicioDia.toISOString());
+
+  const estourou = (usadosConta ?? 0) >= LIMITE_DIA_CONTA || (usadosGlobais ?? 0) >= TETO_GLOBAL_DIA;
 
   const { data: linha } = await svc.from("email_outbox").insert({
     account_id: opts.accountId ?? null,
@@ -185,7 +195,7 @@ async function enviarEmail(
     status: estourou ? "blocked_quota" : "queued",
   }).select("id").single();
 
-  if (estourou) return { enviado: false, motivo: "limite diario (5/5) do plano free", id: linha?.id };
+  if (estourou) return { enviado: false, motivo: "limite diario de 5 e-mails atingido para esta conta", id: linha?.id };
 
   const key = Deno.env.get("RESEND_API_KEY");
   if (!key) return { enviado: false, motivo: "RESEND_API_KEY ausente (fica na fila)", id: linha?.id };

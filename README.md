@@ -4,21 +4,26 @@ Chat de IA com estética de terminal (preto/vermelho), **100% código novo e pr�
 assets ou interface capturados de qualquer outro site. Tudo é real: servidor, banco, contas, login,
 recuperação de senha e chat.
 
-**No ar:** https://mlk010173.github.io/skynetchat/
+**No ar:** https://skynetchat-xi.vercel.app (oficial) · espelho https://mlk010173.github.io/skynetchat/
 
 ## Arquitetura
 
 | Camada | Tecnologia |
 |---|---|
-| Frontend | Next.js 15 exportado como site estático → GitHub Pages (branch `gh-pages`) |
-| Backend | Edge Functions do Supabase (`chat`, `models`, `conversations`) |
-| Conta + histórico | Supabase Auth + Postgres com Row Level Security |
+| Frontend | **React 18 + Vite** em `frontend/`, compilado para `site/` (HashRouter) |
+| Publicação | **Vercel** (origem oficial: https://skynetchat-xi.vercel.app) e espelho no **GitHub Pages** |
+| Backend | **Edge Functions do Supabase** em `supabase/functions/` (`chat`, `api`, `mcp`, `auth`, `conversations`, `sandbox`, `devtool`, …) |
+| Agente | Node em `server/agent.mjs` no **Render** (`skynet-agent.onrender.com`, exige `AGENT_TOKEN`) |
+| Conta + histórico | Supabase Auth (e-mail/senha **e** código de 12 dígitos) + Postgres com Row Level Security |
 | Chat | qualquer provedor compatível com a API OpenAI (OpenAI, Groq, OpenRouter…) — resposta em **streaming** |
 | Busca | **full-text em português** (tsvector + GIN) por título e conteúdo das mensagens |
 | Memória | **pgvector**: embeddings por mensagem; o agente lembra de conversas passadas |
 | Tempo real | **Supabase Realtime**: histórico sincronizado entre dispositivos |
 | Limpeza | **pg_cron**: rotina horária que apaga requisições anônimas antigas |
 | Testes | `node --test` (built-in) + `tsc --noEmit` |
+
+> Esta é a arquitetura vigente. O texto antigo descrevia um app Next.js que não existe mais no
+> repositório: o frontend atual é `frontend/` (Vite) e o que está publicado é `site/`.
 
 ```
 Browser ──> Edge Functions (Supabase) ──> Provedor de IA

@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
             override fun shouldOverrideUrlLoading(view: WebView, pedido: WebResourceRequest): Boolean {
                 val url = pedido.url.toString()
                 val interno = url.startsWith(BuildConfig.SKYNET_URL.trimEnd('/')) ||
-                    url.startsWith("https://mlk010173.github.io/skynetchat") ||
+                    url.startsWith("https://skynetchat-xi.vercel.app") ||
                     url.startsWith("https://rkgwhhtenfozdwzpvxjj.supabase.co")
                 if (interno) return false
                 // link externo: abre no navegador, o app continua no SKYNET

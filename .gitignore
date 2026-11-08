@@ -20,3 +20,9 @@ android/local.properties
 android/release.keystore
 *.apk
 *.aab
+
+# segredos e artefatos locais que nao devem ir para o repositorio publico
+/.env.production
+supabase/.temp/
+*.keystore
+*.jks

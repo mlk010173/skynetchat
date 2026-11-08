@@ -43,17 +43,22 @@ async function memoriaBuscar(email, consulta) {
   if (!r.ok) return { ok: false, erro: "falha na busca (" + r.status + ")" };
   return { ok: true, resultados: await r.json() };
 }
-const VERSION = "1.3.0";
+const VERSION = "1.3.1";
 const MAX_TEXTO = 9000;
 const UA = "Mozilla/5.0 (compatible; skynet-agent/" + VERSION + ")";
 
+// Somente leitura e diagnostico do servidor. Execucao de codigo (node, python3, sh, git)
+// fica FORA de proposito: um token comprometido nao pode rodar codigo arbitrario nem
+// consultar variaveis de ambiente do processo.
 const COMANDOS = {
   ls: "ls", pwd: "pwd", df: "df", free: "free", uptime: "uptime",
-  node: "node", python3: "python3", git: "git",
   cat: "cat", head: "head", tail: "tail", grep: "grep", wc: "wc",
   hostname: "hostname", uname: "uname", id: "id", whoami: "whoami",
   nproc: "nproc", date: "date", lsb_release: "lsb_release", tree: "tree",
 };
+
+// Nenhum argumento pode apontar para segredo, credencial ou area de processo.
+const ARG_PROIBIDO = /(\.env|environ|process\.|\.ssh|id_rsa|id_ed25519|\.keystore|\.jks|\.pem|\.crt|\/proc|\/etc\/|\/root|passwd|shadow|credential|secret|token|api[_-]?key|\.git\/)/i;
 const PROIBIDO = /[;&|`$><\n\r\\'"*?~]/;
 
 export function sanitizar(texto) {
@@ -73,7 +78,11 @@ export function validarComando(linha) {
   const partes = linha.trim().split(/\s+/);
   const bin = partes[0];
   if (!COMANDOS[bin]) return { ok: false, erro: "binario fora da whitelist: " + bin };
-  return { ok: true, bin, args: partes.slice(1, 9) };
+  const args = partes.slice(1, 9);
+  if (args.some((arg) => ARG_PROIBIDO.test(arg))) {
+    return { ok: false, erro: "argumento aponta para arquivo sensivel: " + bin };
+  }
+  return { ok: true, bin, args };
 }
 
 // ---------- ferramentas de rede ----------
