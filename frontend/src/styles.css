@@ -897,3 +897,13 @@ button { font-family: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .crm-detalhe { animation: none; }
 }
+
+/* página de ferramentas do agente */
+.pagina-ferramentas {
+  height: 100dvh; overflow-y: auto; padding: 18px 16px 40px; max-width: 860px; margin: 0 auto;
+}
+.pagina-topo { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.pagina-voltar { font-size: 12px; color: var(--muted); }
+.pagina-voltar:hover { color: #dcdcdc; }
+.pagina-topo h1 { margin: 2px 0 0; font-size: 21px; font-weight: 600; }
+.pagina-topo p { margin: 0; font-size: 12.5px; line-height: 1.5; color: #9a9a9a; max-width: 62ch; }

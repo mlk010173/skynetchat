@@ -171,3 +171,71 @@
   margin-top: 4px; background: none; border: none; padding: 0; cursor: pointer;
   font-size: 10.5px; color: #c07a7a; text-decoration: underline; text-underline-offset: 2px;
 }
+
+/* métricas no cabeçalho e no corpo do dossiê */
+.art-cabeca-dir { display: flex; align-items: center; gap: 6px; }
+.art-metrica { display: flex; flex-direction: column; align-items: center; line-height: 1.05; padding: 0 4px; }
+.art-metrica b { font-size: 12.5px; color: #f0f0f0; font-variant-numeric: tabular-nums; }
+.art-metrica small { font-size: 8.5px; letter-spacing: .04em; text-transform: uppercase; color: #7a7a7a; }
+.art-metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.art-metrica-card {
+  background: #121212; border: 1px solid var(--line); border-radius: 9px; padding: 7px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.art-metrica-card b { font-size: 15px; color: #f2f2f2; font-variant-numeric: tabular-nums; }
+.art-metrica-card small { font-size: 9px; letter-spacing: .04em; text-transform: uppercase; color: #7a7a7a; }
+
+/* controles do dossiê */
+.art-controles { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.art-filtros { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.art-filtros button {
+  background: #141414; border: 1px solid var(--line); color: #b9b9b9; font-size: 10.5px;
+  padding: 4px 8px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+}
+.art-filtros button.on { border-color: var(--red); color: #fff; background: #1a1010; }
+.art-filtros i { font-style: normal; color: #7d7d7d; margin-left: 3px; }
+.art-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.art-acoes select, .art-acoes button {
+  background: #141414; border: 1px solid var(--line); color: #cfcfcf; font-size: 10.5px;
+  padding: 4px 8px; border-radius: 7px; cursor: pointer;
+}
+.art-tipo { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; border-radius: 999px; border: 1px solid #2a2a2a; color: #9a9a9a; }
+.art-tipo.oficial { color: #8fc7a2; border-color: #1f3a26; }
+.art-tipo.academico { color: #9db4d8; border-color: #1f2a3a; }
+.art-tipo.imprensa { color: #d8b48f; border-color: #3a2f1f; }
+.art-tipo.tecnico { color: #b9a4d8; border-color: #2a1f3a; }
+.art-tempo { font-size: 9.5px; color: #6f6f6f; }
+
+/* plano da pesquisa dentro do dossiê */
+.art-plano { margin-top: 10px; border-top: 1px solid #171717; padding-top: 8px; }
+.art-plano > button {
+  background: none; border: none; padding: 0; cursor: pointer; color: #c07a7a;
+  font-size: 11px; text-decoration: underline; text-underline-offset: 2px;
+}
+.art-plano ol { margin: 8px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 5px; }
+.art-plano li { font-size: 11px; color: #a2a2a2; }
+.art-plano li b { color: #dedede; margin-right: 5px; }
+
+/* lista de ferramentas dentro do chat */
+.art-ferramentas { display: flex; flex-direction: column; gap: 6px; }
+.art-ferr { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid #171717; }
+.art-ferr:last-child { border-bottom: none; }
+.art-ferr-ico { width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; background: #161616; border: 1px solid var(--line); color: #cf7b7b; flex: 0 0 24px; }
+.art-ferr-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.art-ferr-txt b { font-size: 12px; color: #ececec; }
+.art-ferr-txt small { font-size: 10.5px; color: #8f8f8f; }
+.art-ferr-meta { display: flex; align-items: center; gap: 6px; }
+.art-ferr-meta em { font-style: normal; font-size: 10px; color: #7d7d7d; font-variant-numeric: tabular-nums; }
+.art-ferr-selo { font-size: 9.5px; text-transform: uppercase; letter-spacing: .04em; padding: 1px 6px; border-radius: 999px; border: 1px solid #2a2a2a; color: #9a9a9a; }
+.art-ferr-selo.ok { color: #8fc7a2; border-color: #1f3a26; }
+.art-ferr-selo.falha { color: #d97a7a; border-color: #3a1f1f; }
+
+/* zoom com barra */
+.art-zoom { flex-direction: column; }
+.art-zoom img { transition: transform .12s ease; }
+.art-zoom-bar {
+  display: flex; align-items: center; gap: 8px; background: #141414; border: 1px solid var(--line);
+  border-radius: 999px; padding: 5px 8px;
+}
+.art-zoom-bar button { background: none; border: none; color: #ddd; font-size: 12px; cursor: pointer; padding: 2px 6px; }
+.art-zoom-bar span { font-size: 11px; color: #9a9a9a; min-width: 38px; text-align: center; }

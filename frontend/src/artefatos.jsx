@@ -10,6 +10,56 @@ const limpar = (t) => String(t == null ? "" : t).replace(/\s+/g, " ").trim();
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
 const url = (u) => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "");
 
+const TIPO_DOMINIO = (host) => {
+  const h = String(host || "");
+  if (/(\.gov|governo|gov\.br|\.leg\.br|\.jus\.br)/.test(h)) return { rotulo: "oficial", classe: "oficial" };
+  if (/(\.edu|arxiv|nature|sciencedirect|pubmed|doi\.org|\.org\.br)/.test(h)) return { rotulo: "acadêmico", classe: "academico" };
+  if (/(reuters|apnews|bbc|folha|estadao|oglobo|g1\.globo|poder360|nexo|veja|exame|infoMoney|valor)/i.test(h)) return { rotulo: "imprensa", classe: "imprensa" };
+  if (/(github|gitlab|docs\.|readthedocs|developer\.)/.test(h)) return { rotulo: "técnico", classe: "tecnico" };
+  return { rotulo: "web", classe: "web" };
+};
+
+const tempoLeitura = (texto) => {
+  const palavras = String(texto || "").trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(palavras / 200));
+};
+
+const tempoRelativo = (valor) => {
+  const t = typeof valor === "number" ? valor : Date.parse(valor || "");
+  if (!t || Number.isNaN(t)) return "";
+  const min = Math.round((Date.now() - t) / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h} h`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "ontem" : `há ${d} dias`;
+};
+
+const baixar = (nome, conteudo, tipo = "text/markdown") => {
+  const blob = new Blob([conteudo], { type: `${tipo};charset=utf-8` });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+};
+
+const markdownDoDossie = (spec) => {
+  const linhas = [`# ${spec.titulo || "Dossiê"}`];
+  if (spec.subtitulo) linhas.push(`_${spec.subtitulo}_`);
+  if (spec.plano) linhas.push(`\nFrentes: ${spec.plano.map((f) => `${f.chave} — ${f.pergunta}`).join("; ")}`);
+  linhas.push("");
+  (spec.itens || []).forEach((f, i) => {
+    linhas.push(`${i + 1}. **${f.titulo}** — ${host(f.url)}`);
+    if (f.excerto) linhas.push(`   > ${f.excerto}`);
+    else if (f.resumo) linhas.push(`   ${f.resumo}`);
+    linhas.push(`   ${f.url}`);
+  });
+  linhas.push(`\nGerado por SKYNET em ${new Date().toLocaleString("pt-BR")}.`);
+  return linhas.join("\n");
+};
+
 const Icone = ({ nome = "file", size = 16 }) => {
   const p = {
     news: "M4 5h11v14H4zM15 9h5v10h-5M7 8h5M7 11h5M7 14h5",
@@ -30,14 +80,22 @@ const Icone = ({ nome = "file", size = 16 }) => {
   );
 };
 
-const Cabeca = ({ icone, titulo, sub, selo }) => (
+const Cabeca = ({ icone, titulo, sub, selo, metricas }) => (
   <header className="art-cabeca">
     <span className="art-icone"><Icone nome={icone} /></span>
     <span className="art-titulos">
       <strong>{titulo}</strong>
       {sub ? <small>{sub}</small> : null}
     </span>
-    {selo ? <span className="art-selo">{selo}</span> : null}
+    <span className="art-cabeca-dir">
+      {(metricas || []).map((m, i) => (
+        <span key={i} className="art-metrica" title={m.rotulo}>
+          <b>{m.valor}</b>
+          <small>{m.rotulo}</small>
+        </span>
+      ))}
+      {selo ? <span className="art-selo">{selo}</span> : null}
+    </span>
   </header>
 );
 
@@ -45,13 +103,27 @@ function Noticias({ spec }) {
   const itens = spec.itens || [];
   return (
     <div className="art-noticias">
-      {itens.map((n, i) => (
-        <a key={i} className="art-noticia" href={url(n.url)} target="_blank" rel="noopener noreferrer">
-          <span className="art-noticia-meta">{[n.fonte || host(n.url), n.data].filter(Boolean).join(" · ")}</span>
-          <b>{limpar(n.titulo)}</b>
-          {n.resumo ? <span className="art-noticia-resumo">{limpar(n.resumo)}</span> : null}
-        </a>
-      ))}
+      {itens.map((n, i) => {
+        const dominio = host(n.url);
+        const quando = tempoRelativo(n.data || n.quando);
+        return (
+          <a key={i} className="art-noticia" href={url(n.url)} target="_blank" rel="noopener noreferrer">
+            <span className="art-noticia-meta">
+              <img
+                className="art-favicon"
+                src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=64`}
+                alt=""
+                loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
+              />
+              {[n.fonte || dominio].filter(Boolean).join(" · ")}
+              {quando ? ` · ${quando}` : ""}
+            </span>
+            <b>{limpar(n.titulo)}</b>
+            {n.resumo ? <span className="art-noticia-resumo">{limpar(n.resumo)}</span> : null}
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -111,46 +183,135 @@ function Social({ spec }) {
 function Fontes({ spec }) {
   const itens = spec.itens || [];
   const [aberto, setAberto] = useState({});
+  const [dominio, setDominio] = useState("todos");
+  const [ordem, setOrdem] = useState("relevancia");
+  const [planoAberto, setPlanoAberto] = useState(false);
+
+  const dominios = useMemo(() => {
+    const contagem = new Map();
+    itens.forEach((f) => {
+      const d = host(f.url);
+      contagem.set(d, (contagem.get(d) || 0) + 1);
+    });
+    return [...contagem.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  }, [itens]);
+
+  const visiveis = useMemo(() => {
+    let lista = dominio === "todos" ? itens : itens.filter((f) => host(f.url) === dominio);
+    if (ordem === "recentes") {
+      lista = [...lista].sort((a, b) => (b.quando || 0) - (a.quando || 0));
+    } else if (ordem === "alfabetica") {
+      lista = [...lista].sort((a, b) => limpar(a.titulo).localeCompare(limpar(b.titulo), "pt-BR"));
+    }
+    return lista;
+  }, [itens, dominio, ordem]);
+
+  const todosAbertos = visiveis.every((_, i) => aberto[i]);
+  const metricas = spec.metricas || [];
+
   return (
-    <ol className="art-fontes">
-      {itens.map((f, i) => {
-        const dominio = host(f.url);
-        return (
-          <li key={i} className={f.primeiraMao ? "primeira-mao" : ""}>
-            <div className="art-fonte">
-              <span className="art-fonte-num">{i + 1}</span>
-              <span className="art-fonte-corpo">
-                <a className="art-fonte-titulo" href={url(f.url)} target="_blank" rel="noopener noreferrer">
-                  <img
-                    className="art-favicon"
-                    src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(dominio)}&sz=64`}
-                    alt=""
-                    loading="lazy"
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
-                  <b>{limpar(f.titulo)}</b>
-                </a>
-                <span className="art-fonte-meta">
-                  <em>{dominio}</em>
-                  {f.primeiraMao ? <span className="art-selo-mini">lida na íntegra</span> : null}
-                  {f.ramos && f.ramos.length > 1 ? <span className="art-selo-mini">{f.ramos.length} frentes</span> : null}
-                </span>
-                {f.excerto ? (
-                  <>
-                    <p className={"art-fonte-excerto" + (aberto[i] ? " aberto" : "")}>{limpar(f.excerto)}</p>
-                    <button type="button" className="art-fonte-mais" onClick={() => setAberto((a) => ({ ...a, [i]: !a[i] }))}>
-                      {aberto[i] ? "recolher trecho" : "ler trecho da fonte"}
-                    </button>
-                  </>
-                ) : f.resumo ? (
-                  <p className="art-fonte-excerto">{limpar(f.resumo)}</p>
-                ) : null}
-              </span>
+    <div className="art-dossie">
+      {metricas.length ? (
+        <div className="art-metricas">
+          {metricas.map((m, i) => (
+            <div key={i} className="art-metrica-card">
+              <b>{m.valor}</b>
+              <small>{m.rotulo}</small>
             </div>
-          </li>
-        );
-      })}
-    </ol>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="art-controles">
+        <div className="art-filtros">
+          <button type="button" className={dominio === "todos" ? "on" : ""} onClick={() => setDominio("todos")}>
+            todos <i>{itens.length}</i>
+          </button>
+          {dominios.map(([d, n]) => (
+            <button key={d} type="button" className={dominio === d ? "on" : ""} onClick={() => setDominio(d)}>
+              {d} <i>{n}</i>
+            </button>
+          ))}
+        </div>
+        <div className="art-acoes">
+          <select value={ordem} onChange={(e) => setOrdem(e.target.value)} aria-label="ordenar fontes">
+            <option value="relevancia">relevância</option>
+            <option value="recentes">mais recentes</option>
+            <option value="alfabetica">A–Z</option>
+          </select>
+          <button type="button" onClick={() => {
+            const proximo = {};
+            visiveis.forEach((f, i) => { if (f.excerto) proximo[i] = !todosAbertos; });
+            setAberto(proximo);
+          }}>
+            {todosAbertos ? "recolher trechos" : "abrir trechos"}
+          </button>
+          <button type="button" onClick={() => baixar(`dossie-${Date.now()}.md`, markdownDoDossie(spec))}>baixar .md</button>
+        </div>
+      </div>
+
+      <ol className="art-fontes">
+        {visiveis.map((f, i) => {
+          const d = host(f.url);
+          const tipo = TIPO_DOMINIO(d);
+          const minutos = f.excerto ? tempoLeitura(f.excerto) : 0;
+          return (
+            <li key={i} className={f.primeiraMao ? "primeira-mao" : ""}>
+              <div className="art-fonte">
+                <span className="art-fonte-num">{i + 1}</span>
+                <span className="art-fonte-corpo">
+                  <a className="art-fonte-titulo" href={url(f.url)} target="_blank" rel="noopener noreferrer">
+                    <img
+                      className="art-favicon"
+                      src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                    <b>{limpar(f.titulo)}</b>
+                  </a>
+                  <span className="art-fonte-meta">
+                    <em>{d}</em>
+                    <span className={`art-tipo ${tipo.classe}`}>{tipo.rotulo}</span>
+                    {f.primeiraMao ? <span className="art-selo-mini">lida na íntegra</span> : null}
+                    {f.ramos && f.ramos.length > 1 ? <span className="art-selo-mini">{f.ramos.length} frentes</span> : null}
+                    {minutos ? <span className="art-tempo">{minutos} min de leitura</span> : null}
+                  </span>
+                  {f.excerto ? (
+                    <>
+                      <p className={"art-fonte-excerto" + (aberto[i] ? " aberto" : "")}>{limpar(f.excerto)}</p>
+                      <button type="button" className="art-fonte-mais" onClick={() => setAberto((a) => ({ ...a, [i]: !a[i] }))}>
+                        {aberto[i] ? "recolher trecho" : "ler trecho da fonte"}
+                      </button>
+                    </>
+                  ) : f.resumo ? (
+                    <p className="art-fonte-excerto">{limpar(f.resumo)}</p>
+                  ) : null}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      {spec.plano && spec.plano.length ? (
+        <div className="art-plano">
+          <button type="button" onClick={() => setPlanoAberto((v) => !v)}>
+            {planoAberto ? "ocultar" : "como esta pesquisa foi feita"} · {spec.plano.length} frentes
+          </button>
+          {planoAberto ? (
+            <ol>
+              {spec.plano.map((f, i) => (
+                <li key={i}>
+                  <b>{f.chave}</b>
+                  <small>{f.pergunta}</small>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -188,12 +349,20 @@ function Clima({ spec }) {
 function Fotos({ spec }) {
   const imagens = spec.imagens || [];
   const [zoom, setZoom] = useState(null);
+  const [escala, setEscala] = useState(1);
+
   useEffect(() => {
     if (zoom === null) return;
-    const onKey = (e) => e.key === "Escape" && setZoom(null);
+    setEscala(1);
+    const onKey = (e) => {
+      if (e.key === "Escape") setZoom(null);
+      if (e.key === "+" || e.key === "=") setEscala((v) => Math.min(4, v + 0.25));
+      if (e.key === "-") setEscala((v) => Math.max(1, v - 0.25));
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [zoom]);
+
   return (
     <>
       <div className="art-fotos">
@@ -205,9 +374,28 @@ function Fotos({ spec }) {
         ))}
       </div>
       {zoom !== null ? (
-        <div className="art-zoom" onClick={() => setZoom(null)} role="dialog" aria-label="imagem ampliada">
-          <img src={imagens[zoom].url} alt={imagens[zoom].legenda || "print"} onClick={(e) => e.stopPropagation()} />
-          <small>{imagens[zoom].legenda || ""}</small>
+        <div
+          className="art-zoom"
+          role="dialog"
+          aria-label="imagem ampliada"
+          onClick={() => setZoom(null)}
+          onWheel={(e) => { e.preventDefault(); setEscala((v) => Math.max(1, Math.min(4, v + (e.deltaY < 0 ? 0.2 : -0.2)))); }}
+        >
+          <img
+            src={imagens[zoom].url}
+            alt={imagens[zoom].legenda || "print"}
+            style={{ transform: `scale(${escala})` }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="art-zoom-bar" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setEscala((v) => Math.max(1, v - 0.25))}>−</button>
+            <span>{Math.round(escala * 100)}%</span>
+            <button type="button" onClick={() => setEscala((v) => Math.min(4, v + 0.25))}>+</button>
+            <button type="button" onClick={() => baixar(imagens[zoom].legenda || "print.png", "", "image/png")}>
+              baixar
+            </button>
+            <button type="button" onClick={() => setZoom(null)}>fechar</button>
+          </div>
         </div>
       ) : null}
     </>
@@ -261,7 +449,29 @@ function Pesquisa({ spec }) {
   );
 }
 
+function Ferramentas({ spec }) {
+  const itens = spec.itens || [];
+  return (
+    <div className="art-ferramentas">
+      {itens.map((t, i) => (
+        <div key={i} className={"art-ferr " + (t.estado || "")}>
+          <span className="art-ferr-ico"><Icone nome={t.icone || "fonte"} size={15} /></span>
+          <span className="art-ferr-txt">
+            <b>{limpar(t.nome)}</b>
+            <small>{limpar(t.descricao)}</small>
+          </span>
+          <span className="art-ferr-meta">
+            {t.latencia ? <em>{t.latencia} ms</em> : null}
+            <span className={"art-ferr-selo " + (t.estado || "")}>{t.estado === "ok" ? "respondendo" : t.estado === "falha" ? "falhou" : "pronta"}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const TIPOS = {
+  ferramentas: { icone: "fonte", selo: "ferramentas", corpo: Ferramentas },
   pesquisa: { icone: "fonte", selo: "pesquisa", corpo: Pesquisa },
   noticias: { icone: "news", selo: "notícias", corpo: Noticias },
   videos: { icone: "video", selo: "vídeos", corpo: Videos },
@@ -374,11 +584,27 @@ export async function montarArtefato(pedido, opcoes = {}) {
     specs.push({ tipo: "social", titulo: `Instagram · ${dossie.plano.nucleo}`, subtitulo: "perfis e posts públicos", itens: dossie.social, rodape: "abre no Instagram" });
   }
   if (dossie.fontes.length) {
+    const lidas = dossie.fontes.filter((f) => f.primeiraMao).length;
     specs.push({
       tipo: "fontes",
       titulo: `Dossiê · ${dossie.plano.nucleo}`.slice(0, 60),
-      subtitulo: `${dossie.fontes.length} fontes · ${dossie.fontes.filter((f) => f.primeiraMao).length} lidas na íntegra`,
-      itens: dossie.fontes.map((f) => ({ titulo: f.titulo, url: f.url, resumo: f.snippet, excerto: f.excerto, primeiraMao: f.primeiraMao, ramos: f.ramos })),
+      subtitulo: `pesquisa em ${dossie.plano.ramos.length} frentes`,
+      itens: dossie.fontes.map((f) => ({
+        titulo: f.titulo,
+        url: f.url,
+        resumo: f.snippet,
+        excerto: f.excerto,
+        primeiraMao: f.primeiraMao,
+        ramos: f.ramos,
+        quando: f.quando,
+      })),
+      plano: dossie.plano.ramos,
+      metricas: [
+        { valor: dossie.fontes.length, rotulo: "fontes" },
+        { valor: lidas, rotulo: "na íntegra" },
+        { valor: dossie.plano.ramos.length, rotulo: "frentes" },
+        { valor: dossie.videos.length + dossie.social.length, rotulo: "mídias" },
+      ],
       rodape: `pesquisa em ${dossie.plano.ramos.length} frentes · ${new Date(dossie.quando).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
     });
   }

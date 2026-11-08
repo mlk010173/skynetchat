@@ -1159,6 +1159,7 @@ export default function Home() {
             <div className="plus-menu">
               <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}>📎 Anexar print ou arquivo</button>
               <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Gerar uma imagem"); }}>🖼 Criar imagem</button>
+              <button type="button" onClick={() => { setPlusOpen(false); window.location.hash = "#/ferramentas"; }}>🧪 Ferramentas do agente</button>
               <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Pesquisar na web agora"); }}>💡 Pensar</button>
               <button type="button" onClick={() => { setPlusOpen(false); setDraft("Investigue com atenção: "); }}>🔍 Investigar</button>
               <button type="button" onClick={() => { setPlusOpen(false); setDraft("Gere o código: "); }}>⌨ Gerar código</button>

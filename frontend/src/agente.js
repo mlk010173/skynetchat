@@ -7,6 +7,7 @@
 //  - deer-flow: orçamento de contexto, compactação e estado de progresso
 
 import { noticias, resumo, social, videos, web } from "./pesquisa.js";
+import { lerConfig } from "./agente-config.js";
 
 const normalizar = (t) =>
   String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -114,14 +115,18 @@ export function planejar(pedido) {
     ramos.push({ chave, pergunta, peso });
   };
 
+  const cfg = lerConfig();
+  const limiteFrentes = Math.max(1, Math.min(5, Number(cfg.frentes) || 4));
+
   add("nucleo", nucleo, 100);
   for (const i of INTENCOES) if (i.re.test(bruto)) add(i.chave, i.pergunta(nucleo), 80);
   // ângulos universais de um bom dossiê
   add("contexto", `${nucleo} contexto histórico`, 55);
   add("primario", `${nucleo} documento oficial dados`, 60);
   add("contra", `${nucleo} críticas`, 45);
+  if (cfg.idioma === "en") add("ingles", `${nucleo} english`, 50);
 
-  return { nucleo, ramos: ramos.slice(0, 5) };
+  return { nucleo, ramos: ramos.slice(0, limiteFrentes) };
 }
 
 /* --------------------------- leitura primária -------------------------- */
@@ -199,9 +204,11 @@ export async function pesquisarProfundo(pedido, { aoPasso = () => {}, querVideos
   const plano = planejar(pedido);
   aoPasso({ etapa: "plano", titulo: "Planejando a pesquisa", detalhe: plano.ramos.map((r) => r.pergunta).join(" · ").slice(0, 180) });
 
+  const cfg = lerConfig();
+  const porFrente = Math.max(3, Math.min(10, Number(cfg.fontesPorFrente) || 6));
   const tarefas = plano.ramos.map((ramo) => async () => {
     const lista = await web(ramo.pergunta).catch(() => []);
-    return lista.slice(0, 6).map((f) => ({
+    return lista.slice(0, porFrente).map((f) => ({
       titulo: f.title || f.titulo || "",
       resumo: f.snippet || f.resumo || "",
       url: f.url,
@@ -253,14 +260,16 @@ export async function pesquisarProfundo(pedido, { aoPasso = () => {}, querVideos
     }
   }
 
-  let fontes = [...mapa.values()].sort((a, b) => b.pontos - a.pontos).slice(0, 12);
+  const limiteFontes = Math.max(6, Math.min(20, Number(cfg.fontesMax) || 12));
+  let fontes = [...mapa.values()].sort((a, b) => b.pontos - a.pontos).slice(0, limiteFontes);
   // citação válida: só fica o que tem URL http e título
   fontes = fontes.filter((f) => /^https?:\/\//i.test(f.url) && (f.titulo || "").length > 3);
 
   aoPasso({ etapa: "rank", titulo: "Filtrando e ordenando", detalhe: `${fontes.length} fontes mantidas de ${mapa.size} obtidas` });
 
   // leitura de primeira mão nas 3 melhores
-  const topo = fontes.slice(0, 2);
+  const quantasLer = Math.max(0, Math.min(4, Number(cfg.leiturasIntegra)));
+  const topo = fontes.slice(0, quantasLer);
   await comLimite(
     topo.map((f) => async () => {
       const leitura = await lerPrimeiraMao(f.url, plano.nucleo);
@@ -269,7 +278,7 @@ export async function pesquisarProfundo(pedido, { aoPasso = () => {}, querVideos
         f.primeiraMao = true;
       }
     }),
-    2
+    Math.max(1, quantasLer)
   );
   fontes = fontes
     .map((f) => ({ ...f, pontos: pontuar(plano.nucleo, f) + (f.primeiraMao ? 18 : 0) }))

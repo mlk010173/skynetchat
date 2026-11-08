@@ -10,6 +10,7 @@ import Settings from "./pages/Settings.jsx";
 import Terms from "./pages/Terms.jsx";
 import Integracoes from "./pages/Integracoes.jsx";
 import Widgets from "./pages/Widgets.jsx";
+import Ferramentas from "./pages/Ferramentas.jsx";
 import Permissoes from "./pages/Permissoes.jsx";
 import Crm from "./pages/Crm.jsx";
 import Sandbox from "./pages/Sandbox.jsx";
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/recovery" element={<Recovery />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/widgets" element={<Widgets />} />
+        <Route path="/ferramentas" element={<Ferramentas />} />
         <Route path="/permissoes" element={<Permissoes />} />
         <Route path="/crm" element={<Crm />} />
         <Route path="/codex" element={<Sandbox />} />

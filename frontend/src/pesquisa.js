@@ -6,12 +6,18 @@
  */
 
 const CACHE = new Map();
-const TTL = 12 * 60 * 1000;
+const ttlAtual = () => {
+  try {
+    return Math.max(60 * 1000, Number(JSON.parse(localStorage.getItem("skynet.agente.config.v1") || "{}").cacheMin || 12) * 60 * 1000);
+  } catch {
+    return 12 * 60 * 1000;
+  }
+};
 const TIMEOUT = 13000;
 
 const cacheGet = (k) => {
   const e = CACHE.get(k);
-  return e && Date.now() - e.t < TTL ? e.v : null;
+  return e && Date.now() - e.t < ttlAtual() ? e.v : null;
 };
 const cacheSet = (k, v) => CACHE.set(k, { t: Date.now(), v });
 
