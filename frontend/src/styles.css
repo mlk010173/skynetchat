@@ -907,3 +907,9 @@ button { font-family: inherit; color: inherit; }
 .pagina-voltar:hover { color: #dcdcdc; }
 .pagina-topo h1 { margin: 2px 0 0; font-size: 21px; font-weight: 600; }
 .pagina-topo p { margin: 0; font-size: 12.5px; line-height: 1.5; color: #9a9a9a; max-width: 62ch; }
+
+/* barra de estado do agente acima do compositor */
+.barra-agente { display: flex; align-items: center; gap: 6px; padding: 6px 14px 0; font-size: 11px; color: #7d7d7d; }
+.barra-agente button { background: none; border: 0; padding: 0; color: #b9b9b9; font-size: 11px; cursor: pointer; text-decoration: underline dotted; }
+.barra-agente button:hover { color: #fff; }
+.barra-sep { opacity: .4; }

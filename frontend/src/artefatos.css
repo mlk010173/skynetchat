@@ -320,3 +320,8 @@
 .art-consenso { margin: 8px 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .art-consenso b { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: #7f7f7f; font-weight: 600; }
 .art-consenso em { font-style: normal; font-size: 11px; color: #b9b9b9; background: #141414; border: 1px solid #242424; border-radius: 999px; padding: 2px 8px; }
+
+/* sugestões de continuidade no fim do dossiê */
+.art-sugestoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.art-sugestoes button { border: 1px solid #2e2e2e; background: #141414; color: #d7d7d7; font-size: 12px; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.art-sugestoes button:hover { border-color: #5a5a5a; color: #fff; }

@@ -11,6 +11,9 @@ import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
 const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá além", "Sem filtros, sem limites."];
 import { useAuth } from "../auth.jsx";
 import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
+import { responderLocal } from "../fallback.js";
+import { guardarDossie, lerArquivo, removerDossie } from "../historico.js";
+import { resumoComportamento } from "../comportamento.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
 import { chatModels, labelFor } from "../models.js";
@@ -21,7 +24,7 @@ import { lerConfig, assinarConfig } from "../agente-config.js";
 import Paleta from "../components/Paleta.jsx";
 import { baixarArquivo, paraMarkdown } from "../habilidades.js";
 import { camadaDeComportamento } from "../comportamento.js";
-import { memoriaParaPrompt } from "../memoria.js";
+import { lerMemoria, memoriaParaPrompt } from "../memoria.js";
 
 const actions = [
   { label: "Pesquisar na web agora", icon: IconGlobe, color: "#60a5fa", desc: "manchetes e fontes ao vivo" },
@@ -147,6 +150,18 @@ export default function Home() {
   const stageRef = useRef(null);
 
   const say = useCallback((m) => { setToast(m); setTimeout(() => setToast(""), 5000); }, []);
+
+  // sugestões dos artefatos caem no campo de texto (sem enviar sozinho)
+  useEffect(() => {
+    const aoSugerir = (ev) => {
+      const texto = ev?.detail?.texto;
+      if (!texto) return;
+      setDraft((d) => (d ? `${d}\n${texto}` : texto));
+      document.querySelector(".dock input[aria-label=\"Mensagem\"]")?.focus();
+    };
+    window.addEventListener("skynet:sugestao", aoSugerir);
+    return () => window.removeEventListener("skynet:sugestao", aoSugerir);
+  }, []);
   useEffect(() => { const t = setInterval(() => setPh((p) => (p + 1) % PLACEHOLDERS.length), 6000); return () => clearInterval(t); }, []);
 
   useEffect(() => { getSession().then((s) => setLogged(!!s)); }, []);
@@ -302,6 +317,8 @@ export default function Home() {
             copy[idx] = { ...alvoMsg, artefatos: (alvoMsg.artefatos || []).filter((a) => a.tipo !== "pesquisa") };
             return copy;
           }
+          const dossie = specs.find((x) => x.tipo === "fontes");
+          if (dossie) guardarDossie(text, dossie);
           copy[idx] = {
             ...alvoMsg,
             text: alvoMsg.text || resumoDoArtefato(specs),
@@ -520,14 +537,48 @@ export default function Home() {
           return copy;
         });
       },
-      onError: (message) => {
+      onError: async (message) => {
+        const aviso = `> O servidor do chat não respondeu (${String(message || "erro").slice(0, 60)}). Montando a resposta aqui no navegador com as fontes reais…`;
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
-          if (last && last.role === "assistant" && last.text === "" && !last.fontes?.length) copy.pop();
-          else if (last && last.role === "assistant") copy[copy.length - 1] = { ...last, text: `> ${message}` };
+          if (last && last.role === "assistant") copy[copy.length - 1] = { ...last, text: aviso, local: true };
+          else copy.push({ role: "assistant", text: aviso, local: true, started: Date.now() });
           return copy;
         });
+        try {
+          const { texto, dossie } = await responderLocal(text);
+          const spec = {
+            tipo: "fontes",
+            titulo: `Dossiê · ${String(text).slice(0, 46)}`,
+            subtitulo: `${dossie.fontes.length} fontes · montado no navegador`,
+            itens: dossie.fontes.slice(0, 14),
+            plano: dossie.plano,
+            rodape: "modo local · sem backend",
+          };
+          guardarDossie(text, spec);
+          setMessages((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") {
+              copy[copy.length - 1] = {
+                ...last,
+                text: texto,
+                local: true,
+                secs: Math.max(1, Math.round((Date.now() - (last.started || Date.now())) / 1000)),
+                artefatos: [...(last.artefatos || []).filter((a) => a.tipo !== "pesquisa"), spec],
+              };
+            }
+            return copy;
+          });
+        } catch {
+          setMessages((prev) => {
+            const copy = [...prev];
+            const last = copy[copy.length - 1];
+            if (last && last.role === "assistant") copy[copy.length - 1] = { ...last, text: aviso };
+            return copy;
+          });
+        }
         say(message);
         if (/limite/i.test(message)) setLimitHit(true);
       },
@@ -1200,6 +1251,15 @@ export default function Home() {
 
       <AcaoSheet acao={acaoSheet} onFechar={fecharSheet} onEnviar={enviarTexto} />
 
+      <div className="barra-agente">
+        <button type="button" onClick={() => { window.location.hash = "#/ferramentas"; }}>
+          {resumoComportamento(lerConfig())}
+        </button>
+        <span className="barra-sep">·</span>
+        <span>{lerConfig().memoriaAtiva ? `${lerMemoria().length} memórias` : "memória off"}</span>
+        <span className="barra-sep">·</span>
+        <span>{lerArquivo().length} no arquivo</span>
+      </div>
       <form className="dock" onSubmit={enviar}>
         {prints.length > 0 && (
           <div className="dock-prints">

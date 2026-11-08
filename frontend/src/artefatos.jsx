@@ -713,6 +713,19 @@ export function Artefato({ spec }) {
     <section className="artefato" data-tipo={spec.tipo}>
       <Cabeca icone={t.icone} titulo={spec.titulo || t.selo} sub={spec.subtitulo} selo={total > 1 ? `${total} ${t.selo}` : t.selo} />
       <div className="art-corpo"><Corpo spec={spec} /></div>
+      {(spec.sugestoes || []).length ? (
+        <div className="art-sugestoes">
+          {(spec.sugestoes || []).map((sug) => (
+            <button
+              key={sug}
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("skynet:sugestao", { detail: { texto: sug } }))}
+            >
+              {sug}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {spec.rodape ? <footer className="art-rodape">{limpar(spec.rodape)}</footer> : null}
     </section>
   );
