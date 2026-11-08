@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,7 +24,7 @@ android {
             val b64 = System.getenv("KEYSTORE_BASE64") ?: ""
             if (b64.isNotEmpty()) {
                 val arquivo = file("${rootDir}/release.keystore")
-                if (!arquivo.exists()) arquivo.writeBytes(java.util.Base64.getDecoder().decode(b64))
+                if (!arquivo.exists()) arquivo.writeBytes(Base64.getDecoder().decode(b64))
                 storeFile = arquivo
                 storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
                 keyAlias = System.getenv("KEY_ALIAS") ?: "skynet"
