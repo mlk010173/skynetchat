@@ -598,18 +598,18 @@ export default function Home() {
     event.target.value = "";
     if (!f) return;
     if (/^image\//.test(f.type)) {
-      if (f.size > 8 * 1024 * 1024) { say("Imagem grande demais (limite 8 MB)."); return; }
+      if (f.size > 40 * 1024 * 1024) { say("Imagem acima de 40 MB não abre no navegador."); return; }
       try {
         const url = await redimensionar(f, 1400);
-        setPrints((p) => [...p, { url, nome: f.name || `print-${p.length + 1}.png`, tipo: f.type }]);
+        setPrints((p) => (p.length >= 8 ? p : [...p, { url, nome: f.name || `print-${p.length + 1}.png`, tipo: f.type }]));
         say(`Print "${f.name || "colado"}" anexado. Pode mandar mais de um.`);
       } catch { say("Nao consegui abrir essa imagem."); }
       return;
     }
-    if (f.size > 1024 * 1024) { say("Arquivo grande demais (limite 1 MB para texto)."); return; }
+    if (f.size > 6 * 1024 * 1024) { say("Arquivo acima de 6 MB para texto."); return; }
     try {
       const texto = await f.text();
-      setDraft((d) => `${d}${d ? "\n\n" : ""}Arquivo "${f.name}":\n${texto.slice(0, 20000)}\n`);
+      setDraft((d) => `${d}${d ? "\n\n" : ""}Arquivo "${f.name}":\n${texto.slice(0, 120000)}\n`);
       say(`Arquivo "${f.name}" anexado ao rascunho.`);
     } catch { say("Nao consegui ler esse arquivo (use texto)."); }
   }, [say]);

@@ -21,6 +21,7 @@ export const PADRAO = {
 export const NIVEIS = {
   rapida: { rotulo: "Rápida", frentes: 2, fontesMax: 8, leiturasIntegra: 1, fontesPorFrente: 5, desc: "2 frentes, 1 leitura completa · resposta em segundos" },
   equilibrada: { rotulo: "Equilibrada", frentes: 4, fontesMax: 12, leiturasIntegra: 2, fontesPorFrente: 6, desc: "4 frentes, 2 leituras completas · padrão" },
+  maxima: { rotulo: "Máxima", frentes: 7, fontesMax: 30, leiturasIntegra: 6, fontesPorFrente: 8, desc: "7 frentes, 6 leituras completas · sem freio, mais lento" },
   profunda: { rotulo: "Profunda", frentes: 5, fontesMax: 18, leiturasIntegra: 4, fontesPorFrente: 10, desc: "5 frentes, 4 leituras completas · mais lento, mais lastro" },
 };
 

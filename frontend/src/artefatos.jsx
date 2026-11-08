@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { clima, noticias, resumo, social, videos, web } from "./pesquisa.js";
 import { pesquisarProfundo, relatorio } from "./agente.js";
+import { cambio, cripto, github, hackernews, pacote, papers, stackoverflow } from "./fontes-extra.js";
 import "./artefatos.css";
 
 const limpar = (t) => String(t == null ? "" : t).replace(/\s+/g, " ").trim();
@@ -470,6 +471,145 @@ function Ferramentas({ spec }) {
   );
 }
 
+const Milhar = (n) => (Number(n) || 0).toLocaleString("pt-BR");
+
+function Topicos({ spec }) {
+  const itens = spec.itens || [];
+  return (
+    <ul className="art-topicos">
+      {itens.map((t, i) => (
+        <li key={i}>
+          <a href={url(t.url)} target="_blank" rel="noopener noreferrer">
+            <span className="art-topico-linha">
+              <b>{limpar(t.titulo)}</b>
+              {t.pontos ? <span className="art-pontos">▲ {Milhar(t.pontos)}</span> : null}
+            </span>
+            <span className="art-topico-meta">
+              {[t.fonte, t.comentarios ? `${Milhar(t.comentarios)} comentários` : "", t.quando, t.aceita ? "respondida" : ""].filter(Boolean).join(" · ")}
+            </span>
+            {t.tags && t.tags.length ? <span className="art-tags">{t.tags.map((g) => <em key={g}>{g}</em>)}</span> : null}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Repos({ spec }) {
+  const itens = spec.itens || [];
+  return (
+    <div className="art-repos">
+      {itens.map((r, i) => (
+        <a key={i} className="art-repo" href={url(r.url)} target="_blank" rel="noopener noreferrer">
+          <span className="art-repo-topo">
+            <b>{limpar(r.titulo)}</b>
+            <span className="art-repo-estrelas">★ {Milhar(r.estrelas)}</span>
+          </span>
+          {r.descricao ? <span className="art-repo-desc">{limpar(r.descricao)}</span> : null}
+          <span className="art-repo-meta">
+            {[r.linguagem, r.forks ? `${Milhar(r.forks)} forks` : "", r.licenca, r.atualizado ? "atualizado " + r.atualizado : ""].filter(Boolean).join(" · ")}
+          </span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function Papers({ spec }) {
+  const itens = spec.itens || [];
+  const [aberto, setAberto] = useState(null);
+  return (
+    <ul className="art-papers">
+      {itens.map((a, i) => (
+        <li key={i} className={aberto === i ? "on" : ""}>
+          <button type="button" className="art-paper-topo" onClick={() => setAberto(aberto === i ? null : i)}>
+            <b>{limpar(a.titulo)}</b>
+            <span className="art-paper-meta">
+              {[a.fonte, a.data, a.citacoes ? `${Milhar(a.citacoes)} citações` : "", a.aberto ? "acesso aberto" : ""].filter(Boolean).join(" · ")}
+            </span>
+          </button>
+          {aberto === i ? (
+            <div className="art-paper-corpo">
+              {a.autores ? <p className="art-paper-autores">{limpar(a.autores)}</p> : null}
+              {a.resumo ? <p>{limpar(a.resumo)}…</p> : null}
+              {url(a.url) ? <a className="art-paper-link" href={url(a.url)} target="_blank" rel="noopener noreferrer">abrir estudo</a> : null}
+            </div>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Numeros({ spec }) {
+  const itens = spec.itens || [];
+  return (
+    <div className="art-numeros">
+      {itens.map((n, i) => (
+        <div key={i} className="art-numero">
+          <span className="art-numero-nome">{(n.nome || "").toUpperCase()}</span>
+          <strong className="art-numero-valor">
+            {spec.formato === "cambio" ? (Number(n.valor) || 0).toFixed(4) : "$ " + Milhar(Math.round(Number(n.usd) || 0))}
+          </strong>
+          {spec.formato === "cambio" ? <small>por 1 USD</small> : (
+            <small>
+              {n.brl ? "R$ " + Milhar(Math.round(n.brl)) + " · " : ""}
+              <em className={Number(n.variacao) >= 0 ? "alta" : "baixa"}>
+                {Number(n.variacao) >= 0 ? "▲" : "▼"} {(Number(n.variacao) || 0).toFixed(2)}%
+              </em>
+            </small>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Pacote({ spec }) {
+  const d = spec.pacote || {};
+  return (
+    <div className="art-pacote">
+      <div className="art-pacote-topo">
+        <b>{d.nome}</b>
+        <span className="art-versao">v{d.versao}</span>
+      </div>
+      {d.descricao ? <p className="art-pacote-desc">{limpar(d.descricao)}</p> : null}
+      <div className="art-pacote-meta">
+        {[d.licenca, d.dependencias + " dependências", d.repo].filter(Boolean).map((x) => <span key={x}>{limpar(String(x)).slice(0, 46)}</span>)}
+      </div>
+      {url(d.url) ? <a className="art-pacote-link" href={url(d.url)} target="_blank" rel="noopener noreferrer">ver no npm</a> : null}
+    </div>
+  );
+}
+
+function Codigo({ spec }) {
+  const [copiado, setCopiado] = useState(false);
+  const texto = spec.codigo || "";
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(texto); setCopiado(true); setTimeout(() => setCopiado(false), 1600); } catch { }
+  };
+  const baixar = () => {
+    const ext = spec.linguagem === "jsx" ? "jsx" : spec.linguagem === "python" ? "py" : spec.linguagem || "txt";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([texto], { type: "text/plain" }));
+    a.download = (spec.arquivo || "skynet") + "." + ext;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+  return (
+    <div className="art-codigo">
+      <div className="art-codigo-barra">
+        <span>{spec.linguagem || "texto"}</span>
+        <span className="art-codigo-acoes">
+          <button type="button" onClick={copiar}>{copiado ? "copiado" : "copiar"}</button>
+          <button type="button" onClick={baixar}>baixar</button>
+        </span>
+      </div>
+      <pre><code>{texto}</code></pre>
+    </div>
+  );
+}
+
 const TIPOS = {
   ferramentas: { icone: "fonte", selo: "ferramentas", corpo: Ferramentas },
   pesquisa: { icone: "fonte", selo: "pesquisa", corpo: Pesquisa },
@@ -481,6 +621,12 @@ const TIPOS = {
   fotos: { icone: "foto", selo: "fotos", corpo: Fotos },
   tabela: { icone: "file", selo: "tabela", corpo: Tabela },
   grafico: { icone: "file", selo: "gráfico", corpo: Grafico },
+  topicos: { icone: "news", selo: "discussões", corpo: Topicos },
+  repos: { icone: "file", selo: "repositórios", corpo: Repos },
+  papers: { icone: "file", selo: "estudos", corpo: Papers },
+  numeros: { icone: "sol", selo: "cotações", corpo: Numeros },
+  pacote: { icone: "file", selo: "pacote", corpo: Pacote },
+  codigo: { icone: "file", selo: "código", corpo: Codigo },
 };
 
 export function Artefato({ spec }) {
@@ -541,6 +687,63 @@ export async function montarArtefato(pedido, opcoes = {}) {
     const cidade = (m ? m[1] : "São Paulo").replace(/\b(agora|hoje|amanha|nessa semana|por favor)\b.*$/i, "").trim() || "São Paulo";
     const dados = await clima(cidade);
     return [{ tipo: "clima", titulo: `Clima · ${cidade}`, subtitulo: dados ? dados.local : "buscando…", dados, rodape: "Open-Meteo · ao vivo" }];
+  }
+
+  // ---- fontes extras (dados abertos, sem chave)
+  if (/github|repositorio|repositórios|open source|opensource/.test(p)) {
+    const q = tema(bruto, ["github", "repositorio", "repositorios", "repositórios", "open", "source", "opensource", "melhores", "sobre"]);
+    passo({ etapa: "coleta", titulo: "Buscando repositórios", detalhe: q || bruto });
+    const itens = await github(q || bruto, 6);
+    passo({ etapa: "fim", titulo: "Repositórios encontrados", detalhe: `${itens.length} projetos` });
+    if (itens.length) return [{ tipo: "repos", titulo: `GitHub · ${q || bruto}`, subtitulo: "ordenado por estrelas", itens, rodape: "api.github.com" }];
+  }
+
+  if (/arxiv|paper|papers|artigo cient|estudo|estudos|academi|pesquisa cientifica|publicac/.test(p)) {
+    const q = tema(bruto, ["arxiv", "paper", "papers", "artigo", "artigos", "cientifico", "estudo", "estudos", "academico", "sobre"]);
+    passo({ etapa: "coleta", titulo: "Buscando estudos", detalhe: q || bruto });
+    const itens = await papers(q || bruto, 5);
+    passo({ etapa: "fim", titulo: "Estudos reunidos", detalhe: `${itens.length} publicações` });
+    if (itens.length) return [{ tipo: "papers", titulo: `Estudos · ${q || bruto}`, subtitulo: "mais recentes primeiro", itens, rodape: "OpenAlex" }];
+  }
+
+  if (/bitcoin|cripto|ethereum|solana|dogecoin|bnb|ripple|criptomoeda/.test(p)) {
+    passo({ etapa: "coleta", titulo: "Consultando cotações", detalhe: "CoinGecko" });
+    const itens = await cripto(bruto);
+    passo({ etapa: "fim", titulo: "Cotações atualizadas", detalhe: `${itens.length} ativos` });
+    if (itens.length) return [{ tipo: "numeros", titulo: "Cripto agora", subtitulo: "dólar, real e variação 24h", itens, rodape: "CoinGecko · ao vivo" }];
+  }
+
+  if (/dolar|dólar|euro|cambio|câmbio|moeda|libra|iene/.test(p)) {
+    passo({ etapa: "coleta", titulo: "Consultando câmbio", detalhe: "open.er-api.com" });
+    const d = await cambio(bruto);
+    passo({ etapa: "fim", titulo: "Câmbio atualizado", detalhe: d ? `${d.itens.length} moedas` : "sem dados" });
+    if (d && d.itens.length) return [{ tipo: "numeros", formato: "cambio", titulo: "Câmbio agora", subtitulo: "base USD · " + d.quando, itens: d.itens, rodape: "open.er-api.com" }];
+  }
+
+  if (/\bnpm\b|pacote|biblioteca|dependencia|dependência/.test(p)) {
+    const limpo = bruto.replace(/\bnpm\b/gi, " ").replace(/\bnpx\b/gi, " ");
+    const m = limpo.match(/\b(?:pacote|biblioteca|modulo|módulo)\s+([\w@/.-]{2,40})/i) || limpo.match(/\b([\w@/.-]{2,40})\b/);
+    const nome = ((m ? m[1] : "") || "react").replace(/^(pacote|biblioteca|do|da|de|o|a)$/i, "").trim() || "react";
+    passo({ etapa: "coleta", titulo: "Consultando o npm", detalhe: nome });
+    const d = await pacote(nome);
+    passo({ etapa: "fim", titulo: "Pacote encontrado", detalhe: d ? `${d.nome} v${d.versao}` : "não encontrado" });
+    if (d) return [{ tipo: "pacote", titulo: `npm · ${d.nome}`, subtitulo: "registro oficial", pacote: d }];
+  }
+
+  if (/hacker news|ycombinator|\bhn\b/.test(p)) {
+    const q = tema(bruto, ["hacker", "news", "ycombinator", "hn", "sobre"]);
+    passo({ etapa: "coleta", titulo: "Lendo o Hacker News", detalhe: q || bruto });
+    const itens = await hackernews(q || bruto, 6);
+    passo({ etapa: "fim", titulo: "Discussões reunidas", detalhe: `${itens.length} tópicos` });
+    if (itens.length) return [{ tipo: "topicos", titulo: `Hacker News · ${q || bruto}`, subtitulo: "por relevância", itens, rodape: "hn.algolia.com" }];
+  }
+
+  if (/stack ?overflow|erro ao|como resolver|como corrigir/.test(p)) {
+    const q = tema(bruto, ["stack", "overflow", "erro", "resolver", "corrigir", "como"]);
+    passo({ etapa: "coleta", titulo: "Procurando no Stack Overflow", detalhe: q || bruto });
+    const itens = await stackoverflow(q || bruto, 5);
+    passo({ etapa: "fim", titulo: "Respostas encontradas", detalhe: `${itens.length} perguntas` });
+    if (itens.length) return [{ tipo: "topicos", titulo: `Stack Overflow · ${q || bruto}`, subtitulo: "perguntas com voto", itens, rodape: "api.stackexchange.com" }];
   }
 
   const querVideos = /video|youtube|assistir|canal/.test(p);

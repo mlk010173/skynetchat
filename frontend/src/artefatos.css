@@ -239,3 +239,54 @@
 }
 .art-zoom-bar button { background: none; border: none; color: #ddd; font-size: 12px; cursor: pointer; padding: 2px 6px; }
 .art-zoom-bar span { font-size: 11px; color: #9a9a9a; min-width: 38px; text-align: center; }
+
+/* tópicos, repositórios, estudos, cotações, pacote e código */
+.art-topicos, .art-papers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.art-topicos a, .art-papers li { display: block; padding: 12px 14px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(255,255,255,.02); }
+.art-topicos a:hover { border-color: rgba(220,38,38,.4); background: rgba(220,38,38,.05); }
+.art-topico-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.art-topico-linha b { font-size: 14px; font-weight: 600; line-height: 1.35; }
+.art-pontos { color: #f59e0b; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.art-topico-meta, .art-paper-meta, .art-repo-meta { display: block; margin-top: 5px; color: var(--muted); font-size: 11.5px; }
+.art-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.art-tags em { font-style: normal; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,.06); color: #b9b9b9; }
+
+.art-repos { display: grid; gap: 10px; }
+.art-repo { display: block; padding: 12px 14px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(255,255,255,.02); }
+.art-repo:hover { border-color: rgba(220,38,38,.4); }
+.art-repo-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.art-repo-topo b { font-size: 14px; color: #e8e8e8; }
+.art-repo-estrelas { color: #f59e0b; font-size: 12px; font-variant-numeric: tabular-nums; }
+.art-repo-desc { display: block; margin-top: 6px; font-size: 12.5px; color: #c9c9c9; line-height: 1.45; }
+
+.art-paper-topo { width: 100%; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; }
+.art-paper-topo b { font-size: 13.5px; font-weight: 600; line-height: 1.4; display: block; }
+.art-papers li.on { border-color: rgba(220,38,38,.35); }
+.art-paper-corpo { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; line-height: 1.5; color: #bdbdbd; }
+.art-paper-autores { color: var(--muted); font-size: 11.5px; margin: 0; }
+.art-paper-link { color: #ef4444; font-size: 12px; font-weight: 600; }
+
+.art-numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.art-numero { padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.02); display: flex; flex-direction: column; gap: 4px; }
+.art-numero-nome { font-size: 10.5px; letter-spacing: .08em; color: var(--muted); }
+.art-numero-valor { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.art-numero small { font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.art-numero em { font-style: normal; font-weight: 600; }
+.art-numero em.alta { color: #10b981; }
+.art-numero em.baixa { color: #ef4444; }
+
+.art-pacote { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(255,255,255,.02); }
+.art-pacote-topo { display: flex; align-items: baseline; gap: 10px; }
+.art-pacote-topo b { font-size: 15px; }
+.art-versao { font-size: 11.5px; color: #10b981; background: rgba(16,185,129,.12); padding: 2px 8px; border-radius: 999px; }
+.art-pacote-desc { margin: 0; font-size: 12.5px; color: #c9c9c9; line-height: 1.45; }
+.art-pacote-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.art-pacote-meta span { font-size: 11px; color: var(--muted); background: rgba(255,255,255,.05); padding: 3px 8px; border-radius: 999px; }
+.art-pacote-link { color: #ef4444; font-size: 12px; font-weight: 600; }
+
+.art-codigo { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); background: #0a0a0a; }
+.art-codigo-barra { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(255,255,255,.04); font-size: 11px; color: var(--muted); }
+.art-codigo-acoes { display: flex; gap: 8px; }
+.art-codigo-acoes button { background: none; border: 1px solid rgba(255,255,255,.12); color: #cfcfcf; font-size: 11px; padding: 3px 9px; border-radius: 999px; cursor: pointer; }
+.art-codigo-acoes button:hover { border-color: #ef4444; color: #fff; }
+.art-codigo pre { margin: 0; padding: 14px; overflow-x: auto; font-family: var(--mono); font-size: 12px; line-height: 1.55; color: #e6e6e6; }
