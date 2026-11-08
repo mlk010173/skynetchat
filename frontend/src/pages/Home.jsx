@@ -18,6 +18,8 @@ import * as voz from "../voz.js";
 import RichText from "../rich.jsx";
 import { Artefato, montarArtefato, resumoDoArtefato, separarArtefatos } from "../artefatos.jsx";
 import { lerConfig, assinarConfig } from "../agente-config.js";
+import Paleta from "../components/Paleta.jsx";
+import { baixarArquivo, paraMarkdown } from "../habilidades.js";
 import { camadaDeComportamento } from "../comportamento.js";
 import { memoriaParaPrompt } from "../memoria.js";
 
@@ -96,6 +98,7 @@ export default function Home() {
   const [active, setActive] = useState("Novo chat");
   const [draft, setDraft] = useState("");
   const [prints, setPrints] = useState([]);
+  const [paleta, setPaleta] = useState(false);
   const [acaoSheet, setAcaoSheet] = useState(null);
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -368,7 +371,7 @@ export default function Home() {
     const camada = camadaDeComportamento(
       cfgNow,
       cfgNow.memoriaAtiva ? memoriaParaPrompt() : "",
-      opcoes.extra || ""
+      (opcoes && opcoes.extra) || ""
     );
     if (camada) conteudo = `${conteudo}\n\n${camada}`;
 
@@ -602,6 +605,51 @@ export default function Home() {
     };
     fr.readAsDataURL(file);
   }), []);
+
+  // Ctrl+K / Cmd+K abre a paleta de comandos (desligável no painel)
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        if (lerConfig().paletaAtalhos === false) return;
+        e.preventDefault();
+        setPaleta((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const exportarConversa = useCallback(() => {
+    const blocos = messages
+      .filter((m) => (m.text || "").trim())
+      .map((m) => ({ tipo: "par", texto: `**${m.role === "user" ? "Você" : "SKYNET"}:** ${m.text}` }));
+    const nome = `skynet-conversa-${new Date().toISOString().slice(0, 10)}.md`;
+    baixarArquivo(nome, paraMarkdown("Conversa SKYNETchat", blocos));
+    say("Conversa exportada em markdown.");
+  }, [messages, say]);
+
+  const aoEscolherPaleta = useCallback((item) => {
+    if (item.tipo === "rota") {
+      window.location.hash = "#" + item.valor;
+      if (item.valor === "/") { /* já estamos */ }
+      return;
+    }
+    if (item.tipo === "prompt") {
+      setDraft((d) => (d ? d + "\n\n" + item.valor : item.valor));
+      return;
+    }
+    if (item.tipo === "exportar") { exportarConversa(); return; }
+    if (item.tipo === "limparMemoria") {
+      import("../memoria.js").then((m) => { m.limparMemoria(); say("Memória limpa."); });
+      return;
+    }
+    if (item.tipo === "sistema") {
+      const cfg = lerConfig();
+      const texto = `tom: ${cfg.tom} · formato: ${cfg.estilo} · raciocínio: ${cfg.raciocinio} · fontes: ${cfg.fontesMax} · leituras: ${cfg.leiturasIntegra}`;
+      navigator.clipboard?.writeText(texto).catch(() => {});
+      say("Configuração copiada.");
+    }
+  }, [exportarConversa, say]);
 
   const fileRef = useRef(null);
   const onFile = useCallback(async (event) => {
@@ -1206,6 +1254,12 @@ export default function Home() {
         <button type="submit" className="dock-send" aria-label="Voz ou enviar"><IconWave width={22} height={22} /></button>
       </form>
 
+      <Paleta
+        aberta={paleta}
+        aoFechar={() => setPaleta(false)}
+        aoEscolher={aoEscolherPaleta}
+        conversa={messages.length}
+      />
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

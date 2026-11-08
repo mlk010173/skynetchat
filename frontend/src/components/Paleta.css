@@ -1,0 +1,25 @@
+
+.paleta-fundo {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .62); backdrop-filter: blur(6px);
+  display: flex; align-items: flex-start; justify-content: center; padding: 92px 16px 16px; z-index: 90;
+}
+.paleta {
+  width: 100%; max-width: 540px; background: #0c0c0c; border: 1px solid #232323; border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .6); overflow: hidden; display: flex; flex-direction: column;
+}
+.paleta-campo {
+  border: none; background: transparent; color: #f2f2f2; font-size: 15px; padding: 16px 18px;
+  outline: none; border-bottom: 1px solid #1c1c1c;
+}
+.paleta-campo::placeholder { color: #6f6f6f; }
+.paleta-lista { list-style: none; margin: 0; padding: 6px; max-height: 52vh; overflow-y: auto; }
+.paleta-lista button {
+  width: 100%; text-align: left; background: none; border: none; border-radius: 10px;
+  padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; cursor: pointer;
+}
+.paleta-lista button.on { background: #1a1a1a; }
+.paleta-titulo { font-size: 13.5px; color: #f0f0f0; }
+.paleta-grupo { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #8d8d8d; align-self: center; }
+.paleta-dica { grid-column: 1 / -1; font-size: 11.5px; color: #7f7f7f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paleta-vazio { padding: 16px; color: #7f7f7f; font-size: 13px; text-align: center; }
+.paleta-pe { display: flex; gap: 14px; padding: 9px 14px; border-top: 1px solid #1c1c1c; font-size: 11px; color: #6f6f6f; }

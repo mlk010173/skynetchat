@@ -24,6 +24,12 @@ export const PADRAO = {
   autoArtefato: true,
   verificarFontes: true,
   memoriaAtiva: true,
+  // habilidades de lógica (aba Habilidades)
+  verificarLinks: true,
+  resumoExecutivo: true,
+  compararFontes: true,
+  deduplicar: true,
+  paletaAtalhos: true,
 };
 
 export const NIVEIS = {

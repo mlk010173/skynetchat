@@ -190,6 +190,7 @@ export default function FerramentasAgente({ pedidoInicial = "inteligência artif
           ["fontes", "Fontes de dados"],
           ["comportamento", "Comportamento"],
           ["memoria", "Memória"],
+          ["habilidades", "Habilidades"],
           ["prompts", "Prompts"],
         ].map(([id, nome]) => (
           <button key={id} type="button" className={aba === id ? "on" : ""} onClick={() => setAba(id)}>
@@ -294,6 +295,46 @@ export default function FerramentasAgente({ pedidoInicial = "inteligência artif
               limpar toda a memória
             </button>
           )}
+        </section>
+      )}
+
+      {aba === "habilidades" && (
+        <section className="ferr-config ferr-habilidades">
+          <h3>Habilidades de lógica</h3>
+          <p className="ferr-resumo">
+            Cada chave abaixo liga um comportamento real no dossiê e no envio da mensagem.
+          </p>
+          <ul className="ferr-hab">
+            {[
+              ["verificarLinks", "Verificar links", "Abre cada fonte em segundo plano e marca as que não respondem."],
+              ["resumoExecutivo", "Resumo executivo", "Fecha o dossiê com até 4 linhas diretas e os números que aparecem."],
+              ["compararFontes", "Comparar fontes", "Mostra que termos aparecem em três ou mais domínios diferentes."],
+              ["deduplicar", "Juntar duplicados", "Agrupa títulos quase iguais para não contar a mesma notícia duas vezes."],
+              ["paletaAtalhos", "Paleta Ctrl+K", "Atalho para pular entre chat, painel, prompts e memória."],
+              ["citacaoObrigatoria", "Fonte numerada", "Obriga o agente a numerar as fontes que usar."],
+            ].map(([chave, titulo, desc]) => (
+              <li key={chave}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={cfg[chave] !== false}
+                    onChange={(e) => atualizar({ [chave]: e.target.checked })}
+                  />
+                  <span>
+                    <b>{titulo}</b>
+                    <small>{desc}</small>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="ferr-hab-dica">
+            <b>Como testar</b>
+            <small>
+              Peça "monte um dossiê sobre [tema]" no chat. Com Verificar links ligado, cada fonte ganha
+              um selo de checagem; com Comparar fontes, aparece a faixa de consenso entre domínios.
+            </small>
+          </div>
         </section>
       )}
 

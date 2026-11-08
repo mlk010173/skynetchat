@@ -1,10 +1,12 @@
 // SKYNET · artefatos no chat: widgets montados a partir de dados reais.
 // `Artefato` renderiza a spec; `montarArtefato` busca os dados quando o pedido
 // pede notícias, vídeos, Instagram, fontes ou clima.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { clima, noticias, resumo, social, videos, web } from "./pesquisa.js";
 import { pesquisarProfundo, relatorio } from "./agente.js";
 import { cambio, cripto, github, hackernews, pacote, papers, stackoverflow } from "./fontes-extra.js";
+import { agruparDuplicados, convergencia, resumoTldr, verificarLinks } from "./habilidades.js";
+import { lerConfig } from "./agente-config.js";
 import "./artefatos.css";
 
 const limpar = (t) => String(t == null ? "" : t).replace(/\s+/g, " ").trim();
@@ -187,6 +189,35 @@ function Fontes({ spec }) {
   const [dominio, setDominio] = useState("todos");
   const [ordem, setOrdem] = useState("relevancia");
   const [planoAberto, setPlanoAberto] = useState(false);
+  const [links, setLinks] = useState(null);
+  const [checando, setChecando] = useState(false);
+  const cfg = useMemo(() => lerConfig(), []);
+
+  const tldr = useMemo(() => (cfg.resumoExecutivo !== false ? resumoTldr(itens, spec.titulo) : null), [itens, cfg.resumoExecutivo, spec.titulo]);
+  const consenso = useMemo(() => (cfg.compararFontes !== false ? convergencia(itens) : []), [itens, cfg.compararFontes]);
+  const repetidos = useMemo(() => {
+    if (cfg.deduplicar === false) return {};
+    const mapa = {};
+    agruparDuplicados(itens).forEach((grupo) => {
+      if (grupo.length > 1) grupo.forEach((i) => { mapa[i] = grupo.length; });
+    });
+    return mapa;
+  }, [itens, cfg.deduplicar]);
+
+  const checarLinks = useCallback(async () => {
+    if (checando || !itens.length) return;
+    setChecando(true);
+    const r = await verificarLinks(itens);
+    setLinks(r);
+    setChecando(false);
+  }, [checando, itens]);
+
+  useEffect(() => {
+    if (cfg.verificarLinks === false) return;
+    if (!itens.length || links || checando) return;
+    const t = setTimeout(() => { checarLinks(); }, 900);
+    return () => clearTimeout(t);
+  }, [cfg.verificarLinks, itens, links, checando, checarLinks]);
 
   const dominios = useMemo(() => {
     const contagem = new Map();
@@ -212,6 +243,31 @@ function Fontes({ spec }) {
 
   return (
     <div className="art-dossie">
+      {tldr && tldr.linhas.length ? (
+        <div className="art-tldr">
+          <h4>resumo executivo</h4>
+          <ul>
+            {tldr.linhas.map((l, i) => (
+              <li key={i}>{limpar(l.texto)}</li>
+            ))}
+          </ul>
+          {tldr.numeros.length ? (
+            <div className="art-tldr-nums">
+              {tldr.numeros.map((n, i) => <em key={i}>{n}</em>)}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {consenso.length ? (
+        <div className="art-consenso">
+          <b>aparece em vários veículos</b>
+          {consenso.map((c) => (
+            <em key={c.termo} title={c.dominios.join(" · ")}>{c.termo}</em>
+          ))}
+        </div>
+      ) : null}
+
       {metricas.length ? (
         <div className="art-metricas">
           {metricas.map((m, i) => (
@@ -248,8 +304,18 @@ function Fontes({ spec }) {
             {todosAbertos ? "recolher trechos" : "abrir trechos"}
           </button>
           <button type="button" onClick={() => baixar(`dossie-${Date.now()}.md`, markdownDoDossie(spec))}>baixar .md</button>
+          <button type="button" onClick={checarLinks} disabled={checando}>
+            {checando ? "checando links…" : links ? `links: ${links.vivos}/${links.total}` : "verificar links"}
+          </button>
         </div>
       </div>
+
+      {links ? (
+        <div className="art-verificar">
+          <span>{links.vivos} de {links.total} links responderam</span>
+          {links.mortos ? <span>· {links.mortos} sem resposta</span> : null}
+        </div>
+      ) : null}
 
       <ol className="art-fontes">
         {visiveis.map((f, i) => {
@@ -277,6 +343,12 @@ function Fontes({ spec }) {
                     {f.primeiraMao ? <span className="art-selo-mini">lida na íntegra</span> : null}
                     {f.ramos && f.ramos.length > 1 ? <span className="art-selo-mini">{f.ramos.length} frentes</span> : null}
                     {minutos ? <span className="art-tempo">{minutos} min de leitura</span> : null}
+                    {links && links.porIndice[i] ? (
+                      <span className={"art-selo-link " + (links.porIndice[i].ok ? "ok" : "morto")}>
+                        {links.porIndice[i].ok ? "link ok" : "sem resposta"}
+                      </span>
+                    ) : null}
+                    {repetidos[i] ? <span className="art-selo-mini">{repetidos[i]} veículos</span> : null}
                   </span>
                   {f.excerto ? (
                     <>
