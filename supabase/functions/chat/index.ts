@@ -195,7 +195,11 @@ function detectTools(text: string): DetectedTool[] {
   }
 
   // 1e. memória de longo prazo: guardar ou consultar
-  const pedeGuardar = /\b(lembre|lembra|lembrar|guarde|guarda|anote|anota|memorize|registre)\b/i.test(text);
+  const ehPedidoDeLembrete = /\bme\s+lembr[ae]\s+(de|para)\b/i.test(text);
+  const pedeGuardar = !ehPedidoDeLembrete && (
+    /\b(guarde|guarda|anote|anota|memorize|registre)\b/i.test(text) ||
+    /\b(lembr[ae]|lembre-se)\b[\s\S]{0,12}\bque\b/i.test(text)
+  );
   const pedeConsultar = /\b(o que voc[eê] sabe|minhas mem[oó]rias|minha mem[oó]ria|o que lembra|mem[oó]ria de longo prazo|voc[eê] lembra)\b/i.test(text);
   if (pedeGuardar || pedeConsultar) {
     tools.push({
@@ -275,8 +279,12 @@ function detectTools(text: string): DetectedTool[] {
 
   // 0b. lembretes: "me lembre de X às 8", "meus lembretes", "o que tenho hoje"
   const listarLembretes = /\b(meus\s+lembretes|minhas\s+tarefas|o\s+que\s+(eu\s+)?tenho|tenho\s+para\s+hoje|lembretes\s+de\s+hoje)\b/i.test(text);
-  const pedeLembrete = /\b(lembr(ar|a|e|ete|etes)|avis(e|ar)|n[ãa]o\s+esque[cç]a)\b/i.test(text);
-  if (listarLembretes || pedeLembrete) {
+  const temHorario = /\b(às|as)\s*\d|\bamanh[ãa]\b|\bhoje\b|\bdaqui\s+a\b|\b(domingo|segunda|ter[çc]a|quarta|quinta|sexta|s[áa]bado)\b|\d{1,2}[\/]\d{1,2}\b/i.test(text);
+  const ehFatoPessoal = /\b(lembr[ae]|lembre-se|guarda|guarde|anota|anote|memoriza|registra)\b[\s\S]{0,14}\b(que)\b/i.test(text) ||
+    /\b(eu\s+prefiro|eu\s+gosto|eu\s+odeio|eu\s+moro|eu\s+trabalho|meu\s+nome|minha\s+empresa|sempre\s+use|nunca\s+use)\b/i.test(text);
+  const pedeTarefa = /\b(me\s+lembr[ae]|me\s+avise|me\s+avisa|avisa[r]?-me|n[ãa]o\s+esque[cç]a|lembrete\s+de|lembrar\s+de)\b/i.test(text);
+  const pedeLembrete = (pedeTarefa || /\b(lembr(ar|a|e|ete|etes)|avis(e|ar))\b/i.test(text)) && (temHorario || pedeTarefa);
+  if (listarLembretes || (pedeLembrete && !(ehFatoPessoal && !temHorario))) {
     tools.push({ name: "lembrete", payload: { pedido: text.slice(0, 300), listar: listarLembretes && !/lembr(ar|a|e)\s+(de|que|para)\b/i.test(text) } });
     return tools;
   }
@@ -554,6 +562,21 @@ function quandoDoPedido(texto: string): string | null {
     const ano = data[3] ? Number(data[3].length === 2 ? "20" + data[3] : data[3]) : dia.getUTCFullYear();
     dia.setUTCFullYear(ano, Number(data[2]) - 1, Number(data[1]));
     temDia = true;
+  } else {
+    // "dia 12", "no dia 12", "todo dia 5": dia do mês, este mês ou o próximo se já passou
+    const diaMes = t.match(/\bdia\s+(\d{1,2})\b/i);
+    if (diaMes) {
+      const alvo = Math.min(31, Math.max(1, Number(diaMes[1])));
+      const agora = new Date(Date.UTC(dia.getUTCFullYear(), dia.getUTCMonth(), dia.getUTCDate()));
+      let tentativa = new Date(Date.UTC(dia.getUTCFullYear(), dia.getUTCMonth(), alvo));
+      if (Number.isNaN(tentativa.getTime())) tentativa = agora;
+      // se o dia já passou neste mês (ou é hoje sem hora futura), usa o mês seguinte
+      if (tentativa.getTime() < agora.getTime()) tentativa = new Date(Date.UTC(dia.getUTCFullYear(), dia.getUTCMonth() + 1, alvo));
+      if (tentativa.getUTCDate() === alvo) {
+        dia.setUTCFullYear(tentativa.getUTCFullYear(), tentativa.getUTCMonth(), tentativa.getUTCDate());
+        temDia = true;
+      }
+    }
   }
 
   if (hora >= 0 && hora <= 23) {
@@ -831,7 +854,15 @@ async function callTool(tool: DetectedTool, conta: string | null = null, jwt: st
         if (!r.ok) return { ok: false, erro: `banco recusou (${r.status}): ${corpo.slice(0, 120)}` };
         return { ok: true, acao: "salvar", chave, valor: texto.slice(0, 200) };
       }
-      const consulta = String(tool.payload?.consulta ?? "").replace(/[%*,()]/g, " ").trim().slice(0, 60);
+      const brutoConsulta = String(tool.payload?.consulta ?? "").replace(/[%*,()]/g, " ").trim();
+      // "o que você sabe sobre mim" é pergunta ampla: filtrar por essas palavras devolveria zero
+      const ampla = /\b(o\s+que\s+(voc[eê]\s+)?sabe|minhas\s+mem[oó]rias|minha\s+mem[oó]ria|o\s+que\s+lembra|mem[oó]ria\s+de\s+longo\s+prazo|sobre\s+mim|lembra\s+de\s+mim)\b/i.test(brutoConsulta);
+      const semRuido = brutoConsulta
+        .replace(/\b(o|a|os|as|que|de|do|da|sobre|mim|voc[eê]|sabe|lembra|minhas?)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 60);
+      const consulta = ampla || semRuido.length < 3 ? "" : semRuido;
       const filtro = consulta
         ? `&or=(chave.ilike.*${encodeURIComponent(consulta)}*,valor.ilike.*${encodeURIComponent(consulta)}*)`
         : "";
@@ -1154,6 +1185,16 @@ Deno.serve(async (req) => {
 
   // ---- sessão do login por código secreto ----
   const conta = await contaDaSessao(req);
+  if (!conta && userId && papel !== "dev") {
+    // usuário de e-mail/senha também tem teto diário (antes não contava nada)
+    const usoEmail = await consumirMensagem(userId, "pro").catch(() => ({ pode: true, usado: 0, limite: 0 }));
+    if (!usoEmail.pode) {
+      return json({
+        ok: false,
+        error: `Você usou as ${usoEmail.limite} mensagens de hoje. Amanhã libera de novo.`,
+      }, 429);
+    }
+  }
   if (conta) {
     contaId = conta.id;
     userId = conta.id;
@@ -1639,7 +1680,15 @@ Deno.serve(async (req) => {
             if (tool.name === "lembrete" && toolResult?.ok) {
               const l = (toolResult.lembrete ?? {}) as Record<string, any>;
               if (toolResult.acao === "listar") {
-                // lista: deixa o modelo conversar, mas com os dados na mão
+                const lista = (toolResult.lembretes ?? []) as Record<string, any>[];
+                const fmt = (q: unknown) => (q
+                  ? new Date(String(q)).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                  : "sem horário");
+                entregaDireta = lista.length
+                  ? {
+                    texto: `**Seus lembretes (${lista.length}):**\n${lista.slice(0, 8).map((x) => `- ${String(x.titulo ?? "").slice(0, 90)} — ${fmt(x.quando)}`).join("\n")}${lista.length > 8 ? `\n- e mais ${lista.length - 8}` : ""}\n\nPainel completo em /lembretes.`,
+                  }
+                  : { texto: "Você não tem lembretes em aberto. Pede assim: \"me lembre de X amanhã às 9h\"." };
               } else if (l?.id) {
                 const quandoTxt = l.quando
                   ? new Date(l.quando).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
@@ -1711,18 +1760,25 @@ Deno.serve(async (req) => {
               }
             }
           } else {
+            const motivo = String(
+              (toolResult as Record<string, unknown>)?.erro ??
+              (toolResult as Record<string, unknown>)?.error ??
+              "",
+            ).slice(0, 160);
             enviaEtapa({
               ferramenta: tool.name,
               titulo: rotuloFerramenta(tool.name),
               estado: "falhou",
-              detalhe: "indisponivel agora",
+              detalhe: motivo || "ferramenta respondeu sem detalhe",
               entrada: JSON.stringify(tool.payload).slice(0, 240),
-              saida: String((toolResult as Record<string, unknown>)?.erro ?? (toolResult as Record<string, unknown>)?.error ?? "").slice(0, 160),
-              erro: "pesquisa indisponível agora",
+              saida: motivo,
+              erro: motivo || `${rotuloFerramenta(tool.name)} falhou`,
               ms: Date.now() - t0,
               fontes: [],
               quando: new Date().toISOString(),
             });
+            // o modelo precisa saber que falhou e por quê, senão inventa que deu certo
+            toolContexts.push(`FERRAMENTA ${rotuloFerramenta(tool.name)} FALHOU: ${motivo || "sem detalhe"}. Diga a verdade ao usuário e não afirme que concluiu.`);
           }
 
           if (contextText) {
@@ -1875,6 +1931,72 @@ Deno.serve(async (req) => {
                 enviaTexto(delta);
               }
             } catch { /* ignora fragmentos parciais */ }
+          }
+        }
+
+        // modelo de raciocínio às vezes devolve só o "pensamento" e nenhum texto:
+        // nesse caso pede de novo, sem raciocínio, para o usuário não ficar no vazio.
+        if (!full && !entregaDireta) {
+          enviaEtapa({
+            ferramenta: "conferindo",
+            titulo: "Pedindo a resposta em texto",
+            estado: "executando",
+            detalhe: "o modelo devolveu apenas raciocínio",
+          });
+          try {
+            const primeiro = fila.find((f) => f.id === usado) ?? fila[0];
+            const candidatosRetry = [primeiro, ...fila.filter((f) => f.id !== primeiro.id)].slice(0, 3);
+            for (const candR of candidatosRetry) {
+              const prov = providerOf(candR.provider);
+              if (!prov) continue;
+              const r2 = await fetch(`${prov.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${Deno.env.get(prov.keyEnv)!}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  model: candR.id,
+                  messages: [
+                    ...llmMessages,
+                    { role: "user", content: "Responda agora em português, apenas com a resposta final em texto. Não use raciocínio." },
+                  ],
+                  max_tokens: limiteSaida,
+                  temperature: 0.5,
+                  stream: false,
+                }),
+                signal: AbortSignal.timeout(timeoutMs()),
+              });
+              const d2 = await r2.json().catch(() => null);
+              const texto2 = String(d2?.choices?.[0]?.message?.content ?? "").trim();
+              if (texto2) {
+                full = texto2;
+                enviaTexto(texto2);
+                enviaEtapa({
+                  ferramenta: "conferindo",
+                  titulo: "Pedindo a resposta em texto",
+                  estado: "concluida",
+                  detalhe: `${texto2.length} caracteres com ${candR.id}`,
+                });
+                break;
+              }
+            }
+            if (!full) {
+              enviaEtapa({
+                ferramenta: "conferindo",
+                titulo: "Pedindo a resposta em texto",
+                estado: "falhou",
+                detalhe: "os modelos responderam vazio",
+              });
+            }
+          } catch (e) {
+            enviaEtapa({
+              ferramenta: "conferindo",
+              titulo: "Pedindo a resposta em texto",
+              estado: "falhou",
+              detalhe: (e as Error)?.name === "TimeoutError" ? "tempo esgotado" : String((e as Error)?.message ?? "falha"),
+            });
+          }
+          if (!full) {
+            full = "Não consegui montar a resposta em texto agora (o modelo devolveu só raciocínio). Tenta reformular em uma frase?";
+            enviaTexto(full);
           }
         }
 
