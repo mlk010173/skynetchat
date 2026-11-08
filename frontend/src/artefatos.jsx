@@ -474,6 +474,7 @@ function Ferramentas({ spec }) {
 const Milhar = (n) => (Number(n) || 0).toLocaleString("pt-BR");
 
 function Topicos({ spec }) {
+  if (!(spec.itens || []).length) return <p className="art-vazio">sem resultados agora</p>;
   const itens = spec.itens || [];
   return (
     <ul className="art-topicos">
@@ -496,6 +497,7 @@ function Topicos({ spec }) {
 }
 
 function Repos({ spec }) {
+  if (!(spec.itens || []).length) return <p className="art-vazio">sem resultados agora</p>;
   const itens = spec.itens || [];
   return (
     <div className="art-repos">
@@ -516,6 +518,7 @@ function Repos({ spec }) {
 }
 
 function Papers({ spec }) {
+  if (!(spec.itens || []).length) return <p className="art-vazio">sem resultados agora</p>;
   const itens = spec.itens || [];
   const [aberto, setAberto] = useState(null);
   return (
@@ -695,7 +698,7 @@ export async function montarArtefato(pedido, opcoes = {}) {
     passo({ etapa: "coleta", titulo: "Buscando repositórios", detalhe: q || bruto });
     const itens = await github(q || bruto, 6);
     passo({ etapa: "fim", titulo: "Repositórios encontrados", detalhe: `${itens.length} projetos` });
-    if (itens.length) return [{ tipo: "repos", titulo: `GitHub · ${q || bruto}`, subtitulo: "ordenado por estrelas", itens, rodape: "api.github.com" }];
+    return [{ tipo: "repos", titulo: `GitHub · ${q || bruto}`, subtitulo: "ordenado por estrelas", itens, rodape: "api.github.com" }];
   }
 
   if (/arxiv|paper|papers|artigo cient|estudo|estudos|academi|pesquisa cientifica|publicac/.test(p)) {
@@ -703,7 +706,7 @@ export async function montarArtefato(pedido, opcoes = {}) {
     passo({ etapa: "coleta", titulo: "Buscando estudos", detalhe: q || bruto });
     const itens = await papers(q || bruto, 5);
     passo({ etapa: "fim", titulo: "Estudos reunidos", detalhe: `${itens.length} publicações` });
-    if (itens.length) return [{ tipo: "papers", titulo: `Estudos · ${q || bruto}`, subtitulo: "mais recentes primeiro", itens, rodape: "OpenAlex" }];
+    return [{ tipo: "papers", titulo: `Estudos · ${q || bruto}`, subtitulo: "mais recentes primeiro", itens, rodape: "OpenAlex" }];
   }
 
   if (/bitcoin|cripto|ethereum|solana|dogecoin|bnb|ripple|criptomoeda/.test(p)) {
@@ -735,7 +738,7 @@ export async function montarArtefato(pedido, opcoes = {}) {
     passo({ etapa: "coleta", titulo: "Lendo o Hacker News", detalhe: q || bruto });
     const itens = await hackernews(q || bruto, 6);
     passo({ etapa: "fim", titulo: "Discussões reunidas", detalhe: `${itens.length} tópicos` });
-    if (itens.length) return [{ tipo: "topicos", titulo: `Hacker News · ${q || bruto}`, subtitulo: "por relevância", itens, rodape: "hn.algolia.com" }];
+    return [{ tipo: "topicos", titulo: `Hacker News · ${q || bruto}`, subtitulo: "por relevância", itens, rodape: "hn.algolia.com" }];
   }
 
   if (/stack ?overflow|erro ao|como resolver|como corrigir/.test(p)) {

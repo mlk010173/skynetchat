@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { aplicarNivel, lerConfig, NIVEIS, resumoConfig, salvarConfig } from "../agente-config.js";
 import { clima, noticias, resumo, social, videos, web } from "../pesquisa.js";
 import { lerPrimeiraMao, planejar } from "../agente.js";
+import { ESTILOS, RACIOCINIO, resumoComportamento, TONS } from "../comportamento.js";
+import { esquecer, lembrar, lerMemoria, limparMemoria } from "../memoria.js";
+import { lerPrompts, removerPrompt, salvarPrompt, todosPrompts } from "../prompts.js";
 import { cambio, cripto, github, hackernews, pacote, papers, stackoverflow } from "../fontes-extra.js";
 import "./FerramentasAgente.css";
 
@@ -124,6 +127,12 @@ const FERRAMENTAS = [
 
 export default function FerramentasAgente({ pedidoInicial = "inteligência artificial no Brasil", compacto = false }) {
   const [cfg, setCfg] = useState(lerConfig);
+  const [memoria, setMemoria] = useState(lerMemoria);
+  const [fato, setFato] = useState("");
+  const [prompts, setPrompts] = useState(todosPrompts);
+  const [novoTitulo, setNovoTitulo] = useState("");
+  const [novoTexto, setNovoTexto] = useState("");
+  const [aba, setAba] = useState("fontes");
   const [estado, setEstado] = useState({});
   const [pedido, setPedido] = useState(pedidoInicial);
   const [rodandoTudo, setRodandoTudo] = useState(false);
@@ -176,6 +185,174 @@ export default function FerramentasAgente({ pedidoInicial = "inteligência artif
         </button>
       </header>
 
+      <nav className="ferr-abas">
+        {[
+          ["fontes", "Fontes de dados"],
+          ["comportamento", "Comportamento"],
+          ["memoria", "Memória"],
+          ["prompts", "Prompts"],
+        ].map(([id, nome]) => (
+          <button key={id} type="button" className={aba === id ? "on" : ""} onClick={() => setAba(id)}>
+            {nome}
+          </button>
+        ))}
+      </nav>
+
+      {aba === "comportamento" && (
+        <section className="ferr-config ferr-comportamento">
+          <h3>Como o agente responde</h3>
+          <p className="ferr-resumo">{resumoComportamento(cfg)}</p>
+          <div className="ferr-grupo">
+            <h4>tom</h4>
+            <div className="ferr-opcoes">
+              {Object.entries(TONS).map(([id, t]) => (
+                <button key={id} type="button" className={cfg.tom === id ? "on" : ""} onClick={() => atualizar({ tom: id })}>
+                  {t.rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ferr-grupo">
+            <h4>formato</h4>
+            <div className="ferr-opcoes">
+              {Object.entries(ESTILOS).map(([id, e]) => (
+                <button key={id} type="button" className={cfg.estilo === id ? "on" : ""} onClick={() => atualizar({ estilo: id })}>
+                  {e.rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ferr-grupo">
+            <h4>raciocínio</h4>
+            <div className="ferr-opcoes">
+              {Object.entries(RACIOCINIO).map(([id, r]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={cfg.raciocinio === id ? "on" : ""}
+                  onClick={() => atualizar({ raciocinio: id })}
+                  title={r.desc}
+                >
+                  {r.rotulo}
+                </button>
+              ))}
+            </div>
+            <small>{RACIOCINIO[cfg.raciocinio] && RACIOCINIO[cfg.raciocinio].desc}</small>
+          </div>
+          <div className="ferr-toggles">
+            <label>
+              <input type="checkbox" checked={cfg.citacaoObrigatoria} onChange={(e) => atualizar({ citacaoObrigatoria: e.target.checked })} />
+              exigir fonte numerada
+            </label>
+            <label>
+              <input type="checkbox" checked={cfg.autoArtefato} onChange={(e) => atualizar({ autoArtefato: e.target.checked })} />
+              montar painel automático (notícias, vídeos, dossiê)
+            </label>
+            <label>
+              <input type="checkbox" checked={cfg.verificarFontes} onChange={(e) => atualizar({ verificarFontes: e.target.checked })} />
+              verificar se os links abrem
+            </label>
+            <label>
+              <input type="checkbox" checked={cfg.memoriaAtiva} onChange={(e) => atualizar({ memoriaAtiva: e.target.checked })} />
+              usar a memória no prompt
+            </label>
+          </div>
+        </section>
+      )}
+
+      {aba === "memoria" && (
+        <section className="ferr-config">
+          <h3>O que o agente lembra</h3>
+          <p className="ferr-resumo">
+            {memoria.length ? `${memoria.length} fato(s) guardado(s) neste navegador` : "nada guardado ainda"}
+          </p>
+          <div className="ferr-linha">
+            <input value={fato} onChange={(e) => setFato(e.target.value)} placeholder="ex.: prefiro respostas curtas e em português" />
+            <button
+              type="button"
+              onClick={() => {
+                if (!fato.trim()) return;
+                setMemoria(lembrar(fato));
+                setFato("");
+              }}
+            >
+              lembrar
+            </button>
+          </div>
+          <ul className="ferr-memoria">
+            {memoria.map((m) => (
+              <li key={m.id}>
+                <span>{m.texto}</span>
+                <button type="button" onClick={() => setMemoria(esquecer(m.id))} aria-label="esquecer">
+                  esquecer
+                </button>
+              </li>
+            ))}
+          </ul>
+          {memoria.length > 0 && (
+            <button type="button" className="ferr-apagar" onClick={() => setMemoria(limparMemoria())}>
+              limpar toda a memória
+            </button>
+          )}
+        </section>
+      )}
+
+      {aba === "prompts" && (
+        <section className="ferr-config">
+          <h3>Prompts prontos</h3>
+          <ul className="ferr-prompts">
+            {prompts.map((pr) => (
+              <li key={pr.id}>
+                <div>
+                  <b>{pr.titulo}</b>
+                  <small>{pr.tag}</small>
+                  <p>{pr.texto}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      navigator.clipboard.writeText(pr.texto);
+                    } catch {
+                      /* sem área de transferência */
+                    }
+                  }}
+                >
+                  copiar
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="ferr-novo-prompt">
+            <input value={novoTitulo} onChange={(e) => setNovoTitulo(e.target.value)} placeholder="título do seu prompt" />
+            <textarea value={novoTexto} onChange={(e) => setNovoTexto(e.target.value)} placeholder="texto do prompt" rows={3} />
+            <button
+              type="button"
+              onClick={() => {
+                if (novoTexto.trim().length < 5) return;
+                setPrompts(todosPrompts(salvarPrompt(novoTitulo, novoTexto)));
+                setNovoTitulo("");
+                setNovoTexto("");
+              }}
+            >
+              salvar prompt
+            </button>
+          </div>
+          {lerPrompts().length > 0 && (
+            <ul className="ferr-meus-prompts">
+              {lerPrompts().map((pr) => (
+                <li key={pr.id}>
+                  <span>{pr.titulo}</span>
+                  <button type="button" onClick={() => setPrompts(todosPrompts(removerPrompt(pr.id)))}>
+                    remover
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <div className="ferr-pedido">
         <label htmlFor="ferr-tema">termo de teste</label>
         <input
@@ -189,6 +366,7 @@ export default function FerramentasAgente({ pedidoInicial = "inteligência artif
         </small>
       </div>
 
+      {aba === "fontes" && (
       <ul className="ferr-lista">
         {FERRAMENTAS.map((f) => {
           const st = estado[f.id] || {};
@@ -209,6 +387,7 @@ export default function FerramentasAgente({ pedidoInicial = "inteligência artif
           );
         })}
       </ul>
+      )}
 
       <section className="ferr-config">
         <h3>Configuração da pesquisa</h3>

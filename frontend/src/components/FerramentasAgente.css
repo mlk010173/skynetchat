@@ -67,3 +67,32 @@
 @media (max-width: 520px) {
   .ferr-lista { grid-template-columns: 1fr; }
 }
+
+/* abas, comportamento, memória e prompts */
+.ferr-abas { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; }
+.ferr-abas button { background: #101010; border: 1px solid #1f1f1f; color: #b9b9b9; border-radius: 999px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+.ferr-abas button.on { background: #1b1b1b; color: #fff; border-color: #2c2c2c; }
+.ferr-comportamento .ferr-grupo { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.ferr-comportamento h4 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #8d8d8d; font-weight: 500; }
+.ferr-opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.ferr-opcoes button { background: #0d0d0d; border: 1px solid #1f1f1f; color: #b9b9b9; border-radius: 10px; padding: 7px 12px; font-size: 13px; }
+.ferr-opcoes button.on { background: #dc2626; border-color: #dc2626; color: #fff; }
+.ferr-toggles { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.ferr-toggles label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cfcfcf; }
+.ferr-toggles input { width: 18px; height: 18px; accent-color: #dc2626; }
+.ferr-resumo { margin: 0 0 10px; color: #8d8d8d; font-size: 13px; }
+.ferr-linha { display: flex; gap: 8px; margin-bottom: 10px; }
+.ferr-linha input { flex: 1; background: #0d0d0d; border: 1px solid #1f1f1f; color: #eee; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.ferr-linha button, .ferr-apagar { background: #1b1b1b; border: 1px solid #2a2a2a; color: #e5e5e5; border-radius: 10px; padding: 10px 14px; font-size: 13px; }
+.ferr-memoria, .ferr-meus-prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ferr-memoria li, .ferr-meus-prompts li { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0d0d0d; border: 1px solid #1c1c1c; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #d6d6d6; }
+.ferr-memoria button, .ferr-meus-prompts button { background: none; border: none; color: #8d8d8d; font-size: 12px; cursor: pointer; }
+.ferr-prompts { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ferr-prompts li { display: flex; gap: 12px; justify-content: space-between; background: #0d0d0d; border: 1px solid #1c1c1c; border-radius: 12px; padding: 12px; }
+.ferr-prompts b { font-size: 13px; color: #fff; }
+.ferr-prompts small { color: #8d8d8d; font-size: 11px; margin-left: 8px; }
+.ferr-prompts p { margin: 6px 0 0; font-size: 12px; color: #a8a8a8; line-height: 1.45; }
+.ferr-prompts button { background: #1b1b1b; border: 1px solid #2a2a2a; color: #e5e5e5; border-radius: 8px; padding: 6px 10px; font-size: 12px; align-self: flex-start; }
+.ferr-novo-prompt { display: flex; flex-direction: column; gap: 8px; }
+.ferr-novo-prompt input, .ferr-novo-prompt textarea { background: #0d0d0d; border: 1px solid #1f1f1f; color: #eee; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: vertical; }
+.ferr-novo-prompt button { background: #dc2626; border: none; color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; }

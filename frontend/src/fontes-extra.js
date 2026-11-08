@@ -18,12 +18,32 @@ async function pegar(url, tipo = "json") {
   }
 }
 
+const recortarJson = (t) => {
+  const texto = String(t || "").replace(/^```(?:json)?/gm, "").replace(/```$/gm, "");
+  const inicios = [texto.indexOf("{"), texto.indexOf("[")].filter((i) => i >= 0);
+  if (!inicios.length) throw new Error("sem json");
+  const ini = Math.min(...inicios);
+  const abre = texto[ini];
+  const fecha = abre === "{" ? "}" : "]";
+  let nivel = 0, dentro = false, emTexto = false, escape = false;
+  for (let i = ini; i < texto.length; i++) {
+    const c = texto[i];
+    if (emTexto) {
+      if (escape) escape = false;
+      else if (c === "\\") escape = true;
+      else if (c === '"') emTexto = false;
+      continue;
+    }
+    if (c === '"') { emTexto = true; continue; }
+    if (c === abre) { nivel++; dentro = true; }
+    else if (c === fecha) { nivel--; if (dentro && nivel === 0) return JSON.parse(texto.slice(ini, i + 1)); }
+  }
+  throw new Error("json incompleto");
+};
+
 const ler = (alvo, tipo = "json") => pegar("https://r.jina.ai/" + alvo, "texto").then((t) => {
   if (tipo === "texto") return t;
-  const i = t.indexOf("{");
-  const j = t.indexOf("[");
-  const corte = i < 0 ? j : j < 0 ? i : Math.min(i, j);
-  return JSON.parse(t.slice(corte));
+  return recortarJson(t);
 });
 
 const num = (n) => (typeof n === "number" ? n : Number(n) || 0);
@@ -56,7 +76,10 @@ export async function hackernews(q = "inteligência artificial", limite = 6) {
 /* ------------------------------------------------------------------ GitHub */
 export async function github(q = "agents", limite = 6) {
   try {
-    const d = await ler(`https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=${limite}`);
+    const alvo = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=${limite}`;
+    let d = null;
+    try { d = await pegar(alvo); } catch { }
+    if (!d || !d.items) d = await ler(alvo);
     return (d.items || []).map((r) => ({
       titulo: r.full_name,
       url: r.html_url,

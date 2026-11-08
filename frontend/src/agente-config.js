@@ -16,6 +16,14 @@ export const PADRAO = {
   cacheMin: 12, // 1 a 120
   mostrarPassos: true,
   autoridadePrimeiro: true,
+  // comportamento do agente
+  tom: "direto", // neutro | direto | tecnico | professor | critico | amigavel
+  estilo: "padrao", // conciso | padrao | detalhado | checklist
+  raciocinio: "padrao", // rapido | padrao | profundo
+  citacaoObrigatoria: true,
+  autoArtefato: true,
+  verificarFontes: true,
+  memoriaAtiva: true,
 };
 
 export const NIVEIS = {

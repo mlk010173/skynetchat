@@ -290,3 +290,4 @@
 .art-codigo-acoes button { background: none; border: 1px solid rgba(255,255,255,.12); color: #cfcfcf; font-size: 11px; padding: 3px 9px; border-radius: 999px; cursor: pointer; }
 .art-codigo-acoes button:hover { border-color: #ef4444; color: #fff; }
 .art-codigo pre { margin: 0; padding: 14px; overflow-x: auto; font-family: var(--mono); font-size: 12px; line-height: 1.55; color: #e6e6e6; }
+.art-vazio { margin: 0; padding: 10px 2px; color: #8d8d8d; font-size: 13px; }

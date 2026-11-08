@@ -17,6 +17,9 @@ import { chatModels, labelFor } from "../models.js";
 import * as voz from "../voz.js";
 import RichText from "../rich.jsx";
 import { Artefato, montarArtefato, resumoDoArtefato, separarArtefatos } from "../artefatos.jsx";
+import { lerConfig, assinarConfig } from "../agente-config.js";
+import { camadaDeComportamento } from "../comportamento.js";
+import { memoriaParaPrompt } from "../memoria.js";
 
 const actions = [
   { label: "Pesquisar na web agora", icon: IconGlobe, color: "#60a5fa", desc: "manchetes e fontes ao vivo" },
@@ -284,7 +287,7 @@ export default function Home() {
       });
     };
 
-    montarArtefato(text, { imagens: anexos, aoPasso })
+    if (lerConfig().autoArtefato !== false) montarArtefato(text, { imagens: anexos, aoPasso })
       .then((specs) => {
         setMessages((prev) => {
           const idx = prev.findIndex((m) => m.mid === mid);
@@ -307,6 +310,7 @@ export default function Home() {
       .catch(() => {});
 
     // Passo de navegacao real: abre o site pedido e mostra o comando na trilha.
+    const cfgNow = lerConfig();
     let conteudo = text;
     const alvo = alvoDeNavegacao(text);
     if (alvo !== null) {
@@ -360,6 +364,13 @@ export default function Home() {
       });
       if (util) conteudo = `${text}\n\nConteudo lido agora de ${alvoFinal}:\n${trecho.slice(0, 2400)}`;
     }
+
+    const camada = camadaDeComportamento(
+      cfgNow,
+      cfgNow.memoriaAtiva ? memoriaParaPrompt() : "",
+      opcoes.extra || ""
+    );
+    if (camada) conteudo = `${conteudo}\n\n${camada}`;
 
     await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar }, {
       onTool: (toolEv) => setMessages((prev) => {
