@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="skynet_fundo">#0B0B0C</color>
+    <color name="skynet_texto">#F5F5F5</color>
+    <color name="skynet_apagado">#A3A3A3</color>
+    <color name="skynet_vermelho">#E11D2A</color>
+</resources>

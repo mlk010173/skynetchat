@@ -11,3 +11,12 @@ next-env.d.ts
 .vercel
 frontend/dist/
 skyhub/dist/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/release.keystore
+*.apk
+*.aab
