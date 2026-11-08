@@ -173,6 +173,7 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onMidia: (m) => handlers.onMidia?.(m),
         onPrint: (p) => handlers.onPrint?.(p),
         onClima: (d) => handlers.onClima?.(d),
+        onLembrete: (l) => handlers.onLembrete?.(l),
         onWidget: (s) => handlers.onWidget?.(s),
         onArquivo: (a) => handlers.onArquivo?.(a),
         onReason: (txt) => handlers.onReason?.(txt),
