@@ -64,3 +64,21 @@ GitHub Actions recusa commit de arquivo em `.github/workflows/`. Por isso o APK 
 gerado localmente (JDK + SDK + Gradle) e publicado como Release. Quando quiser
 build automático a cada mudança, basta criar o workflow pelo site do GitHub: os
 passos estão descritos acima.
+
+## Pendencia obrigatoria para publicar na Play Store
+
+O modulo esta em `compileSdk = 34` e `targetSdk = 34`. Desde 31/08/2026 o Google Play exige
+API 36 para apps novos e atualizacoes, e API 35 como minimo para apps existentes.
+
+Como o AGP 8.5.2 nao compila contra SDK 36, a atualizacao precisa subir a cadeia toda de uma vez
+(e isso tem de ser validado num build local, porque o ambiente do agente nao tem o Android SDK):
+
+| Item | Hoje | Necessario |
+|---|---|---|
+| `compileSdk` / `targetSdk` | 34 | 36 |
+| Android Gradle Plugin (`android/build.gradle.kts`) | 8.5.2 | 8.9.x ou superior |
+| Gradle wrapper (`android/gradle/wrapper`) | conferir | 8.11+ |
+| JDK | conferir | 17 ou superior |
+
+Tambem vale desligar `android:allowBackup="true"` do manifesto (backup indiscriminado de dados)
+e revisar cookies de terceiros e downloads do WebView.
