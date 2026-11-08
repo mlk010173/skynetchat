@@ -43,7 +43,7 @@ async function memoriaBuscar(email, consulta) {
   if (!r.ok) return { ok: false, erro: "falha na busca (" + r.status + ")" };
   return { ok: true, resultados: await r.json() };
 }
-const VERSION = "1.3.1";
+const VERSION = "1.3.2";
 const MAX_TEXTO = 9000;
 const UA = "Mozilla/5.0 (compatible; skynet-agent/" + VERSION + ")";
 
@@ -58,7 +58,7 @@ const COMANDOS = {
 };
 
 // Nenhum argumento pode apontar para segredo, credencial ou area de processo.
-const ARG_PROIBIDO = /(\.env|environ|process\.|\.ssh|id_rsa|id_ed25519|\.keystore|\.jks|\.pem|\.crt|\/proc|\/etc\/|\/root|passwd|shadow|credential|secret|token|api[_-]?key|\.git\/)/i;
+const ARG_PROIBIDO = /(\.env|environ|process\.|\.ssh|id_rsa|id_ed25519|\.keystore|\.jks|\.pem|\.crt|\/proc|\/etc\/|\/root|passwd|shadow|credential|secret|token|api[_-]?key|\.git\/|\.temp\/)/i;
 const PROIBIDO = /[;&|`$><\n\r\\'"*?~]/;
 
 export function sanitizar(texto) {
