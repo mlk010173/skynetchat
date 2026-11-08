@@ -5,7 +5,7 @@ import {
   IconGift, IconGlobe, IconHistory, IconImage, IconInstagram, IconLife, IconMail, IconMoney,
   IconPlug, IconServer, IconTheme, IconUser, IconUsers, IconZap,
 } from "./Icons.jsx";
-import { api, getSession } from "../lib.js";
+import { api, contaAuth, getSession } from "../lib.js";
 import AutomationsPanel from "./AutomationsPanel.jsx";
 import MemoriaPanel from "./MemoriaPanel.jsx";
 
@@ -44,6 +44,11 @@ const items = [
 export default function Sidebar({ open, onClose, active, onSelect, logged, onLogout, say, onOpenConv, draftFill }) {
   const navigate = useNavigate();
   const [view, setView] = useState("menu");
+  const [supMsg, setSupMsg] = useState("");
+  const [supEmail, setSupEmail] = useState("");
+  const [supBusy, setSupBusy] = useState(false);
+  const [supOk, setSupOk] = useState("");
+  const [supErro, setSupErro] = useState("");
   const [busca, setBusca] = useState("");
   const [convs, setConvs] = useState([]);
   const [buscaConv, setBuscaConv] = useState("");
@@ -270,6 +275,27 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
       setTermOutput(String(err?.message || err));
     }
   };
+
+  /** Envia a mensagem para o suporte de verdade (função auth v36+, ação support). */
+  async function enviarSuporte() {
+    const texto = supMsg.trim();
+    if (supBusy || !texto) return;
+    setSupBusy(true); setSupOk(""); setSupErro("");
+    const sessao = await getSession();
+    const d = await contaAuth("support", { message: texto, email: supEmail.trim() || undefined }, sessao?.access_token ?? null);
+    setSupBusy(false);
+    if (d?.ok) {
+      const entregue = d.entrega === "enviado";
+      setSupOk(
+        entregue
+          ? (d.protocolo ? "recebido · protocolo " + String(d.protocolo).slice(0, 8) : "recebido pelo suporte")
+          : "mensagem registrada · o envio por e-mail ainda está pendente (domínio do suporte não verificado)",
+      );
+      setSupMsg("");
+    } else {
+      setSupErro(d?.error || "Não consegui enviar agora.");
+    }
+  }
 
   return (
     <>
@@ -753,10 +779,17 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
             <p className="panel-title">SUPORTE</p>
             <div className="panel-card">
               <div className="panel-head"><b>Suporte SKYNETchat</b></div>
-              <p className="panel-status">Online · resposta na hora</p>
-              <p className="panel-msg">Oi! 👋 Sou o suporte do SKYNETchat. Como posso te ajudar? (conta, acesso…)</p>
+              <p className="panel-msg">Escreva sua dúvida sobre conta ou acesso. A mensagem chega na caixa do suporte e você recebe a resposta no e-mail da conta.</p>
+              <label className="code-label" htmlFor="sup-email">SEU E-MAIL (OPCIONAL)</label>
+              <input id="sup-email" type="email" value={supEmail} onChange={(e) => setSupEmail(e.target.value)} placeholder="voce@exemplo.com" aria-label="E-mail para resposta do suporte" autoComplete="email" />
+              <label className="code-label" htmlFor="sup-msg">MENSAGEM</label>
+              <textarea id="sup-msg" value={supMsg} onChange={(e) => setSupMsg(e.target.value)} rows={4} maxLength={4000} placeholder="Descreva o que está acontecendo…" aria-label="Mensagem para o suporte" style={{ width: "100%", resize: "vertical" }} />
+              <button type="button" className="prompt-btn" onClick={enviarSuporte} disabled={supBusy || !supMsg.trim()}>
+                {supBusy ? "ENVIANDO…" : "ENVIAR MENSAGEM"}
+              </button>
+              {supOk && <p className="aviso-ok" role="status">// {supOk}</p>}
+              {supErro && <p className="erro" role="alert">{supErro}</p>}
               <button className="prompt-btn" onClick={() => { onClose(); say("Guarde seu código de 12 dígitos: é a única chave da conta."); }}>Perdi meu código</button>
-              <a className="prompt-btn" href="mailto:suporte@skynet.app?subject=Suporte%20SKYNETchat">Falar com atendente</a>
             </div>
           </div>
         )}
