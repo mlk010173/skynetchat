@@ -849,7 +849,7 @@ export default function Home() {
         </button>
         <button
           type="button"
-          className="icon-btn so-desktop"
+          className="icon-btn"
           onClick={() => {
             const linhas = [`# SKYNET · ${new Date().toLocaleDateString("pt-BR")}`, ""];
             for (const m of messages) {
