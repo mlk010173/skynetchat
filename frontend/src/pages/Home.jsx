@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MediaPlayer from "../media.jsx";
+import { FavReal, Marca, marcaDe } from "../marcas.jsx";
 import ClimaCard from "../clima.jsx";
 import { NavegadorAoVivo } from "../artefato.jsx";
 import { chaveStorage, criarWidget, carregarWidgets, daSpec, porPalavras, salvarWidgets } from "../widgets/registry.js";
@@ -1149,7 +1150,7 @@ export default function Home() {
                                       <span className="fontes-chips">
                                         {p.fontes.map((f, j) => (
                                           <a key={j} href={f.url} target="_blank" rel="noopener noreferrer" className="fonte-chip" title={f.url}>
-                                            <IconGlobe width={12} height={12} />
+                                            <FavReal url={f.url} titulo={f.titulo} size={13} />
                                             <span>{f.titulo || f.url}</span>
                                           </a>
                                         ))}

@@ -1,0 +1,7 @@
+/* Fontes próprias: nada de cair no system-ui genérico. */
+@font-face { font-family: "SK Inter"; src: url("/fonts/inter-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SK Inter"; src: url("/fonts/inter-600.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "SK Mono"; src: url("/fonts/mono-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "SK Mono"; src: url("/fonts/mono-700.woff2") format("woff2"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "SK Display"; src: url("/fonts/display-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "SK Display"; src: url("/fonts/display-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }

@@ -7,8 +7,9 @@
   --muted: #8d8d8d;
   --red: #dc2626;
   --red-title: #c4161c;
-  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", "Courier New", monospace;
+  --sans: "SK Inter", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "SK Mono", "JetBrains Mono", ui-monospace, monospace;
+  --display: "SK Display", "SK Inter", system-ui, sans-serif;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; }

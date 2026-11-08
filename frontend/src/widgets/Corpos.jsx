@@ -1,5 +1,6 @@
 // Corpos dos widgets: cada tipo sabe buscar seus dados e se desenhar.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Marca } from "../marcas.jsx";
 import { api, askOnce, SUPA_URL, SUPA_ANON } from "../lib.js";
 import MediaPlayer from "../media.jsx";
 import { ImagemIaBody, Lightbox } from "./avancado.jsx";
@@ -259,8 +260,14 @@ export function GithubBody({ config, tick }) {
 
   if (erro) return <p className="wg-erro">{erro}</p>;
   if (!dados) return <Skeleton />;
+  const cabeca = (
+    <a className="wg-repo" href={`https://github.com/${config.repo}`} target="_blank" rel="noopener noreferrer">
+      <Marca slug="github" size={13} /> {config.repo}
+    </a>
+  );
+
   if (config.visao === "commits") {
-    return (
+    return (<>{cabeca}
       <ul className="wg-lista">
         {dados.map((c) => (
           <li key={c.sha}>
@@ -268,23 +275,25 @@ export function GithubBody({ config, tick }) {
             <small>{c.commit?.author?.name} · {quando(c.commit?.author?.date)}</small>
           </li>
         ))}
-      </ul>
+      </ul></>
     );
   }
   if (config.visao === "arquivos") {
-    return (
+    return (<>{cabeca}
       <ul className="wg-lista">
         {dados.slice(0, 30).map((f) => (
           <li key={f.path}>
             <a href={f.html_url} target="_blank" rel="noopener noreferrer">{f.type === "dir" ? "▸ " : ""}{f.name}</a>
           </li>
         ))}
-      </ul>
+      </ul></>
     );
   }
   return (
     <div className="wg-repo">
-      <a className="wg-repo-nome" href={dados.html_url} target="_blank" rel="noopener noreferrer">{dados.full_name}</a>
+      <a className="wg-repo-nome" href={dados.html_url} target="_blank" rel="noopener noreferrer">
+        <Marca slug="github" size={14} /> {dados.full_name}
+      </a>
       <p className="wg-pe">{dados.description || "sem descrição"}</p>
       <p className="wg-pe">★ {dados.stargazers_count} · forks {dados.forks_count} · {dados.language || "—"} · atualizado {quando(dados.updated_at)}</p>
     </div>

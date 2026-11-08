@@ -1963,3 +1963,21 @@
 .dev-mini-topo { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line, #2a2a2a); font-size: 12px; }
 .dev-mini-topo button { border: 1px solid var(--line, #2a2a2a); background: transparent; color: var(--muted, #a3a3a3); font: 500 11.5px/1 inherit; padding: 6px 9px; border-radius: 7px; cursor: pointer; }
 .dev-mini-saida { margin: 0; padding: 10px 12px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; }
+
+/* Tipografia de verdade: display para titulos, mono para dados */
+.hero h1, .auth-page .logo, .ac-sheet-topo strong, .wg-page h1, .dev-page h1,
+.panel-title, .mp-titulo, .lem-titulo {
+  font-family: var(--display);
+  letter-spacing: -0.01em;
+}
+.hero h1 { letter-spacing: -0.03em; }
+.num, .mp-badge, .fonte-chip span, .wg-card-pe, .lem-quando { font-variant-numeric: tabular-nums; }
+
+/* Marcas reais nos chips, no player e nos widgets */
+.marca { display: inline-block; vertical-align: -2px; }
+.fav-real { border-radius: 3px; object-fit: contain; background: #141416; }
+.fonte-chip .marca, .fonte-chip .fav-real { margin-right: 2px; }
+.mp-badge { display: inline-flex; align-items: center; gap: 5px; }
+.wg-repo { display: flex; align-items: center; gap: 6px; }
+.wg-repo-nome { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #fff; text-decoration: none; }
+.wg-repo-nome:hover { color: var(--red); }

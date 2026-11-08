@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SUPA_ANON, SUPA_URL } from "./lib.js";
 import { HlsPlayer } from "./widgets/avancado.jsx";
+import { Marca } from "./marcas.jsx";
 import PlayerYoutube, { buscarPrevia, idDoYoutube } from "./widgets/youtube.jsx";
 
 const PROVEDORES = [
@@ -188,7 +189,7 @@ export default function MediaPlayer({ provedor, url, embed, titulo, aviso, compa
   return (
     <section ref={caixaRef} className={`mp ${compacto ? "mp-compacto" : ""}`} aria-label="Player de mídia">
       <header className="mp-top">
-        <span className="mp-badge">{atual.provedor}</span>
+        <span className="mp-badge"><Marca slug={atual.provedor === "youtube" ? "youtube" : atual.provedor === "spotify" ? "spotify" : atual.provedor === "soundcloud" ? "soundcloud" : atual.provedor === "vimeo" ? "vimeo" : "github"} size={12} /> {atual.provedor}</span>
         <p className="mp-titulo" title={atual.titulo}>{atual.titulo || "player pronto"}</p>
         {atual.url ? (
           <a className="mp-abrir" href={atual.url} target="_blank" rel="noopener noreferrer">abrir no site</a>
