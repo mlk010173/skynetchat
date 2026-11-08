@@ -1250,7 +1250,11 @@ Deno.serve(async (req) => {
   } catch {
     return json({ ok: false, error: "Corpo inválido." }, 400);
   }
-  const content = (body.content ?? "").trim();
+  // o painel do usuario anexa "orientacoes do painel" ao texto; elas nao fazem
+  // parte do pedido e quebravam comandos como /sandbox ls e a deteccao de ferramentas
+  const content = String(body.content ?? "")
+    .replace(/\n*\[orienta[cç][oõ]es do painel\][\s\S]*$/i, "")
+    .trim();
   if (!content) return json({ ok: false, error: "Mensagem vazia." }, 400);
   if (content.length > 4000) return json({ ok: false, error: "Mensagem longa demais (máx. 4000 caracteres)." }, 400);
 
