@@ -28,6 +28,14 @@ export default function Account() {
   const [code8, setCode8] = useState("");
   const [verificando, setVerificando] = useState(false);
 
+  // --- chaves de API (função auth v36+) ---
+  const [chaves, setChaves] = useState(null); // null = carregando
+  const [chaveNome, setChaveNome] = useState("");
+  const [chaveNova, setChaveNova] = useState("");
+  const [chaveBusy, setChaveBusy] = useState(false);
+  const [chaveMsg, setChaveMsg] = useState("");
+  const [chaveErro, setChaveErro] = useState("");
+
   useEffect(() => {
     getSession().then((s) => {
       if (s?.user) { setUser(s.user); setNick(String(s.user.user_metadata?.nickname ?? "")); }
@@ -104,7 +112,50 @@ export default function Account() {
     }
   }
 
-  async function sair() { await supabase.auth.signOut(); navigate("/", { replace: true }); }
+  async function carregarChaves() {
+    const s = await getSession();
+    if (!s?.access_token) { setChaves([]); return; }
+    const d = await contaAuth("apikey-list", {}, s.access_token);
+    if (d?.ok) setChaves(d.chaves ?? []);
+    else { setChaves([]); setChaveErro(d?.error || "Não consegui listar suas chaves."); }
+  }
+
+  async function gerarChave() {
+    if (chaveBusy) return;
+    setChaveBusy(true); setChaveErro(""); setChaveMsg(""); setChaveNova("");
+    const s = await getSession();
+    const d = await contaAuth("apikey-new", { nome: chaveNome.trim() || "chave" }, s?.access_token ?? null);
+    setChaveBusy(false);
+    if (d?.ok && d.chave) {
+      setChaveNova(d.chave);
+      setChaveNome("");
+      setChaveMsg(d.aviso || "Guarde agora: ela não aparece de novo.");
+      carregarChaves();
+    } else {
+      setChaveErro(d?.error || "Não consegui criar a chave.");
+    }
+  }
+
+  async function revogarChave(id) {
+    if (chaveBusy) return;
+    setChaveBusy(true); setChaveErro(""); setChaveMsg("");
+    const s = await getSession();
+    const d = await contaAuth("apikey-revoke", { id }, s?.access_token ?? null);
+    setChaveBusy(false);
+    if (d?.ok) { setChaveMsg("chave revogada"); carregarChaves(); }
+    else setChaveErro(d?.error || "Não consegui revogar a chave.");
+  }
+
+  useEffect(() => {
+    if (tab === "api" && user && chaves === null) carregarChaves();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user]);
+
+  async function sair() {
+    try { await contaAuth("logout"); } catch { /* sessão por JWT não usa token opaco */ }
+    await supabase.auth.signOut();
+    navigate("/", { replace: true });
+  }
 
   if (!user && !guest) return <div className="pro-modal-wrap"><p className="hint">carregando…</p></div>;
   const desde = user ? new Date(user.created_at).toLocaleDateString("pt-BR") : "";
@@ -123,6 +174,7 @@ export default function Account() {
         <div className="pro-tabs" role="tablist">
           <button className={"pro-tab" + (tab === "conta" ? " on" : "")} onClick={() => setTab("conta")}>👤 Conta</button>
           <button className={"pro-tab" + (tab === "seguranca" ? " on" : "")} onClick={() => setTab("seguranca")}>🛡 Segurança</button>
+          <button className={"pro-tab" + (tab === "api" ? " on" : "")} onClick={() => setTab("api")}>🔑 API</button>
           <button className={"pro-tab" + (tab === "assinatura" ? " on" : "")} onClick={() => setTab("assinatura")}>✦ Assinatura</button>
         </div>
 
@@ -205,6 +257,50 @@ export default function Account() {
             <p className="hint">Sem senha: a conta é acessada apenas pelo seu código. Sessão expira conforme a política do Supabase.</p>
             {user && verificado !== true && <p className="hint">Gerar um novo código só é possível com o e-mail de recuperação verificado.</p>}
             {user && <button className="pro-btn danger" onClick={sair}>ENCERRAR SESSÃO</button>}
+          </div>
+        )}
+
+        {tab === "api" && (
+          <div className="pro-body">
+            {guest && <p className="hint">Entre na conta para criar chaves de API.</p>}
+            {guest && <Link to="/login" className="pro-btn green" style={{ textAlign: "center" }}>ENTRAR</Link>}
+            {user && (
+              <>
+                <label className="pro-lbl green">NOVA CHAVE</label>
+                <div className="nick-box">
+                  <input value={chaveNome} onChange={(e) => setChaveNome(e.target.value)} placeholder="nome da chave (ex: meu script)" aria-label="Nome da chave de API" maxLength={60} />
+                  <small>Usada no /api e no /mcp com o header x-api-key. A chave aparece uma vez só.</small>
+                  <button type="button" className="pro-btn green-outline" onClick={gerarChave} disabled={chaveBusy}>{chaveBusy ? "GERANDO…" : "GERAR CHAVE"}</button>
+                </div>
+                {chaveNova && (
+                  <div className="code-box">
+                    <b className="code-digits" style={{ fontSize: "13px", letterSpacing: "1px", wordBreak: "break-all" }}>{chaveNova}</b>
+                    <small>{chaveMsg}</small>
+                    <button type="button" className="pro-btn" onClick={() => navigator.clipboard?.writeText(chaveNova)}>⧉ Copiar chave</button>
+                  </div>
+                )}
+                {!chaveNova && chaveMsg && <p className="aviso-ok" role="status">// {chaveMsg}</p>}
+                {chaveErro && <p className="erro" role="alert">{chaveErro}</p>}
+
+                <label className="pro-lbl">SUAS CHAVES</label>
+                {chaves === null && <p className="hint">carregando…</p>}
+                {chaves && chaves.length === 0 && <p className="hint">Nenhuma chave ainda. Gere a primeira acima.</p>}
+                {chaves && chaves.map((k) => (
+                  <div className="pro-row" key={k.id} style={{ alignItems: "center", gap: "8px" }}>
+                    <span>
+                      <b>{k.name}</b> <code style={{ fontSize: "11px" }}>{k.prefix}…</code>
+                      <br />
+                      <small className="hint">{k.calls ?? 0} chamadas{k.last_used ? " · último uso " + new Date(k.last_used).toLocaleDateString("pt-BR") : ""}</small>
+                    </span>
+                    {k.revoked ? (
+                      <b className="hint">revogada</b>
+                    ) : (
+                      <button type="button" className="pro-btn danger" style={{ width: "auto", padding: "6px 10px", fontSize: "11px" }} onClick={() => revogarChave(k.id)} disabled={chaveBusy}>revogar</button>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 

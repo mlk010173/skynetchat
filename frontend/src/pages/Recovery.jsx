@@ -71,6 +71,7 @@ export default function Recovery() {
           <button type="button" onClick={enviarCodigo} disabled={busy || !emailValido}>
             {busy ? "ENVIANDO…" : "SOLICITAR RECUPERAÇÃO"}
           </button>
+          <p className="hint">O e-mail precisa estar verificado na sua conta (aba Conta) para o código chegar.</p>
           {estado === "enviado" && (
             <p className="aviso-ok" role="status">{detalhe || "Pedido registrado. O código novo chega pelo e-mail cadastrado."}</p>
           )}
