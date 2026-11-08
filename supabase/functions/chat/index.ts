@@ -42,6 +42,7 @@ const ROTULOS: Record<string, string> = {
   web_pesquisar: "Pesquisar na web",
   abrir: "Abrir página",
   calcular: "Calcular",
+  devtool: "Ferramentas de engenharia",
   moeda: "Consultar câmbio",
   clima: "Consultar clima",
   hora: "Ver hora",
@@ -233,6 +234,43 @@ function detectTools(text: string): DetectedTool[] {
   if (pedePrint) {
     const link = text.match(/https?:\/\/\S+/)?.[0] ?? text.match(/\b((?:[a-z0-9-]+\.)+(?:com|com\.br|net|org|io|dev|app|br)(?:\/[^\s,]*)?)\b/i)?.[0] ?? "";
     tools.unshift({ name: "print", payload: { url: link.replace(/[.,;]$/, "") } });
+  }
+
+  // 0c. ferramentas de engenharia (devtool): json, base64, hash, uuid, jwt, epoch, cron, cores, bytes, case, stats
+  {
+    const t = text;
+    const pedaco = trechoDoPedido(t);
+    let acao = "", extra = "";
+    if (/\b(json|minifica|minificar|formata(r)?\s+(esse\s+)?json|valida(r)?\s+(esse\s+)?json)\b/i.test(t) && /[{[][\s\S]*[}\]]/.test(t)) acao = "json";
+    else if (/\b(base64|b64)\b/i.test(t)) { acao = "base64"; extra = /\b(decod\w*|descod\w*|decode|ler|l[eê])\b/i.test(t) ? "decodificar" : "codificar"; }
+    else if (/\b(sha-?256|sha-?1|sha-?512|hash|checksum|digest)\b/i.test(t)) { acao = "hash"; extra = /sha-?512/i.test(t) ? "sha512" : /sha-?1\b/i.test(t) ? "sha1" : "sha256"; }
+    else if (/\b(uuid|guid|id \u00fanico)\b/i.test(t)) { acao = "uuid"; extra = String((t.match(/\b(\d{1,2})\s*(uuid|guid|ids?)/i)?.[1]) ?? "1"); }
+    else if (/\bjwt\b|eyJ[A-Za-z0-9_-]{10}/i.test(t)) acao = "jwt";
+    else if (/\b(epoch|timestamp|unix time|carimbo de tempo)\b/i.test(t)) acao = "epoch";
+    else if (/\bcron\b/i.test(t)) acao = "cron";
+    else if (/\b(hex|rgb|hsl)\b/i.test(t) && /#[0-9a-f]{3,6}|rgb\(|\d{1,3}\s*,\s*\d{1,3}/i.test(t)) acao = "cores";
+    else if (/\b(gb|mb|kb|tb|bytes?)\b/i.test(t) && /\d/.test(t) && /\b(converte|converter|transforma|quanto|em)\b/i.test(t)) acao = "bytes";
+    else if (/\b(camel ?case|snake ?case|kebab ?case|pascal ?case|constant ?case)\b/i.test(t)) acao = "case";
+    else if (/\b(quantas palavras|contar (as )?palavras|estat[ií]sticas do texto|quantos caracteres)\b/i.test(t)) acao = "stats";
+    if (acao) {
+      let texto = acao === "uuid" || (acao === "epoch" && /\bagora\b/i.test(t)) ? "" : (pedaco || t.slice(0, 4000));
+      if (acao === "base64" && extra === "decodificar") {
+        const token = t.match(/[A-Za-z0-9+/=_-]{8,}/g)?.filter((x) => !/^(base64|b64|decodifica\w*|decodificar)$/i.test(x)).sort((a, b) => b.length - a.length)[0];
+        if (token) texto = token;
+      }
+      if (acao === "jwt") {
+        const token = t.match(/eyJ[A-Za-z0-9_.-]{10,}/)?.[0];
+        if (token) texto = token;
+      }
+      if (acao === "uuid") texto = "";
+      if (acao === "json") {
+        // o JSON tem que ir inteiro para a ferramenta: nada de limpar palavras dentro dele
+        const bruto = t.match(/[{[][\s\S]*[}\]]/);
+        if (bruto) texto = bruto[0];
+      }
+      tools.push({ name: "devtool", payload: { acao, texto: texto.slice(0, 4000), extra, pedido: t.slice(0, 200) } });
+      return tools;
+    }
   }
 
   // 0b. lembretes: "me lembre de X às 8", "meus lembretes", "o que tenho hoje"
@@ -542,7 +580,46 @@ async function chamarLembretes(caminho: string, jwt: string | null, conta: strin
   return await r.json().catch(() => ({ ok: false, error: "sem resposta do serviço de lembretes" }));
 }
 
+
+/** Chama a função devtool como o próprio usuário. */
+async function chamarDevtool(jwt: string | null, conta: string | null, acao: string, texto: string, extra = "") {
+  const base = Deno.env.get("SUPABASE_URL")!;
+  const chave = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const headers: Record<string, string> = { "content-type": "application/json", apikey: chave };
+  if (jwt) headers.authorization = `Bearer ${jwt}`;
+  else { headers.authorization = `Bearer ${chave}`; if (conta) headers["x-conta-id"] = conta; }
+  const r = await fetch(`${base}/functions/v1/devtool?acao=${encodeURIComponent(acao)}`, {
+    method: "POST", headers, body: JSON.stringify({ texto, extra }),
+  });
+  return await r.json().catch(() => ({ ok: false, error: "sem resposta das ferramentas" }));
+}
+
+/** Extrai o que deve ser processado: bloco ```...```, texto entre aspas ou o resto do pedido. */
+function trechoDoPedido(texto: string): string {
+  const bloco = texto.match(/```[a-zA-Z]*\n?([\s\S]*?)```/);
+  if (bloco) return bloco[1].trim();
+  const crase = texto.match(/`([^`]{2,})`/);
+  if (crase) return crase[1].trim();
+  const aspas = texto.match(/[""]([\s\S]{2,}?)[""]/);
+  if (aspas) return aspas[1].trim();
+  return texto
+    .replace(/^\s*(por favor[, ]*)?(me )?(formata|formatar|valida|validar|minifica|minificar|decodifica|decodificar|codifica|codificar|gera|gerar|cria|criar|explica|explicar|converte|converter|transforma|transformar|calcula|calcular|faz|fazer|l[eê]|mostra|mostrar)\b/i, "")
+    .replace(/\b(o |esse |este |meu |minha )?(json|base64|hash|sha-?\d+|uuid|guid|jwt|token|epoch|timestamp|cron|hex|rgb|hsl|camel ?case|snake ?case|kebab ?case|pascal ?case|texto)\b/gi, " ")
+    .replace(/\b(em|para|pra|de|do|da|com|no|na)\b/gi, " ")
+    .replace(/[""\s]+/g, " ")
+    .trim();
+}
+
 async function callTool(tool: DetectedTool, conta: string | null = null, jwt: string | null = null) {
+  if (tool.name === "devtool") {
+    const p2 = tool.payload as Record<string, unknown>;
+    const acao = String(p2?.acao ?? "");
+    const texto = String(p2?.texto ?? "");
+    const extra = String(p2?.extra ?? "");
+    const r = await chamarDevtool(jwt, conta, acao, texto, extra);
+    return { ...r, acao, pedido: p2?.pedido ?? "" };
+  }
+
   if (tool.name === "lembrete") {
     const pedido = String((tool.payload as Record<string, unknown>)?.pedido ?? "").trim();
     const listar = Boolean((tool.payload as Record<string, unknown>)?.listar);
@@ -1014,6 +1091,14 @@ ${erroSaida.slice(0, 400)}` : "") +
     case "mcp": {
       contextText = `RESULTADO REAL DA FERRAMENTA MCP ${data.ferramenta ?? ""}:\n${String(data.texto ?? "").slice(0, 1500)}` +
         `\nREQUISITO: use esse resultado como está, sem inventar.`;
+      break;
+    }
+    case "devtool": {
+      const r = data as Record<string, unknown>;
+      const semBruto = Object.fromEntries(Object.entries(r).filter(([k]) => !["pedido"].includes(k)));
+      contextText = r.ok
+        ? `RESULTADO DA FERRAMENTA ${String(r.acao).toUpperCase()}:\n${JSON.stringify(semBruto, null, 2).slice(0, 2600)}\nResponda em português, curto, mostrando o resultado principal (sem repetir o JSON inteiro quando for grande).`
+        : `A ferramenta ${String(r.acao)} falhou: ${String(r.error ?? "erro desconhecido")}. Explique em uma frase o que faltou.`;
       break;
     }
     case "lembrete": {
@@ -1537,6 +1622,18 @@ Deno.serve(async (req) => {
                   const faixa = (hoje.min !== undefined && hoje.max !== undefined) ? ` Hoje fica entre ${hoje.min}°C e ${hoje.max}°C.` : "";
                   return `Clima em **${r.cidade ?? "sua cidade"}** agora: ${partes.join(", ")}.${faixa} O gráfico interativo está na conversa.`;
                 })(),
+              };
+            }
+            if (tool.name === "devtool" && toolResult?.ok) {
+              const r = toolResult as Record<string, any>;
+              const resumo: Record<string, string> = {
+                json: "JSON válido", base64: "base64", hash: `${String(r.algoritmo ?? "SHA-256").toLowerCase()}`, uuid: `${(r.uuids ?? []).length} uuid(s)`,
+                jwt: r.expirado ? "JWT expirado" : "JWT lido", epoch: "data convertida", cron: "cron explicado",
+                cores: r.hex ?? "cor", bytes: "medida convertida", case: "nomes convertidos", stats: "contagem", url: "URL", regex: `${r.total ?? 0} achado(s)`, diff: "diff",
+              };
+              entregaDireta = {
+                quadro: { tipo: "devtool", dados: { ...r, resumo: resumo[String(r.acao)] ?? String(r.acao) } },
+                texto: `Ferramenta pronta: **${resumo[String(r.acao)] ?? r.acao}**. Resultado no cartão abaixo.`,
               };
             }
             if (tool.name === "lembrete" && toolResult?.ok) {

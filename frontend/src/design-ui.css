@@ -1936,3 +1936,30 @@
 .lem-sino { position: relative; color: var(--muted, #a3a3a3); text-decoration: none; font-size: 17px; }
 .lem-sino.tem-atraso { color: var(--red, #e11d2a); }
 .lem-sino-n { position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px; border-radius: 999px; background: var(--red, #e11d2a); color: #fff; font: 700 9.5px/15px inherit; text-align: center; }
+
+/* ---- devtool: ferramentas de engenharia ---- */
+.dev-page { max-width: 880px; margin: 0 auto; padding: 24px 18px 64px; }
+.dev-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.dev-topo h1 { margin: 0; font-size: 23px; letter-spacing: -0.02em; }
+.dev-sub { margin: 6px 0 0; font-size: 13px; color: var(--muted, #a3a3a3); }
+.dev-voltar { font-size: 12.5px; color: var(--muted, #a3a3a3); text-decoration: none; border: 1px solid var(--line, #2a2a2a); padding: 8px 12px; border-radius: 10px; }
+.dev-voltar:hover { color: var(--fg, #f2f2f2); border-color: var(--red, #e11d2a); }
+.dev-abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.dev-abas button { min-height: 34px; padding: 0 13px; border-radius: 999px; border: 1px solid var(--line, #2a2a2a); background: transparent; color: var(--muted, #a3a3a3); font: 500 12.5px/1 inherit; cursor: pointer; }
+.dev-abas button.on { color: var(--fg, #f2f2f2); border-color: var(--red, #e11d2a); background: color-mix(in srgb, var(--red, #e11d2a) 14%, transparent); }
+.dev-form { display: grid; gap: 10px; margin-bottom: 16px; }
+.dev-campo { display: grid; gap: 6px; font-size: 12px; color: var(--muted, #a3a3a3); }
+.dev-campo textarea, .dev-campo select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line, #2a2a2a); background: var(--soft, #141414); color: var(--fg, #f2f2f2); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+.dev-campo-mini { max-width: 220px; }
+.dev-rodar { justify-self: start; min-height: 40px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--red, #e11d2a); background: var(--red, #e11d2a); color: #fff; font: 600 13px/1 inherit; cursor: pointer; }
+.dev-rodar:disabled { opacity: .55; cursor: not-allowed; }
+.dev-erro { font-size: 13px; color: var(--red, #e11d2a); }
+.dev-saida { border: 1px solid var(--line, #2a2a2a); border-radius: 12px; background: var(--card, #111); overflow: hidden; }
+.dev-saida-topo { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line, #2a2a2a); font-size: 12.5px; }
+.dev-saida-topo button { min-height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line, #2a2a2a); background: transparent; color: var(--muted, #a3a3a3); font: 500 12px/1 inherit; cursor: pointer; }
+.dev-saida pre { margin: 0; padding: 14px; font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 420px; overflow: auto; }
+
+.dev-mini { margin-top: 10px; border: 1px solid var(--line, #2a2a2a); border-radius: 12px; background: var(--soft, #141414); overflow: hidden; }
+.dev-mini-topo { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line, #2a2a2a); font-size: 12px; }
+.dev-mini-topo button { border: 1px solid var(--line, #2a2a2a); background: transparent; color: var(--muted, #a3a3a3); font: 500 11.5px/1 inherit; padding: 6px 9px; border-radius: 7px; cursor: pointer; }
+.dev-mini-saida { margin: 0; padding: 10px 12px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; }

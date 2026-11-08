@@ -494,6 +494,16 @@ export default function Home() {
         copy[copy.length - 1] = { ...last, clima: dados };
         return copy;
       }),
+      onDevtool: (dados) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant") {
+          copy.push({ role: "assistant", text: "", devtool: dados, passos: [], fontes: [], ts: Date.now() });
+          return copy;
+        }
+        copy[copy.length - 1] = { ...last, devtool: dados };
+        return copy;
+      }),
       onLembrete: (dados) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
@@ -1181,6 +1191,37 @@ export default function Home() {
                       </div>
                     )}
                     {message.print && <NavegadorAoVivo alvo={message.print.alvo} inicial={message.print.url} provedor={message.print.provedor} />}
+                    {message.devtool && (
+                      <div className="dev-mini">
+                        <div className="dev-mini-topo">
+                          <b>{message.devtool.resumo || message.devtool.acao}</b>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const d = message.devtool;
+                              const txt = d.saida ?? d.uuids?.join("\n") ?? d.iso ?? d.explicacao
+                                ?? (d.camelCase ? `camel: ${d.camelCase}\nsnake: ${d.snake_case}\nkebab: ${d["kebab-case"]}\nPascal: ${d.PascalCase}` : "")
+                                ?? JSON.stringify(d, null, 2);
+                              navigator.clipboard?.writeText(String(txt));
+                              say("Resultado copiado.");
+                            }}
+                          >
+                            copiar
+                          </button>
+                        </div>
+                        <pre className="dev-mini-saida">{
+                          message.devtool.saida
+                          ?? (message.devtool.uuids ?? []).join("\n")
+                          ?? (message.devtool.explicacao ? `${message.devtool.expressao} → ${message.devtool.explicacao}` : null)
+                          ?? (message.devtool.iso ? `${message.devtool.iso} · ${message.devtool.sao_paulo ?? ""}` : null)
+                          ?? (message.devtool.hex ? `${message.devtool.hex} · ${message.devtool.rgb ?? ""} · ${message.devtool.hsl ?? ""}` : null)
+                          ?? (message.devtool.mb ? `${message.devtool.mb} MB · ${message.devtool.gb} GB` : null)
+                          ?? (message.devtool.camelCase ? `camelCase: ${message.devtool.camelCase}\nsnake_case: ${message.devtool.snake_case}\nkebab-case: ${message.devtool["kebab-case"]}\nPascalCase: ${message.devtool.PascalCase}` : null)
+                          ?? (message.devtool.palavras !== undefined ? `${message.devtool.palavras} palavras · ${message.devtool.caracteres} caracteres · ${message.devtool.linhas} linha(s)` : null)
+                          ?? JSON.stringify(message.devtool, null, 2)
+                        }</pre>
+                      </div>
+                    )}
                     {message.lembrete && (
                       <a className="lem-mini" href="#/lembretes">
                         <span className="lem-mini-ico" aria-hidden="true">◷</span>

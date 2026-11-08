@@ -98,6 +98,8 @@ export async function streamChat({ conversationId, content, model, continuar }, 
               handlers.onPermissao({ id: it.id, ferramenta: it.ferramenta, rotulo: it.rotulo, politica: it.politica, resumo: it.resumo });
             } else if (it.tipo === "clima" && handlers.onClima) {
               handlers.onClima(it.dados ?? it);
+            } else if (it.tipo === "devtool" && handlers.onDevtool) {
+              handlers.onDevtool(it.dados ?? it);
             } else if (it.tipo === "lembrete" && handlers.onLembrete) {
               handlers.onLembrete(it.dados ?? it);
             } else if (it.tipo === "widget" && handlers.onWidget) {
@@ -174,6 +176,7 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onPrint: (p) => handlers.onPrint?.(p),
         onClima: (d) => handlers.onClima?.(d),
         onLembrete: (l) => handlers.onLembrete?.(l),
+        onDevtool: (d) => handlers.onDevtool?.(d),
         onWidget: (s) => handlers.onWidget?.(s),
         onArquivo: (a) => handlers.onArquivo?.(a),
         onReason: (txt) => handlers.onReason?.(txt),
