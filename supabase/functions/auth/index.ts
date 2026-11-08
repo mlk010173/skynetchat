@@ -67,18 +67,86 @@ function novoCodigo(): string {
   return `${n.slice(0, 4)}-${n.slice(4, 8)}-${n.slice(8, 12)}`;
 }
 const normaliza = (c: string) => String(c ?? "").replace(/\D/g, "");
+
+function novoCodigoVerificacao(): string {
+  const limite = Math.floor(0x100000000 / 100000000) * 100000000;
+  const buf = new Uint32Array(1);
+  do { crypto.getRandomValues(buf); } while (buf[0] >= limite);
+  return String(buf[0] % 100000000).padStart(8, "0");
+}
+
+async function hashCodigoVerificacao(accountId: string, email: string, codigo: string): Promise<string> {
+  const pepper = Deno.env.get("CODE_ENC_KEY") ?? "";
+  if (!pepper) throw new Error("CODE_ENC_KEY ausente");
+  const input = `${accountId}|${email.toLowerCase()}|${normaliza(codigo)}|${pepper}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function liberarVerificacaoEstrita(
+  svc: ReturnType<typeof db>, chave: string, limite: number, janela: "minute" | "hour" | "day",
+): Promise<boolean> {
+  try {
+    const { data, error } = await svc.rpc("rate_bater", { p_chave: chave, p_janela: janela });
+    return !error && typeof data === "number" && data <= limite;
+  } catch {
+    return false;
+  }
+}
 function novoToken(): string {
   return b64(crypto.getRandomValues(new Uint8Array(32))).replace(/[+/=]/g, "").slice(0, 43);
 }
 
 async function contaPorToken(svc: ReturnType<typeof db>, token: string | null) {
   if (!token) return null;
-  const { data } = await svc.from("acc_sessions").select("account_id, revoked").eq("token", token).maybeSingle();
-  if (!data || data.revoked) return null;
+  const { data, error } = await svc.from("acc_sessions").select("account_id, revoked, last_used").eq("token", token).maybeSingle();
+  if (error || !data || data.revoked) return null;
+  const lastUsedMs = Date.parse(String(data.last_used ?? ""));
+  if (!Number.isFinite(lastUsedMs) || Date.now() - lastUsedMs > 30 * 24 * 60 * 60 * 1000) {
+    await svc.from("acc_sessions").update({ revoked: true }).eq("token", token);
+    return null;
+  }
   const { data: conta } = await svc.from("accounts").select("*").eq("id", data.account_id).maybeSingle();
   if (!conta || conta.blocked) return null;
   await svc.from("acc_sessions").update({ last_used: new Date().toISOString() }).eq("token", token);
   return conta;
+}
+
+/** Resolve a conta aceitando a sessão opaca (x-session) ou o JWT do Supabase (Authorization). */
+async function contaDaRequisicao(
+  svc: ReturnType<typeof db>,
+  req: Request,
+): Promise<Record<string, any> | null> {
+  const opaco = req.headers.get("x-session");
+  if (opaco) return await contaPorToken(svc, opaco);
+  const authz = req.headers.get("authorization") ?? "";
+  const jwt = authz.replace(/^Bearer\s+/i, "").trim();
+  if (jwt.split(".").length !== 3) return null;
+  const base = Deno.env.get("SUPABASE_URL")!;
+  const chave = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const r = await fetch(base + "/auth/v1/user", {
+    headers: { apikey: chave, Authorization: "Bearer " + jwt },
+  });
+  if (!r.ok) return null;
+  const user = await r.json().catch(() => null) as { id?: string } | null;
+  if (!user?.id) return null;
+  const { data: existente } = await svc.from("accounts").select("*").eq("auth_user_id", user.id).maybeSingle();
+  if (existente) return existente.blocked ? null : existente;
+  const codigoNovo = novoCodigo();
+  const { data: criada, error: erroInsert } = await svc.from("accounts")
+    .insert({
+      auth_user_id: user.id,
+      tier: "free",
+      code_enc: await cifrar(normaliza(codigoNovo)),
+      code_hint: normaliza(codigoNovo).slice(-4),
+      recovery_email_verified: false,
+    })
+    .select("*").single();
+  if (erroInsert) {
+    const { data: corrida } = await svc.from("accounts").select("*").eq("auth_user_id", user.id).maybeSingle();
+    return corrida && !corrida.blocked ? corrida : null;
+  }
+  return criada ?? null;
 }
 
 const publico = (c: Record<string, unknown>) => ({
@@ -87,6 +155,7 @@ const publico = (c: Record<string, unknown>) => ({
   role: (c.role as string) ?? "user",
   nickname: (c.nickname as string) ?? null,
   recoveryEmail: c.recovery_email ?? null,
+  recoveryEmailVerified: c.recovery_email_verified === true,
   codeHint: c.code_hint ?? null,
   createdAt: c.created_at,
 });
@@ -179,7 +248,7 @@ Deno.serve(async (req) => {
   try {
     // ---- sessão atual ----
     if (acao === "session" && req.method === "GET") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ error: "unauthorized" }, 401);
       return json({ ok: true, user: publico(conta) });
     }
@@ -193,7 +262,7 @@ Deno.serve(async (req) => {
     // ---- cadastro: gera a conta e devolve o código uma única vez ----
     if (acao === "access-code") {
       if (!(await liberar("acesso:" + ipDe(req), 5, "hour"))) return respostaLimite(CORS);
-      const ipCliente = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
+      const ipCliente = ipDe(req);
       const captcha = await turnstileValidar(String(corpo.turnstileToken ?? corpo.cfToken ?? ""), ipCliente);
       if (!captcha.ok) return json({ ok: false, error: "Verificação de segurança falhou. Recarregue e tente de novo." }, 403);
 
@@ -270,7 +339,7 @@ Deno.serve(async (req) => {
       const emailsAdmin = (Deno.env.get("ADMIN_EMAILS") ?? "")
         .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
       const emailDaConta = String(alvo.recovery_email ?? "").toLowerCase();
-      if (emailsAdmin.includes(emailDaConta) && alvo.role !== "admin") {
+      if (alvo.recovery_email_verified === true && emailsAdmin.includes(emailDaConta) && alvo.role !== "admin") {
         await svc.from("accounts").update({ role: "admin" }).eq("id", alvo.id);
         final = { ...alvo, role: "admin" };
       }
@@ -288,7 +357,7 @@ Deno.serve(async (req) => {
         .select("*").ilike("recovery_email", email).limit(1).maybeSingle();
 
       // resposta neutra: não conta se o e-mail existe
-      if (!conta) return json({ ok: true, aviso: "Se este e-mail estiver cadastrado, o código chega em instantes." });
+      if (!conta || conta.recovery_email_verified !== true) return json({ ok: true, aviso: "Se este e-mail estiver cadastrado e verificado, o código chega em instantes." });
 
       const codigo = await decifrar(String(conta.code_enc));
       const formatado = `${codigo.slice(0, 4)}-${codigo.slice(4, 8)}-${codigo.slice(8, 12)}`;
@@ -301,33 +370,94 @@ Deno.serve(async (req) => {
       });
       return json({
         ok: true,
-        aviso: "Se este e-mail estiver cadastrado, o código chega em instantes.",
-        entrega: envio.enviado ? "enviado" : envio.motivo,
+        aviso: "Se este e-mail estiver cadastrado e verificado, o código chega em instantes.",
       });
     }
 
     // ---- salvar e-mail de recuperação (logado) ----
     if (acao === "recovery-email") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      if (!(await liberarVerificacaoEstrita(svc, "recovery-email-send:" + conta.id, 3, "hour"))) {
+        return respostaLimite(CORS);
+      }
       const email = String(corpo.email ?? "").trim().toLowerCase();
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(email)) {
         return json({ ok: false, error: "E-mail inválido." }, 400);
       }
-      await svc.from("accounts").update({
+      const { error: updateError } = await svc.from("accounts").update({
         recovery_email: email,
         recovery_email_verified: false,
         updated_at: new Date().toISOString(),
       }).eq("id", conta.id);
-      return json({ ok: true });
+      if (updateError) return json({ ok: false, error: "Não foi possível salvar o e-mail." }, 500);
+
+      const codigo = novoCodigoVerificacao();
+      const codeHash = await hashCodigoVerificacao(conta.id, email, codigo);
+      await svc.from("recovery_email_verifications").delete()
+        .eq("account_id", conta.id).is("consumed_at", null);
+      const { error: insertError } = await svc.from("recovery_email_verifications").insert({
+        account_id: conta.id,
+        email,
+        code_hash: codeHash,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      });
+      if (insertError) return json({ ok: false, error: "Não foi possível iniciar a verificação." }, 500);
+
+      const envio = await enviarEmail(svc, {
+        accountId: conta.id,
+        to: email,
+        subject: "Verifique seu e-mail de recuperação do SKYNETchat",
+        body: [
+          "Código de verificação do SKYNETchat",
+          "",
+          codigo,
+          "",
+          "Digite este código nas configurações da sua conta.",
+          "Ele expira em 15 minutos e permite no máximo 5 tentativas.",
+          "Se você não solicitou esta verificação, ignore esta mensagem.",
+        ].join("\n"),
+        kind: "recovery_email_verification",
+      });
+      return json({
+        ok: true,
+        verificationRequired: true,
+        expiresInSeconds: 900,
+        aviso: envio.enviado ? "Código enviado. Verifique sua caixa de entrada." : "Solicitação registrada; a entrega do e-mail pode estar pendente.",
+      });
+    }
+
+    if (acao === "recovery-email-verify") {
+      const conta = await contaDaRequisicao(svc, req);
+      if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
+      if (!(await liberarVerificacaoEstrita(svc, "recovery-email-confirm:" + conta.id, 10, "hour"))) {
+        return respostaLimite(CORS);
+      }
+      const email = String(conta.recovery_email ?? "").trim().toLowerCase();
+      const codigo = normaliza(String(corpo.code ?? corpo.codigo ?? ""));
+      if (!email || codigo.length !== 8) {
+        return json({ ok: false, error: "Informe o código de 8 dígitos enviado ao e-mail." }, 400);
+      }
+      const codeHash = await hashCodigoVerificacao(conta.id, email, codigo);
+      const { data: status, error } = await svc.rpc("confirm_recovery_email_verification", {
+        p_account_id: conta.id,
+        p_email: email,
+        p_code_hash: codeHash,
+      });
+      if (error) return json({ ok: false, error: "Não foi possível confirmar o código." }, 500);
+      if (status === "verified") return json({ ok: true, verified: true });
+      if (status === "expired") return json({ ok: false, error: "Código expirado. Solicite outro." }, 410);
+      if (status === "locked") return json({ ok: false, error: "Limite de tentativas atingido. Solicite outro código." }, 429);
+      if (status === "email_changed") return json({ ok: false, error: "O e-mail foi alterado. Solicite um novo código." }, 409);
+      return json({ ok: false, error: "Código inválido ou inexistente." }, 400);
     }
 
     // ---- novo código de segurança ----
     if (acao === "new-code") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
-      if (!conta.recovery_email) {
-        return json({ ok: false, message: "Adicione um email de recuperação antes de gerar um novo código." }, 400);
+      if (!conta.recovery_email || conta.recovery_email_verified !== true) {
+        return json({ ok: false, error: "Verifique seu e-mail de recuperação antes de gerar um novo código." }, 403);
       }
       const codigo = novoCodigo();
       await svc.from("accounts").update({
@@ -353,7 +483,7 @@ Deno.serve(async (req) => {
 
     // ---- suporte (abre pedido e avisa o e-mail de suporte) ----
     if (acao === "support") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       const email = String(corpo.email ?? conta?.recovery_email ?? "").trim().toLowerCase();
       const mensagem = String(corpo.message ?? corpo.mensagem ?? "").slice(0, 4000);
       if (!mensagem) return json({ ok: false, error: "Escreva sua mensagem." }, 400);
@@ -372,7 +502,7 @@ Deno.serve(async (req) => {
 
     // ---- memória por conta ----
     if (acao === "memory-save") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const chave = String(corpo.chave ?? corpo.key ?? "").trim().slice(0, 80);
       const valor = String(corpo.valor ?? corpo.value ?? corpo.texto ?? corpo.conteudo ?? corpo.content ?? "").trim().slice(0, 2000);
@@ -388,7 +518,7 @@ Deno.serve(async (req) => {
     }
 
     if (acao === "memory-list" && req.method === "GET") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const { data } = await svc.from("acc_memory")
         .select("id, chave, valor, tipo, updated_at")
@@ -399,7 +529,7 @@ Deno.serve(async (req) => {
     }
 
     if (acao === "memory-forget") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const id = String(corpo.id ?? "");
       if (id) await svc.from("acc_memory").delete().eq("id", id).eq("account_id", conta.id);
@@ -409,7 +539,7 @@ Deno.serve(async (req) => {
 
     // ---- painel admin (só role=admin) ----
     if (acao.startsWith("admin-")) {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta || conta.role !== "admin") return json({ ok: false, error: "Sem permissão de admin." }, 403);
 
       if (acao === "admin-contas" && req.method === "GET") {
@@ -475,7 +605,7 @@ Deno.serve(async (req) => {
 
     // ---- chaves da API pública ----
     if (acao === "apikey-new") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const bruta = "sk-" + Array.from(crypto.getRandomValues(new Uint8Array(24)))
         .map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -490,7 +620,7 @@ Deno.serve(async (req) => {
     }
 
     if (acao === "apikey-list" && req.method === "GET") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const { data } = await svc.from("api_keys")
         .select("id, name, prefix, created_at, last_used, calls, revoked")
@@ -499,7 +629,7 @@ Deno.serve(async (req) => {
     }
 
     if (acao === "apikey-revoke") {
-      const conta = await contaPorToken(svc, token);
+      const conta = await contaDaRequisicao(svc, req);
       if (!conta) return json({ ok: false, error: "Entre na conta primeiro." }, 401);
       const id = String(corpo.id ?? "").trim();
       if (!id) return json({ ok: false, error: "Informe o id da chave." }, 400);

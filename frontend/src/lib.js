@@ -152,6 +152,22 @@ export async function codeAuth(action, payload = {}, token = null) {
   return data;
 }
 
+/** Chamadas da API nova de conta (função `auth`, v39+): /functions/v1/auth?action=… */
+export async function contaAuth(action, payload = {}, token = null) {
+  const temCorpo = payload && Object.keys(payload).length > 0;
+  const res = await fetch(`${SUPA_URL}/functions/v1/auth?action=${encodeURIComponent(action)}`, {
+    method: temCorpo ? "POST" : "GET",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: SUPA_ANON,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(temCorpo ? { body: JSON.stringify(payload) } : {}),
+  });
+  const data = await res.json().catch(() => ({ ok: false, error: "Resposta inválida." }));
+  return data;
+}
+
 let MODEL_LIST = [];
 export function setModelList(list) { MODEL_LIST = Array.isArray(list) ? list : []; }
 

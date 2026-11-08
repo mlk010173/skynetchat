@@ -10,8 +10,11 @@ const db = () =>
   );
 
 export function ipDe(req: Request): string {
-  const f = req.headers.get("x-forwarded-for") ?? "";
-  return (f.split(",")[0] || req.headers.get("cf-connecting-ip") || "desconhecido").trim().slice(0, 60);
+  // Cloudflare sobrescreve cf-connecting-ip; priorize-o para reduzir spoofing de X-Forwarded-For.
+  const confiavel = req.headers.get("cf-connecting-ip")?.trim();
+  if (confiavel) return confiavel.slice(0, 60);
+  const encaminhado = req.headers.get("x-forwarded-for") ?? "";
+  return (encaminhado.split(",")[0] || "desconhecido").trim().slice(0, 60);
 }
 
 /** true = pode passar; false = estourou o limite da janela. */
@@ -19,10 +22,10 @@ export async function liberar(chave: string, limite: number, janela: "minute" | 
   try {
     const svc = db();
     const { data, error } = await svc.rpc("rate_bater", { p_chave: chave, p_janela: janela });
-    if (error || typeof data !== "number") return true; // falha aberta só para não derrubar o serviço
+    if (error || typeof data !== "number") return false; // falha fechada: não liberar sem validar o limite
     return data <= limite;
   } catch (_) {
-    return true;
+    return false;
   }
 }
 

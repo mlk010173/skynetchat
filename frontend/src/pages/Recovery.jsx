@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import AuthShell from "../components/AuthShell.jsx";
-import { codeAuth } from "../lib.js";
+import { contaAuth } from "../lib.js";
 import { useAuth } from "../auth.jsx";
 
 /** /recovery: redefinir senha por e-mail (principal) ou recuperar o código de 12 dígitos. */
@@ -27,9 +27,9 @@ export default function Recovery() {
   async function enviarCodigo() {
     if (busy || !emailValido) return;
     setBusy(true); setEstado(""); setDetalhe("");
-    const data = await codeAuth("recover", { email });
+    const data = await contaAuth("recovery-request", { email });
     setBusy(false);
-    if (data.ok) { setEstado("enviado"); setDetalhe(data.mensagem || ""); }
+    if (data.ok) { setEstado("enviado"); setDetalhe(data.aviso || data.mensagem || ""); }
     else { setEstado("erro"); setDetalhe(data.error || "Não foi possível solicitar a recuperação."); }
   }
 
