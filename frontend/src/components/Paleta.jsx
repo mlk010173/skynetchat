@@ -15,6 +15,8 @@ export default function Paleta({ aberta, aoFechar, aoEscolher, conversa }) {
       { id: "chat", titulo: "Ir para o chat", grupo: "navegar", dica: "conversa atual", acao: () => aoEscolher({ tipo: "rota", valor: "/" }) },
       { id: "painel", titulo: "Painel do agente", grupo: "navegar", dica: "ferramentas, comportamento, memória", acao: () => aoEscolher({ tipo: "rota", valor: "/ferramentas" }) },
       { id: "widgets", titulo: "Widgets do chat", grupo: "navegar", dica: "notícias, clima, gráficos", acao: () => aoEscolher({ tipo: "rota", valor: "/widgets" }) },
+      { id: "arquivo", titulo: "Arquivo de dossiês", grupo: "navegar", dica: "pesquisas guardadas com fontes", acao: () => aoEscolher({ tipo: "rota", valor: "/arquivo" }) },
+      { id: "lembretes", titulo: "Lembretes", grupo: "navegar", dica: "o que o chat anotou", acao: () => aoEscolher({ tipo: "rota", valor: "/lembretes" }) },
       { id: "exportar", titulo: "Exportar conversa (.md)", grupo: "ação", dica: "baixa o histórico atual", acao: () => aoEscolher({ tipo: "exportar" }) },
       { id: "sistema", titulo: "Copiar instrução de sistema", grupo: "ação", dica: "tom e memória em texto", acao: () => aoEscolher({ tipo: "sistema" }) },
       { id: "limpar", titulo: "Limpar memória", grupo: "ação", dica: `${lerMemoria().length} fato(s) guardado(s)`, acao: () => aoEscolher({ tipo: "limparMemoria" }) },

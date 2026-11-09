@@ -11,7 +11,7 @@ import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
   { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens"] },
-  { titulo: "Ferramentas", itens: ["Codex", "CRM", "Lembretes", "Devtool", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
+  { titulo: "Ferramentas", itens: ["Codex", "CRM", "Lembretes", "Arquivo", "Devtool", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
   { titulo: "Crescer", itens: ["Indique e Ganhe", "Monetize com SKYNETchat", "Conversas em grupo"] },
   { titulo: "Descobrir", itens: ["Conheça o SKYNETchat", "Prompts", "Suporte", "Atualizações"] },
 ];
@@ -34,6 +34,7 @@ const items = [
   { label: "Memória", tag: "REAL", desc: "Painel de Memória de Longo Prazo", icon: IconBook },
 
   { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
+  { label: "Arquivo", tag: "NOVO", desc: "Dossiês guardados com fontes e trechos", icon: IconFolder },
   { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
   { label: "Conheça o SKYNETchat", desc: "Descubra como funciona o projeto", icon: IconBook },
   { label: "Prompts", desc: "Prompts úteis para usar com a IA", icon: IconChat },
@@ -235,6 +236,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "CRM") { navigate("/crm"); onClose(); }
     else if (label === "Lembretes") { navigate("/lembretes"); onClose(); }
     else if (label === "Devtool") { navigate("/devtool"); onClose(); }
+    else if (label === "Arquivo") { navigate("/arquivo"); onClose(); }
     else if (label === "Automações") setView("automations");
     else if (label === "E-mail") setView("email");
     else if (label === "Memória") setView("memoria");

@@ -13,7 +13,7 @@ const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá alé
 import { useAuth } from "../auth.jsx";
 import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { responderLocal } from "../fallback.js";
-import { guardarDossie, lerArquivo, removerDossie } from "../historico.js";
+import { guardarDossie, lerArquivo, removerDossie, specDoArquivo } from "../historico.js";
 import { resumoComportamento } from "../comportamento.js";
 import { agentGet, askOnce, runTool } from "../lib.js";
 import { ajudaComandos, parseCommand } from "../commands.js";
@@ -209,6 +209,27 @@ export default function Home() {
     const t = setTimeout(() => setFase((f) => (f === "imagem" || f === "documento" || f === "pesquisa" ? "gerando" : f)), 3200);
     return () => clearTimeout(t);
   }, [busy]);
+  // dossiê aberto a partir do Arquivo (#/?dossie=ID)
+  useEffect(() => {
+    const abrirDossieDoHash = () => {
+      const m = window.location.hash.match(/dossie=([a-z0-9_]+)/i);
+      if (!m) return;
+      const item = lerArquivo().find((d) => d.id === m[1]);
+      history.replaceState(null, "", window.location.pathname + window.location.search + "#/");
+      if (!item) return;
+      const spec = specDoArquivo(item);
+      if (!spec) return;
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", mid: "arq" + item.id, text: `Reabri do arquivo: **${item.titulo}** (${item.fontes} fontes).`, artefatos: [spec], started: Date.now() },
+      ]);
+      say("Dossiê reaberto a partir do arquivo.");
+    };
+    abrirDossieDoHash();
+    window.addEventListener("hashchange", abrirDossieDoHash);
+    return () => window.removeEventListener("hashchange", abrirDossieDoHash);
+  }, [say]);
+
   useEffect(() => { aplicarFavicon(document.documentElement.dataset.theme === "white" ? "#b91c1c" : "#ef4444"); }, []);
 
   useEffect(() => { getSession().then((s) => setLogged(!!s)); }, []);

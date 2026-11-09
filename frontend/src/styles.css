@@ -1063,3 +1063,55 @@ button { font-family: inherit; color: inherit; }
   100% { transform: scale(1); }
 }
 .dock-send.cancelar { background: #1a1010; border: 1px solid rgba(239, 68, 68, .5); color: #ff6b6b; }
+
+/* ================= arquivo de dossiês ================= */
+.arquivo-pagina { max-width: 860px; margin: 0 auto; padding: 26px 18px 80px; }
+.arquivo-topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.arquivo-topo h1 { display: flex; align-items: center; gap: 9px; font-size: 19px; margin: 0 0 4px; color: #f0f0f0; letter-spacing: .01em; }
+.arquivo-topo h1 svg { color: #ef4444; }
+.arquivo-topo p { margin: 0; font-size: 12px; color: #8a8a8a; }
+.arquivo-topo-acoes { display: flex; gap: 8px; align-items: center; }
+.arquivo-topo-acoes input {
+  background: #0f0f11; border: 1px solid #26262a; border-radius: 10px; padding: 9px 12px;
+  color: #e8e8e8; font-size: 12.5px; min-width: 200px; outline: none;
+}
+.arquivo-topo-acoes input:focus { border-color: rgba(239, 68, 68, .55); box-shadow: 0 0 0 3px rgba(239, 68, 68, .09); }
+.arquivo-topo-acoes .ghost { background: none; border: 1px solid #2b2b2f; color: #9a9a9a; border-radius: 10px; padding: 9px 12px; font-size: 12px; cursor: pointer; }
+.arquivo-vazio {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  padding: 54px 20px; border: 1px dashed #2a2a2e; border-radius: 16px; color: #8b8b8b; background: #0c0c0e;
+}
+.arquivo-vazio svg { color: #ef4444; opacity: .8; }
+.arquivo-vazio b { color: #ededed; font-size: 15px; }
+.arquivo-vazio p { margin: 0; font-size: 12.5px; max-width: 340px; line-height: 1.55; }
+.arquivo-vazio button { margin-top: 6px; background: rgba(239, 68, 68, .12); border: 1px solid rgba(239, 68, 68, .45); color: #ff6b6b; border-radius: 10px; padding: 9px 16px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.arquivo-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.arquivo-item {
+  border: 1px solid #232327; background: linear-gradient(180deg, #101012, #0b0b0d);
+  border-radius: 14px; padding: 14px; transition: border-color .18s, box-shadow .18s;
+}
+.arquivo-item:hover { border-color: rgba(239, 68, 68, .38); box-shadow: 0 10px 28px rgba(0, 0, 0, .45); }
+.arquivo-item-topo { display: flex; align-items: baseline; gap: 10px; justify-content: space-between; }
+.arquivo-item-topo b { font-size: 14px; color: #f1f1f1; }
+.arquivo-item-topo small { font-size: 11px; color: #6e6e6e; white-space: nowrap; }
+.arquivo-pedido { margin: 5px 0 0; font-size: 12.5px; color: #9a9a9a; line-height: 1.5; }
+.arquivo-selos { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.arquivo-selos em {
+  font-style: normal; font-size: 10.5px; color: #b9b9b9; padding: 3px 8px; border-radius: 999px;
+  background: #16161a; border: 1px solid #26262b;
+}
+.arquivo-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+.arquivo-acoes button {
+  display: inline-flex; align-items: center; gap: 5px; background: #15151a; border: 1px solid #2a2a30;
+  color: #cfcfcf; border-radius: 9px; padding: 7px 11px; font-size: 12px; cursor: pointer;
+}
+.arquivo-acoes button:hover { border-color: rgba(239, 68, 68, .5); color: #ff7070; }
+.arquivo-acoes button.perigo { padding: 7px 9px; color: #b96b6b; }
+.arquivo-acoes button.perigo:hover { background: #1b1010; border-color: #ef4444; color: #ff6b6b; }
+.arquivo-ver { margin-top: 9px; background: none; border: none; color: #8a8a8a; font-size: 11.5px; cursor: pointer; padding: 0; text-decoration: underline dotted; }
+.arquivo-ver:hover { color: #ff7070; }
+.arquivo-fontes { list-style: none; margin: 9px 0 0; padding: 9px 0 0; border-top: 1px solid #1f1f23; display: grid; gap: 6px; }
+.arquivo-fontes li { display: flex; gap: 8px; align-items: baseline; font-size: 12px; }
+.arquivo-fontes a { color: #cdcdcd; text-decoration: none; }
+.arquivo-fontes a:hover { color: #ff6b6b; }
+.arquivo-fontes small { color: #6a6a6a; font-size: 10.5px; }
