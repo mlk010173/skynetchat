@@ -161,8 +161,6 @@ export function resumoTraco(traco) {
   else partes.push(traco.fim ? "concluído" : "em andamento");
   const n = grupos.length;
   if (n > 1) partes.push(`${n} etapas`);
-  const seg = duracao(traco);
-  if (seg >= 2) partes.push(`${seg}s`);
   if (traco.resumo.fontes) partes.push(`${traco.resumo.fontes} fontes`);
   if (traco.resumo.arquivos) partes.push(`${traco.resumo.arquivos} arquivos`);
   return partes.join(" · ") || "preparando";
