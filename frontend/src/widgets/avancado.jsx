@@ -170,13 +170,26 @@ export function ImagemIaBody({ config, atualizarConfig }) {
   );
 }
 
-/** Ampliação de qualquer mídia estática (usada na galeria). */
-export function Lightbox({ url, alt, onFechar }) {
+/** Ampliação de qualquer mídia estática: abre no app, fecha no Esc ou no toque. */
+export function Lightbox({ url, alt, nome, onFechar }) {
+  useEffect(() => {
+    if (!url) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") onFechar?.(); };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
+  }, [url, onFechar]);
   if (!url) return null;
   return (
-    <div className="ia-img-zoom" role="dialog" aria-label="Mídia ampliada" onClick={onFechar}>
-      <img src={url} alt={alt || ""} />
-      <span className="ia-img-zoom-dica">clique para fechar</span>
+    <div className="ia-img-zoom" role="dialog" aria-modal="true" aria-label={alt || "Mídia ampliada"} onClick={onFechar}>
+      <div className="ia-img-zoom-caixa" onClick={(e) => e.stopPropagation()}>
+        <img src={url} alt={alt || ""} />
+        <div className="ia-img-zoom-acoes">
+          {nome ? <small>{nome}</small> : <small>toque fora para fechar</small>}
+          <a href={url} download={nome || "imagem"} target="_blank" rel="noopener noreferrer">baixar</a>
+          <button type="button" onClick={onFechar} aria-label="fechar">fechar</button>
+        </div>
+      </div>
     </div>
   );
 }

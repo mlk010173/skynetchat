@@ -28,6 +28,7 @@ import AcoesMensagem from "../components/AcoesMensagem.jsx";
 import AnexosSheet from "../components/AnexosSheet.jsx";
 import PreviaAnexos from "../components/PreviaAnexos.jsx";
 import IndicadorProcesso from "../components/IndicadorProcesso.jsx";
+import { Lightbox } from "../widgets/avancado.jsx";
 import GravacaoAudio, { OndaSonora } from "../components/GravacaoAudio.jsx";
 import { iniciarGravacao, duracaoLegivel } from "../gravador.js";
 import { baixarArquivo, paraMarkdown } from "../habilidades.js";
@@ -104,6 +105,13 @@ function alvoDeNavegacao(texto) {
   return quer && !dominio ? "" : null;
 }
 
+const tamanhoLegivel = (bytes = 0) => {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+};
+
 export default function Home() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("Novo chat");
@@ -116,6 +124,7 @@ export default function Home() {
   const [niveis, setNiveis] = useState([]);
   const [audioUrl, setAudioUrl] = useState(null);
   const [fase, setFase] = useState("pensando");
+  const [zoom, setZoom] = useState(null);
 
   // fase exibida no indicador: imagem, documento ou o estágio do pedido
   const faseFinal = () => {
@@ -1310,9 +1319,29 @@ export default function Home() {
                     {message.image && <img src={message.image} alt="imagem gerada" className="gen-img" />}
                     {message.anexos && message.anexos.length > 0 && (
                       <div className="bubble-prints">
-                        {message.anexos.map((a, k) => (
-                          <img key={k} src={a.url} alt={a.nome} onClick={() => window.open(a.url, "_blank")} />
-                        ))}
+                        {message.anexos.map((a, k) => {
+                          const imagem = /^image\//.test(a.tipo || "") || (a.url || "").startsWith("data:image");
+                          if (!imagem) {
+                            return (
+                              <span className="bubble-arquivo" key={k}>
+                                <b>{a.nome || "arquivo"}</b>
+                                <small>{a.tamanho ? tamanhoLegivel(a.tamanho) : (a.tipo || "").split("/")[1] || "anexo"}</small>
+                                {a.url ? <a href={a.url} target="_blank" rel="noopener noreferrer">abrir</a> : null}
+                              </span>
+                            );
+                          }
+                          return (
+                            <button
+                              type="button"
+                              className="bubble-print"
+                              key={k}
+                              aria-label={`ampliar ${a.nome || "print"}`}
+                              onClick={() => setZoom({ url: a.url, alt: a.nome, nome: a.nome })}
+                            >
+                              <img src={a.url} alt={a.nome} loading="lazy" />
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                     {message.clima && <ClimaCard dados={message.clima} />}
@@ -1532,6 +1561,11 @@ export default function Home() {
       <form className="dock" onSubmit={enviar}>
         <PreviaAnexos
           itens={prints}
+          aoAbrir={(item) => {
+            const imagem = /^image\//.test(item.tipo || "") || (item.url || "").startsWith("data:image");
+            if (imagem && item.url) setZoom({ url: item.url, alt: item.nome, nome: item.nome });
+            else if (item.url) window.open(item.url, "_blank", "noopener");
+          }}
           aoRemover={(i) => setPrints((l) => l.filter((_, k) => k !== i))}
         />
         <div className="plus-wrap">
@@ -1629,6 +1663,8 @@ export default function Home() {
           </button>
         )}
       </form>
+
+      <Lightbox url={zoom?.url} alt={zoom?.alt} nome={zoom?.nome} onFechar={() => setZoom(null)} />
 
       <AnexosSheet
         aberta={anexosOpen}

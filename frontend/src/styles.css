@@ -714,9 +714,36 @@ button { font-family: inherit; color: inherit; }
 .ia-img-estilos { display: flex; flex-wrap: wrap; gap: 5px; }
 .ia-img-estilos button { padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: none; color: #9a9a9a; font: inherit; font-size: 10.5px; cursor: pointer; }
 .ia-img-estilos button.ativo { color: #fff; border-color: rgba(255,77,77,.65); background: rgba(255,77,77,.16); }
-.ia-img-zoom { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.86); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; cursor: zoom-out; animation: wgEntra .2s ease both; }
-.ia-img-zoom img { max-width: 94vw; max-height: 84vh; border-radius: 12px; box-shadow: 0 30px 90px rgba(0,0,0,.8); }
+.ia-img-zoom {
+  position: fixed; inset: 0; z-index: 140; background: rgba(3, 3, 4, .93);
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+  cursor: zoom-out; backdrop-filter: blur(6px); animation: wgEntra .2s ease both;
+}
+.ia-img-zoom-caixa { display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 100%; cursor: default; }
+.ia-img-zoom img {
+  max-width: 94vw; max-height: 78vh; border-radius: 14px; object-fit: contain;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .85), 0 0 0 1px rgba(239, 68, 68, .18);
+}
+.ia-img-zoom-acoes { display: flex; align-items: center; gap: 10px; }
+.ia-img-zoom-acoes small { font-size: 11px; color: #8d8d8d; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ia-img-zoom-acoes a, .ia-img-zoom-acoes button {
+  background: #141416; border: 1px solid #2c2c31; color: #d5d5d5; border-radius: 9px;
+  padding: 7px 13px; font-size: 12px; cursor: pointer; text-decoration: none;
+}
+.ia-img-zoom-acoes a:hover, .ia-img-zoom-acoes button:hover { border-color: rgba(239, 68, 68, .55); color: #ff6b6b; }
 .ia-img-zoom-dica { font-size: 11px; color: #9a9a9a; }
+
+/* prints e arquivos dentro da bolha */
+.bubble-print { padding: 0; border: 1px solid #26262a; background: #0d0d0f; border-radius: 11px; overflow: hidden; cursor: zoom-in; line-height: 0; }
+.bubble-print img { width: 132px; height: 102px; object-fit: cover; display: block; transition: transform .22s ease, filter .22s; }
+.bubble-print:hover img { transform: scale(1.04); filter: brightness(1.08); }
+.bubble-arquivo {
+  display: inline-flex; flex-direction: column; gap: 1px; padding: 8px 11px; border-radius: 11px;
+  background: #101012; border: 1px solid #26262a; max-width: 210px;
+}
+.bubble-arquivo b { font-size: 11.5px; color: #dcdcdc; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bubble-arquivo small { font-size: 10px; color: #757575; }
+.bubble-arquivo a { font-size: 10.5px; color: #ff6b6b; text-decoration: none; margin-top: 2px; }
 @media (prefers-reduced-motion: reduce) { .ia-img-carregando span { animation-duration: 2s; } }
 
 /* ---------- permissões do agente ---------- */
