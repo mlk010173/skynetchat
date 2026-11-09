@@ -29,6 +29,7 @@ import AnexosSheet from "../components/AnexosSheet.jsx";
 import PreviaAnexos from "../components/PreviaAnexos.jsx";
 import IndicadorProcesso from "../components/IndicadorProcesso.jsx";
 import { Lightbox } from "../widgets/avancado.jsx";
+import { apagarRascunho, densidadeSalva, guardarDensidade, guardarRascunho, lerRascunho } from "../habilidades.js";
 import GravacaoAudio, { OndaSonora } from "../components/GravacaoAudio.jsx";
 import { iniciarGravacao, duracaoLegivel } from "../gravador.js";
 import { baixarArquivo, paraMarkdown } from "../habilidades.js";
@@ -125,6 +126,8 @@ export default function Home() {
   const [audioUrl, setAudioUrl] = useState(null);
   const [fase, setFase] = useState("pensando");
   const [zoom, setZoom] = useState(null);
+  const [densidade, setDensidade] = useState(() => densidadeSalva());
+  const [rascunhoSalvo, setRascunhoSalvo] = useState(null);
 
   // fase exibida no indicador: imagem, documento ou o estágio do pedido
   const faseFinal = () => {
@@ -203,10 +206,11 @@ export default function Home() {
   // sugestões dos artefatos caem no campo de texto (sem enviar sozinho)
   useEffect(() => {
     const aoSugerir = (ev) => {
-      const texto = ev?.detail?.texto;
+      const bruto = ev?.detail;
+      const texto = typeof bruto === "string" ? bruto : bruto?.texto;
       if (!texto) return;
       setDraft((d) => (d ? `${d}\n${texto}` : texto));
-      document.querySelector(".dock input[aria-label=\"Mensagem\"]")?.focus();
+      document.querySelector('.dock input[aria-label="Mensagem"], .dock textarea')?.focus();
     };
     window.addEventListener("skynet:sugestao", aoSugerir);
     return () => window.removeEventListener("skynet:sugestao", aoSugerir);
@@ -218,6 +222,26 @@ export default function Home() {
     const t = setTimeout(() => setFase((f) => (f === "imagem" || f === "documento" || f === "pesquisa" ? "gerando" : f)), 3200);
     return () => clearTimeout(t);
   }, [busy]);
+  // rascunho: recupera o que ficou pela metade e guarda enquanto digita
+  useEffect(() => {
+    const salvo = lerRascunho();
+    if (salvo) setRascunhoSalvo(salvo);
+  }, []);
+
+  const jaDigitou = useRef(false);
+  useEffect(() => {
+    // a primeira passada só lê o rascunho antigo; não pode apagá-lo antes do uso
+    if (!jaDigitou.current) { jaDigitou.current = true; return undefined; }
+    const t = setTimeout(() => guardarRascunho(draft), 700);
+    return () => clearTimeout(t);
+  }, [draft]);
+
+  // densidade da conversa
+  useEffect(() => {
+    document.documentElement.dataset.densidade = densidade;
+    guardarDensidade(densidade);
+  }, [densidade]);
+
   // dossiê aberto a partir do Arquivo (#/?dossie=ID)
   useEffect(() => {
     const abrirDossieDoHash = () => {
@@ -358,6 +382,8 @@ export default function Home() {
     if ((!text && !anexos.length) || busy) return;
     setDraft("");
     setPrints([]);
+    apagarRascunho();
+    setRascunhoSalvo(null);
     const mid = "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     setMessages((prev) => [
       ...prev,
@@ -1554,7 +1580,23 @@ export default function Home() {
         <span>{lerConfig().memoriaAtiva ? `${lerMemoria().length} memórias` : "memória off"}</span>
         <span className="barra-sep">·</span>
         <span>{lerArquivo().length} no arquivo</span>
+        <button
+          type="button"
+          className="barra-densidade"
+          title="densidade da conversa"
+          onClick={() => setDensidade((d) => (d === "confortavel" ? "compacta" : d === "compacta" ? "ampla" : "confortavel"))}
+        >
+          {densidade === "compacta" ? "compacta" : densidade === "ampla" ? "ampla" : "confortável"}
+        </button>
       </div>
+      {rascunhoSalvo && !draft.trim() && !busy ? (
+        <div className="rascunho-faixa">
+          <span>rascunho de {new Date(rascunhoSalvo.quando).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+          <b>{rascunhoSalvo.texto.slice(0, 68)}{rascunhoSalvo.texto.length > 68 ? "…" : ""}</b>
+          <button type="button" onClick={() => { setDraft(rascunhoSalvo.texto); setRascunhoSalvo(null); }}>usar</button>
+          <button type="button" className="ghost" onClick={() => { apagarRascunho(); setRascunhoSalvo(null); }}>descartar</button>
+        </div>
+      ) : null}
       {(busy || gravando) && (
         <IndicadorProcesso fase={gravando ? "documento" : faseFinal()} segundos={segundosAoVivo} />
       )}

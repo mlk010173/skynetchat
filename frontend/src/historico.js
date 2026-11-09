@@ -38,6 +38,8 @@ export function guardarDossie(pedido, spec) {
       domain: f.domain,
       excerto: f.excerto || "",
       resumo: f.resumo || "",
+      quando: f.quando || null,
+      primeiraMao: !!f.primeiraMao,
     })),
   };
   const lista = ler().filter((x) => x.pedido !== item.pedido || x.titulo !== item.titulo);

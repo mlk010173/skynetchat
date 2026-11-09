@@ -312,6 +312,12 @@ export default function FerramentasAgente({ pedidoInicial = "inteligência artif
               ["deduplicar", "Juntar duplicados", "Agrupa títulos quase iguais para não contar a mesma notícia duas vezes."],
               ["paletaAtalhos", "Paleta Ctrl+K", "Atalho para pular entre chat, painel, prompts e memória."],
               ["citacaoObrigatoria", "Fonte numerada", "Obriga o agente a numerar as fontes que usar."],
+              ["palavrasChave", "Palavras-chave", "Extrai os termos mais repetidos nas fontes e deixa clicar para perguntar."],
+              ["linhaTempo", "Linha do tempo", "Encontra datas nos títulos e trechos e ordena do mais novo ao mais antigo."],
+              ["frescorFontes", "Frescor das fontes", "Mostra a idade média das fontes e quantas saíram nos últimos 7 dias."],
+              ["balancoFontes", "Balanço de fontes", "Barra com oficial, acadêmico, imprensa e técnico para ver de onde vem."],
+              ["tempoLeitura", "Tempo de leitura", "Soma as palavras dos trechos e estima minutos de leitura."],
+              ["perguntasSeguir", "Perguntas de continuidade", "Sugere cinco perguntas tiradas dos temas do dossiê."],
             ].map(([chave, titulo, desc]) => (
               <li key={chave}>
                 <label>

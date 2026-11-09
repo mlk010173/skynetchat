@@ -30,6 +30,12 @@ export const PADRAO = {
   compararFontes: true,
   deduplicar: true,
   paletaAtalhos: true,
+  palavrasChave: true,
+  linhaTempo: true,
+  frescorFontes: true,
+  balancoFontes: true,
+  tempoLeitura: true,
+  perguntasSeguir: true,
 };
 
 export const NIVEIS = {

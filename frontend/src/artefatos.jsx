@@ -5,7 +5,21 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { clima, noticias, resumo, social, videos, web } from "./pesquisa.js";
 import { pesquisarProfundo, relatorio } from "./agente.js";
 import { cambio, cripto, github, hackernews, pacote, papers, stackoverflow } from "./fontes-extra.js";
-import { agruparDuplicados, convergencia, resumoTldr, verificarLinks } from "./habilidades.js";
+import {
+  agruparDuplicados,
+  balancoFontes,
+  checarAtualidade,
+  compararTextos,
+  convergencia,
+  estimarLeitura,
+  extrairPalavrasChave,
+  gerarPerguntas,
+  linhaDoTempo,
+  paraCsv,
+  resumoTldr,
+  verificarLinks,
+  baixarArquivo,
+} from "./habilidades.js";
 import { lerConfig } from "./agente-config.js";
 import "./artefatos.css";
 
@@ -191,6 +205,7 @@ function Fontes({ spec }) {
   const [planoAberto, setPlanoAberto] = useState(false);
   const [links, setLinks] = useState(null);
   const [checando, setChecando] = useState(false);
+  const [comparando, setComparando] = useState(null);
   const cfg = useMemo(() => lerConfig(), []);
 
   const tldr = useMemo(() => (cfg.resumoExecutivo !== false ? resumoTldr(itens, spec.titulo) : null), [itens, cfg.resumoExecutivo, spec.titulo]);
@@ -219,6 +234,20 @@ function Fontes({ spec }) {
     return () => clearTimeout(t);
   }, [cfg.verificarLinks, itens, links, checando, checarLinks]);
 
+  const chaves = useMemo(() => (cfg.palavrasChave === false ? [] : extrairPalavrasChave(itens, 8)), [itens, cfg.palavrasChave]);
+  const datas = useMemo(() => (cfg.linhaTempo === false ? [] : linhaDoTempo(itens)), [itens, cfg.linhaTempo]);
+  const frescor = useMemo(() => (cfg.frescorFontes === false ? null : checarAtualidade(itens)), [itens, cfg.frescorFontes]);
+  const balanco = useMemo(() => (cfg.balancoFontes === false ? [] : balancoFontes(itens)), [itens, cfg.balancoFontes]);
+  const leitura = useMemo(() => (cfg.tempoLeitura === false ? null : estimarLeitura(itens)), [itens, cfg.tempoLeitura]);
+  const perguntas = useMemo(() => (cfg.perguntasSeguir === false ? [] : gerarPerguntas(itens, spec.titulo)), [itens, spec.titulo, cfg.perguntasSeguir]);
+  const dupla = useMemo(() => {
+    if (!comparando) return null;
+    const a = itens[comparando.a];
+    const b = itens[comparando.b];
+    if (!a || !b) return null;
+    return { a, b, diff: compararTextos(`${a.excerto || a.resumo || a.titulo}`, `${b.excerto || b.resumo || b.titulo}`) };
+  }, [comparando, itens]);
+
   const dominios = useMemo(() => {
     const contagem = new Map();
     itens.forEach((f) => {
@@ -243,6 +272,37 @@ function Fontes({ spec }) {
 
   return (
     <div className="art-dossie">
+      {(frescor || balanco.length || leitura) ? (
+        <div className="art-painel">
+          {frescor ? (
+            <div className="art-medidor" title={`média de ${frescor.media} dias entre as fontes datadas`}>
+              <div className="art-medidor-topo"><b>frescor</b><em>{frescor.frescor}%</em></div>
+              <div className="art-barra"><i style={{ width: `${frescor.frescor}%` }} /></div>
+              <small>{frescor.recentes} nos últimos 7 dias · {frescor.antigas} com mais de 4 meses</small>
+            </div>
+          ) : null}
+          {balanco.length ? (
+            <div className="art-balanco">
+              <div className="art-medidor-topo"><b>de onde vem</b><em>{itens.length} fontes</em></div>
+              <div className="art-balanco-barra">
+                {balanco.map((b) => (
+                  <i key={b.chave} className={`tipo-${b.chave}`} style={{ width: `${b.fatia}%` }} title={`${b.chave}: ${b.n}`} />
+                ))}
+              </div>
+              <div className="art-balanco-legenda">
+                {balanco.map((b) => <span key={b.chave}><i className={`tipo-${b.chave}`} />{b.chave} {b.n}</span>)}
+              </div>
+            </div>
+          ) : null}
+          {leitura ? (
+            <div className="art-leitura">
+              <b>{leitura.minutos} min</b>
+              <small>de leitura nas fontes · {leitura.palavras.toLocaleString("pt-BR")} palavras</small>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       {tldr && tldr.linhas.length ? (
         <div className="art-tldr">
           <h4>resumo executivo</h4>
@@ -266,6 +326,33 @@ function Fontes({ spec }) {
             <em key={c.termo} title={c.dominios.join(" · ")}>{c.termo}</em>
           ))}
         </div>
+      ) : null}
+
+      {chaves.length ? (
+        <div className="art-chaves">
+          <b>palavras-chave</b>
+          {chaves.map((c) => (
+            <button
+              type="button"
+              key={c.termo}
+              onClick={() => window.dispatchEvent(new CustomEvent("skynet:sugestao", { detail: `o que há de mais recente sobre ${c.termo}?` }))}
+              title={`${c.n} aparições · usar no chat`}
+            >
+              {c.termo}<i>{c.n}</i>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {datas.length ? (
+        <ol className="art-tempo">
+          {datas.map((d, i) => (
+            <li key={i}>
+              <span className="art-tempo-data">{d.quando.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}</span>
+              <a href={d.url} target="_blank" rel="noopener noreferrer">{limpar(d.titulo || d.rotulo).slice(0, 74)}</a>
+            </li>
+          ))}
+        </ol>
       ) : null}
 
       {metricas.length ? (
@@ -304,16 +391,74 @@ function Fontes({ spec }) {
             {todosAbertos ? "recolher trechos" : "abrir trechos"}
           </button>
           <button type="button" onClick={() => baixar(`dossie-${Date.now()}.md`, markdownDoDossie(spec))}>baixar .md</button>
+          <button type="button" onClick={() => baixarArquivo(`fontes-${Date.now()}.csv`, paraCsv(itens), "text/csv")}>fontes .csv</button>
+          <button
+            type="button"
+            className={comparando ? "on" : ""}
+            onClick={() => setComparando(comparando ? null : { a: 0, b: Math.min(1, itens.length - 1) })}
+            disabled={itens.length < 2}
+          >
+            {comparando ? "fechar comparação" : "comparar 2 fontes"}
+          </button>
           <button type="button" onClick={checarLinks} disabled={checando}>
             {checando ? "checando links…" : links ? `links: ${links.vivos}/${links.total}` : "verificar links"}
           </button>
         </div>
       </div>
 
+      {perguntas.length ? (
+        <div className="art-perguntas">
+          <b>continuar daqui</b>
+          <div>
+            {perguntas.map((p, i) => (
+              <button
+                type="button"
+                key={i}
+                onClick={() => window.dispatchEvent(new CustomEvent("skynet:sugestao", { detail: p }))}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {links ? (
         <div className="art-verificar">
           <span>{links.vivos} de {links.total} links responderam</span>
           {links.mortos ? <span>· {links.mortos} sem resposta</span> : null}
+        </div>
+      ) : null}
+
+      {dupla ? (
+        <div className="art-comparar">
+          <div className="art-comparar-topo">
+            <label>
+              fonte A
+              <select value={comparando.a} onChange={(e) => setComparando({ ...comparando, a: Number(e.target.value) })}>
+                {itens.map((f, i) => <option key={i} value={i}>{i + 1}. {limpar(f.titulo).slice(0, 42)}</option>)}
+              </select>
+            </label>
+            <label>
+              fonte B
+              <select value={comparando.b} onChange={(e) => setComparando({ ...comparando, b: Number(e.target.value) })}>
+                {itens.map((f, i) => <option key={i} value={i}>{i + 1}. {limpar(f.titulo).slice(0, 42)}</option>)}
+              </select>
+            </label>
+            <em>{dupla.diff.semelhanca}% de vocabulário em comum</em>
+          </div>
+          <div className="art-comparar-grade">
+            <div>
+              <b>{host(dupla.a.url)}</b>
+              <p>{limpar(dupla.a.excerto || dupla.a.resumo || "sem trecho lido")}</p>
+              {dupla.diff.soA.length ? <small>só aqui: {dupla.diff.soA.join(", ")}</small> : null}
+            </div>
+            <div>
+              <b>{host(dupla.b.url)}</b>
+              <p>{limpar(dupla.b.excerto || dupla.b.resumo || "sem trecho lido")}</p>
+              {dupla.diff.soB.length ? <small>só aqui: {dupla.diff.soB.join(", ")}</small> : null}
+            </div>
+          </div>
         </div>
       ) : null}
 
