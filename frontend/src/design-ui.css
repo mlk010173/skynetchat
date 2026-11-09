@@ -2167,3 +2167,134 @@
 :root[data-theme="white"] .drawer-item:hover { background: rgba(0, 0, 0, 0.05); }
 :root[data-theme="white"] .di-title { color: #1a1a1a; }
 :root[data-theme="white"] .di-text small { color: #6a6a6a; }
+
+/* ============================================================
+   MOBILE · estrutura de chat (cabeçalho fixo, thread, compositor)
+   ============================================================ */
+
+/* cabeçalho */
+.topbar.m-top{
+  position:sticky;top:0;z-index:30;
+  height:calc(52px + env(safe-area-inset-top));
+  padding:env(safe-area-inset-top) 8px 0;
+  grid-template-columns:40px 1fr auto;gap:4px;
+  background:rgba(5,5,5,.94);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(127,127,127,.14);
+}
+.m-brand{display:flex;align-items:center;gap:7px;min-width:0;padding-left:2px}
+.m-brand > svg:first-child{flex:none}
+.m-brand-tag{
+  flex:none;font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:#ff6a6a;border:1px solid rgba(220,38,38,.32);border-radius:5px;padding:1px 5px;line-height:1.5;
+}
+.m-top-acoes{display:flex;align-items:center;gap:2px}
+.m-top .icon-btn{width:36px;height:36px;border-radius:8px;color:#cfcfcf}
+.m-top .icon-btn.on{background:rgba(255,255,255,.09);color:#fff}
+.m-opcoes span{font-size:17px;line-height:1;letter-spacing:1px}
+
+/* folha de opções */
+.m-sheet-fundo{position:fixed;inset:0;border:0;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);z-index:40}
+.m-sheet{
+  position:fixed;right:8px;top:calc(52px + env(safe-area-inset-top));z-index:41;
+  width:min(86vw,320px);padding:6px;display:grid;gap:2px;
+  background:#0d0d0d;border:1px solid rgba(127,127,127,.18);border-radius:14px;
+  box-shadow:0 24px 60px rgba(0,0,0,.62);animation:mSheet .16s ease-out;
+}
+@keyframes mSheet{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.m-sheet-topo{display:flex;align-items:center;justify-content:space-between;padding:4px 8px 6px}
+.m-sheet-topo b{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a}
+.m-sheet-x{border:0;background:none;color:#8a8a8a;font-size:13px;padding:2px 4px;cursor:pointer}
+.m-sheet-item{
+  display:grid;gap:1px;width:100%;text-align:left;padding:9px 10px;border:0;border-radius:9px;
+  background:none;color:#ececec;font-size:13px;font-weight:500;cursor:pointer;
+  transition:background .14s ease;
+}
+.m-sheet-item small{font-size:11px;font-weight:400;color:#7d7d7d}
+.m-sheet-item:hover,.m-sheet-item:active{background:rgba(255,255,255,.06)}
+.m-sheet-item.alerta span{color:#ff6a6a}
+.m-sheet-item.destaque span{color:#ff5d5d}
+
+/* área da conversa */
+.stage{padding:0 12px calc(196px + env(safe-area-inset-bottom))}
+.thread{max-width:none;gap:16px;padding-top:8px}
+
+/* hierarquia das mensagens */
+.bubble{font-size:15px;line-height:1.58;max-width:100%}
+.bubble.user{
+  max-width:86%;padding:10px 13px;font-size:14.5px;
+  border-radius:14px;border-bottom-right-radius:6px;
+}
+.bubble.assistant{max-width:100%;padding:0 0 0 12px;color:#e2e2e2}
+.bubble-actions{gap:6px;margin-top:8px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.bubble-actions::-webkit-scrollbar{display:none}
+
+/* painel de raciocínio */
+.traco{border-radius:10px;background:rgba(255,255,255,.022);margin-bottom:8px}
+.traco-topo{height:40px;padding:0 10px}
+.traco.vivo{border-color:rgba(220,38,38,.35)}
+
+/* compositor */
+.dock.m-dock{
+  left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));
+  width:auto;height:auto;transform:none;
+  display:flex;flex-direction:column;align-items:stretch;gap:0;
+  padding:8px 8px 6px;border-radius:16px;
+  background:#0b0b0b;border:1px solid rgba(127,127,127,.2);
+  box-shadow:0 -10px 34px rgba(0,0,0,.55);
+}
+.m-tools{display:flex;gap:6px;overflow-x:auto;padding:0 2px 8px;scrollbar-width:none}
+.m-tools::-webkit-scrollbar{display:none}
+.m-tool{
+  flex:none;height:26px;padding:0 9px;border-radius:8px;font-size:11px;font-weight:500;
+  color:#a8a8a8;border:1px solid rgba(127,127,127,.2);background:rgba(255,255,255,.03);
+  white-space:nowrap;cursor:pointer;transition:color .14s ease,border-color .14s ease,background .14s ease;
+}
+.m-tool:hover,.m-tool:active{color:#fff;border-color:rgba(220,38,38,.45);background:rgba(220,38,38,.1)}
+
+.m-campo{position:relative;display:flex;align-items:center;padding:0 2px}
+.m-campo input,.m-campo textarea{
+  width:100%;background:none;border:0;outline:none;color:#fff;
+  font-family:var(--sans);font-size:15px;line-height:1.5;
+  padding:6px 78px 6px 4px;min-height:38px;
+}
+.m-campo textarea{resize:none;max-height:38vh}
+.m-campo input::placeholder,.m-campo textarea::placeholder{color:#616161}
+.m-campo-lado{position:absolute;right:2px;bottom:4px;display:flex;align-items:center;gap:4px}
+.m-campo .dock-contador{position:static;font-size:10.5px;color:#6f6f6f}
+.m-campo .dock-expandir{width:26px;height:26px;border-radius:7px;font-size:12px}
+
+.m-barra{
+  display:flex;align-items:center;gap:6px;margin-top:4px;padding-top:4px;
+  border-top:1px solid rgba(127,127,127,.1);
+}
+.m-barra .plus-wrap{position:relative}
+.m-barra .dock-plus{width:34px;height:34px;border-radius:9px;background:#171717;border:1px solid rgba(127,127,127,.14)}
+.m-barra-fim{margin-left:auto;display:flex;align-items:center;gap:4px}
+.m-barra .icon-btn{width:34px;height:34px;border-radius:9px}
+.m-barra .dock-send{width:38px;height:38px;border-radius:10px}
+.m-barra .dock-send.cancelar{background:#2a1414;border:1px solid rgba(220,38,38,.4);color:#ff7b7b;width:38px;height:38px;border-radius:10px}
+
+/* seletor de modelo dentro do compositor */
+.m-motor-wrap{position:relative;min-width:0;display:flex}
+.m-barra .motor{
+  display:flex;align-items:center;gap:4px;height:34px;max-width:46vw;
+  padding:0 8px;border-radius:9px;border:1px solid rgba(127,127,127,.16);
+  background:rgba(255,255,255,.03);color:#dcdcdc;font-size:11.5px;cursor:pointer;
+}
+.m-barra .motor-selo,.m-barra .motor-nome,.m-barra .motor-tag{display:none}
+.m-barra .motor-modelo{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;font-weight:500}
+.m-barra .motor .chev{flex:none;color:#7a7a7a}
+.m-motor-wrap .painel-motor{
+  position:absolute;left:0;right:auto;top:auto;bottom:calc(100% + 10px);
+  width:min(88vw,360px);max-height:min(60vh,440px);overflow:auto;
+  border-radius:14px;z-index:35;
+}
+
+/* tablet e desktop continuam organizados */
+@media (min-width:760px){
+  .topbar.m-top{padding-left:16px;padding-right:16px}
+  .dock.m-dock{left:50%;right:auto;width:760px;transform:translateX(-50%)}
+  .stage{padding-bottom:210px}
+  .thread{max-width:760px}
+  .bubble.user{max-width:82%}
+}

@@ -1045,6 +1045,8 @@ export default function Home() {
     send(null, "continuar", { continuar: perm.id });
   }, [say, send]);
 
+  const [opcoesOpen, setOpcoesOpen] = useState(false);
+
   return (
     <div className="app">
       <Sidebar
@@ -1070,184 +1072,82 @@ export default function Home() {
         draftFill={(text) => { setDraft(text); setOpen(false); }}
       />
 
-      <header className="topbar">
-        <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Abrir menu">
+      <header className="topbar m-top">
+        <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Histórico e menu">
           <IconMenu />
         </button>
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => {
-            const linhas = [`# SKYNET · ${new Date().toLocaleDateString("pt-BR")}`, ""];
-            for (const m of messages) {
-              if (!m.text?.trim()) continue;
-              linhas.push(`## ${m.role === "assistant" ? "SKYNET" : "Você"} — ${new Date(m.ts || Date.now()).toLocaleString("pt-BR")}`);
-              linhas.push(String(m.text).trim(), "");
-            }
-            if (linhas.length <= 2) { say("Nada para exportar nesta conversa ainda."); return; }
-            const blob = new Blob([linhas.join("\n")], { type: "text/markdown" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = `skynet-${new Date().toISOString().slice(0, 10)}.md`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            say("Conversa exportada em Markdown.");
-          }}
-          aria-label="Exportar conversa"
-          title="Exportar conversa em .md"
-        >
-          ↓
-        </button>
-        <a
-          className={`icon-btn lem-sino${atrasados ? " tem-atraso" : ""}`}
-          href="#/lembretes"
-          aria-label={atrasados ? `${atrasados} lembrete(s) atrasado(s)` : "Lembretes"}
-          title={atrasados ? `${atrasados} lembrete(s) atrasado(s)` : "Lembretes"}
-        >
-          ◷{atrasados ? <b className="lem-sino-n">{atrasados}</b> : null}
-        </a>
-        <button
-          type="button"
-          className={`motor${modelOpen ? " aberto" : ""}`}
-          aria-label="Motor, modelo e habilidades do agente"
-          aria-expanded={modelOpen}
-          onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}
-        >
-          <span className="motor-selo" aria-hidden="true">
-            <Simbolo tamanho={17} cor="var(--red)" />
-          </span>
-          <span className="motor-nome"><Logotipo tamanho={20} /></span>
-          <span className="motor-tag">{modo === "4.5" ? "agente" : "rápido"}</span>
-          <span className="motor-modelo">{labelFor(model)}</span>
-          <IconChevron className="chev" width={15} height={15} />
-        </button>
 
-        {modelOpen && (
-          <div className="painel-motor" role="dialog" aria-label="Configuração do motor">
-            <div className="pm-topo">
-              <span className="pm-status">
-                <i className="pm-dot" aria-hidden="true" />
-                {tools.length} ferramentas · {habilidades.length || "…"} habilidades
-              </span>
-              <button type="button" className="pm-x" aria-label="Fechar" onClick={() => setModelOpen(false)}>✕</button>
-            </div>
-
-            <div className="pm-abas" role="tablist">
-              {[["modo", "Modo"], ["modelo", "Modelo"], ["habilidades", `Habilidades${habilidades.length ? ` ${habilidades.length}` : ""}`]].map(([id, rotulo]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={abaMotor === id}
-                  className={`pm-aba${abaMotor === id ? " on" : ""}`}
-                  onClick={() => setAbaMotor(id)}
-                >
-                  {rotulo}
-                </button>
-              ))}
-            </div>
-
-            {abaMotor === "modo" && (
-              <div className="pm-corpo">
-                {[["4.0", "Chat simples", "Responde direto, sem ferramentas nem navegação."],
-                  ["4.5", "Pro · agente", "Pesquisa, abre sites, gera imagem, clima e habilidades."]].map(([v, titulo, texto]) => (
-                  <button
-                    key={v}
-                    type="button"
-                    className={`pm-modo${modo === v ? " on" : ""}`}
-                    onClick={() => { trocarModo(v); setModelOpen(false); }}
-                  >
-                    <b>{v}</b>
-                    <span>
-                      <strong>{titulo}</strong>
-                      <small>{texto}</small>
-                    </span>
-                    {modo === v && <em>ativo</em>}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {abaMotor === "modelo" && (
-              <div className="pm-corpo pm-lista">
-                {models.slice(0, 10).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={`pm-item${m === model ? " on" : ""}`}
-                    onClick={() => { setModel(m); setModelOpen(false); }}
-                  >
-                    <span className="pm-radio" aria-hidden="true" />
-                    <span className="pm-item-txt">
-                      <strong>{labelFor(m)}</strong>
-                      <small>{m === "auto" || m === "melhor" ? "o roteador escolhe o provedor por latência" : m}</small>
-                    </span>
-                    {m === model && <em>ativo</em>}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {abaMotor === "habilidades" && (
-              <div className="pm-corpo">
-                <input
-                  className="pm-busca"
-                  type="search"
-                  value={habBusca}
-                  onChange={(e) => setHabBusca(e.target.value)}
-                  placeholder="buscar habilidade (cpf, cep, juros, qr code…)"
-                  aria-label="Buscar habilidade"
-                />
-                <div className="pm-pacotes">
-                  {["todos", ...Array.from(new Set(habilidades.map((h) => h.pacote)))].map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className={`pm-pacote${habPacote === p ? " on" : ""}`}
-                      onClick={() => setHabPacote(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-                <div className="pm-habs">
-                  {habilidades
-                    .filter((h) => habPacote === "todos" || h.pacote === habPacote)
-                    .filter((h) => !habBusca.trim() || `${h.nome} ${h.descricao} ${h.id}`.toLowerCase().includes(habBusca.trim().toLowerCase()))
-                    .map((h) => (
-                      <button
-                        key={h.id}
-                        type="button"
-                        className="pm-hab"
-                        title={h.descricao}
-                        onClick={() => { setDraft(`${h.exemplo}`); setModelOpen(false); }}
-                      >
-                        <strong>{h.nome}</strong>
-                        <small>{h.descricao}</small>
-                      </button>
-                    ))}
-                  {!habilidades.length && <p className="pm-vazio">carregando o catálogo…</p>}
-                </div>
-                <p className="pm-dica">Toque numa habilidade para levar o exemplo para o campo de mensagem.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="top-actions">
-          <button type="button" className="icon-btn" aria-label="Tema" onClick={() => {
-            const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
-            document.documentElement.dataset.theme = next;
-            localStorage.setItem("skynet-theme-bg", next);
-          }}><IconTheme /></button>
-          <button type="button" className="icon-btn" aria-label="Novo chat" onClick={() => pick("Novo chat")}><IconEdit /></button>
-          {logged && (
-            <button type="button" className="icon-btn" aria-label="Notificações" onClick={abrirSino}>
-              <IconBell width={20} height={20} />
-              {unread > 0 && <b className="bell-badge">{unread}</b>}
-            </button>
-          )}
+        <div className="m-brand">
+          <Simbolo tamanho={17} cor="var(--red)" />
+          <Logotipo tamanho={17} />
+          <span className="m-brand-tag">{modo === "4.5" ? "agente" : "rápido"}</span>
         </div>
+
+        <div className="m-top-acoes">
+          <button type="button" className="icon-btn" onClick={() => pick("Novo chat")} aria-label="Nova conversa" title="Nova conversa">
+            <IconEdit />
+          </button>
+          <button
+            type="button"
+            className={`icon-btn m-opcoes${opcoesOpen ? " on" : ""}`}
+            onClick={() => setOpcoesOpen((v) => !v)}
+            aria-label="Opções"
+            aria-expanded={opcoesOpen}
+          >
+            <span aria-hidden="true">⋯</span>
+          </button>
+        </div>
+
+        {opcoesOpen && (
+          <>
+            <button type="button" className="m-sheet-fundo" aria-label="Fechar opções" onClick={() => setOpcoesOpen(false)} />
+            <div className="m-sheet" role="dialog" aria-label="Opções do app">
+              <div className="m-sheet-topo">
+                <b>Opções</b>
+                <button type="button" className="m-sheet-x" onClick={() => setOpcoesOpen(false)} aria-label="Fechar">✕</button>
+              </div>
+              <button type="button" className="m-sheet-item" onClick={() => { setOpcoesOpen(false); setModelOpen(true); }}>
+                <span>Motor e modelo</span>
+                <small>{labelFor(model)} · {modo === "4.5" ? "Pro · agente" : "chat simples"}</small>
+              </button>
+              <button type="button" className="m-sheet-item" onClick={() => { setOpcoesOpen(false); exportarConversa(); }}>
+                <span>Exportar conversa</span>
+                <small>baixar em .md</small>
+              </button>
+              <a className={`m-sheet-item${atrasados ? " alerta" : ""}`} href="#/lembretes" onClick={() => setOpcoesOpen(false)}>
+                <span>Lembretes</span>
+                <small>{atrasados ? `${atrasados} atrasado(s)` : "o que o chat anotou"}</small>
+              </a>
+              <a className="m-sheet-item" href="#/ferramentas" onClick={() => setOpcoesOpen(false)}>
+                <span>Ferramentas do agente</span>
+                <small>fontes, memória, habilidades</small>
+              </a>
+              <button
+                type="button"
+                className="m-sheet-item"
+                onClick={() => {
+                  const next = document.documentElement.dataset.theme === "white" ? "black" : "white";
+                  document.documentElement.dataset.theme = next;
+                  localStorage.setItem("skynet-theme-bg", next);
+                  setOpcoesOpen(false);
+                }}
+              >
+                <span>Tema</span>
+                <small>{document.documentElement.dataset.theme === "white" ? "claro" : "escuro"} · toque para alternar</small>
+              </button>
+              <Link to="/account?tab=assinatura" className="m-sheet-item destaque" onClick={() => setOpcoesOpen(false)}>
+                <span>Assinar PRO</span>
+                <small>sem limites diários</small>
+              </Link>
+              {logged && (
+                <button type="button" className="m-sheet-item" onClick={() => { setOpcoesOpen(false); abrirSino(); }}>
+                  <span>Notificações</span>
+                  <small>{unread > 0 ? `${unread} nova(s)` : "nada por aqui"}</small>
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </header>
 
       <main
@@ -1654,7 +1554,7 @@ export default function Home() {
       {(busy || gravando) && (
         <IndicadorProcesso fase={gravando ? "documento" : faseFinal()} segundos={segundosAoVivo} />
       )}
-      <form className="dock" onSubmit={enviar}>
+      <form className="dock m-dock" onSubmit={enviar}>
         <PreviaAnexos
           itens={prints}
           aoAbrir={(item) => {
@@ -1664,6 +1564,53 @@ export default function Home() {
           }}
           aoRemover={(i) => setPrints((l) => l.filter((_, k) => k !== i))}
         />
+        <div className="m-tools" role="toolbar" aria-label="Pesquisa e recursos">
+          <button type="button" className="m-tool" onClick={() => setAcaoSheet("Pesquisar na web agora")}>🔍 Pesquisar web</button>
+          <button type="button" className="m-tool" onClick={() => setAcaoSheet("Gerar uma imagem")}>🖼 Criar imagem</button>
+          <button type="button" className="m-tool" onClick={() => setDraft("Investigue com atenção: ")}>🔎 Investigar</button>
+          <button type="button" className="m-tool" onClick={() => setDraft("Gere o código: ")}>⌨ Código</button>
+          <button type="button" className="m-tool" onClick={() => { window.location.hash = "#/ferramentas"; }}>🧪 Ferramentas</button>
+        </div>
+
+        <div className={`m-campo${expandido ? " expandido" : ""}`}>
+        {expandido ? (
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onPaste={aoColar}
+            placeholder={PLACEHOLDERS[ph]}
+            aria-label="Mensagem"
+            rows={5}
+            autoFocus
+          />
+        ) : (
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onPaste={aoColar}
+            placeholder={PLACEHOLDERS[ph]}
+            aria-label="Mensagem"
+          />
+        )}
+          <div className="m-campo-lado">
+        {draft.length > 0 && (
+          <span className="dock-contador" aria-live="polite">
+            {draft.length > 1200 ? <b>{draft.length}</b> : draft.length}
+          </span>
+        )}
+        <button
+          type="button"
+          className={`dock-expandir${expandido ? " on" : ""}`}
+          aria-label={expandido ? "recolher campo" : "expandir campo"}
+          aria-pressed={expandido}
+          onClick={() => setExpandido((v) => !v)}
+        >
+          {expandido ? "⤡" : "⤢"}
+        </button>
+          </div>
+        </div>
+
+        <div className="m-barra">
         <div className="plus-wrap">
           <button type="button" className="dock-plus" aria-label="Mais" onClick={() => { setPlusOpen((v) => !v); setModelOpen(false); }}><IconPlus /></button>
           {plusOpen && (
@@ -1689,39 +1636,137 @@ export default function Home() {
           )}
         </div>
         <input ref={fileRef} type="file" hidden onChange={onFile} accept="image/*,.txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
+          <div className="m-motor-wrap">
         <button
           type="button"
-          className={`dock-expandir${expandido ? " on" : ""}`}
-          aria-label={expandido ? "recolher campo" : "expandir campo"}
-          aria-pressed={expandido}
-          onClick={() => setExpandido((v) => !v)}
+          className={`motor${modelOpen ? " aberto" : ""}`}
+          aria-label="Motor, modelo e habilidades do agente"
+          aria-expanded={modelOpen}
+          onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}
         >
-          {expandido ? "⤡" : "⤢"}
-        </button>
-        {expandido ? (
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onPaste={aoColar}
-            placeholder={PLACEHOLDERS[ph]}
-            aria-label="Mensagem"
-            rows={5}
-            autoFocus
-          />
-        ) : (
-          <input
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onPaste={aoColar}
-            placeholder={PLACEHOLDERS[ph]}
-            aria-label="Mensagem"
-          />
-        )}
-        {draft.length > 0 && (
-          <span className="dock-contador" aria-live="polite">
-            {draft.length > 1200 ? <b>{draft.length}</b> : draft.length}
+          <span className="motor-selo" aria-hidden="true">
+            <Simbolo tamanho={17} cor="var(--red)" />
           </span>
+          <span className="motor-nome"><Logotipo tamanho={20} /></span>
+          <span className="motor-tag">{modo === "4.5" ? "agente" : "rápido"}</span>
+          <span className="motor-modelo">{labelFor(model)}</span>
+          <IconChevron className="chev" width={15} height={15} />
+        </button>
+
+        {modelOpen && (
+          <div className="painel-motor" role="dialog" aria-label="Configuração do motor">
+            <div className="pm-topo">
+              <span className="pm-status">
+                <i className="pm-dot" aria-hidden="true" />
+                {tools.length} ferramentas · {habilidades.length || "…"} habilidades
+              </span>
+              <button type="button" className="pm-x" aria-label="Fechar" onClick={() => setModelOpen(false)}>✕</button>
+            </div>
+
+            <div className="pm-abas" role="tablist">
+              {[["modo", "Modo"], ["modelo", "Modelo"], ["habilidades", `Habilidades${habilidades.length ? ` ${habilidades.length}` : ""}`]].map(([id, rotulo]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={abaMotor === id}
+                  className={`pm-aba${abaMotor === id ? " on" : ""}`}
+                  onClick={() => setAbaMotor(id)}
+                >
+                  {rotulo}
+                </button>
+              ))}
+            </div>
+
+            {abaMotor === "modo" && (
+              <div className="pm-corpo">
+                {[["4.0", "Chat simples", "Responde direto, sem ferramentas nem navegação."],
+                  ["4.5", "Pro · agente", "Pesquisa, abre sites, gera imagem, clima e habilidades."]].map(([v, titulo, texto]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={`pm-modo${modo === v ? " on" : ""}`}
+                    onClick={() => { trocarModo(v); setModelOpen(false); }}
+                  >
+                    <b>{v}</b>
+                    <span>
+                      <strong>{titulo}</strong>
+                      <small>{texto}</small>
+                    </span>
+                    {modo === v && <em>ativo</em>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {abaMotor === "modelo" && (
+              <div className="pm-corpo pm-lista">
+                {models.slice(0, 10).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    className={`pm-item${m === model ? " on" : ""}`}
+                    onClick={() => { setModel(m); setModelOpen(false); }}
+                  >
+                    <span className="pm-radio" aria-hidden="true" />
+                    <span className="pm-item-txt">
+                      <strong>{labelFor(m)}</strong>
+                      <small>{m === "auto" || m === "melhor" ? "o roteador escolhe o provedor por latência" : m}</small>
+                    </span>
+                    {m === model && <em>ativo</em>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {abaMotor === "habilidades" && (
+              <div className="pm-corpo">
+                <input
+                  className="pm-busca"
+                  type="search"
+                  value={habBusca}
+                  onChange={(e) => setHabBusca(e.target.value)}
+                  placeholder="buscar habilidade (cpf, cep, juros, qr code…)"
+                  aria-label="Buscar habilidade"
+                />
+                <div className="pm-pacotes">
+                  {["todos", ...Array.from(new Set(habilidades.map((h) => h.pacote)))].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`pm-pacote${habPacote === p ? " on" : ""}`}
+                      onClick={() => setHabPacote(p)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="pm-habs">
+                  {habilidades
+                    .filter((h) => habPacote === "todos" || h.pacote === habPacote)
+                    .filter((h) => !habBusca.trim() || `${h.nome} ${h.descricao} ${h.id}`.toLowerCase().includes(habBusca.trim().toLowerCase()))
+                    .map((h) => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        className="pm-hab"
+                        title={h.descricao}
+                        onClick={() => { setDraft(`${h.exemplo}`); setModelOpen(false); }}
+                      >
+                        <strong>{h.nome}</strong>
+                        <small>{h.descricao}</small>
+                      </button>
+                    ))}
+                  {!habilidades.length && <p className="pm-vazio">carregando o catálogo…</p>}
+                </div>
+                <p className="pm-dica">Toque numa habilidade para levar o exemplo para o campo de mensagem.</p>
+              </div>
+            )}
+          </div>
         )}
+          </div>
+
+          <div className="m-barra-fim">
         {(gravando || audioUrl) ? (
           <GravacaoAudio
             gravando={gravando}
@@ -1758,6 +1803,8 @@ export default function Home() {
             <IconWave width={22} height={22} />
           </button>
         )}
+          </div>
+        </div>
       </form>
 
       <Lightbox url={zoom?.url} alt={zoom?.alt} nome={zoom?.nome} onFechar={() => setZoom(null)} />
