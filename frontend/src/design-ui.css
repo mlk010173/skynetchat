@@ -1981,3 +1981,98 @@
 .wg-repo { display: flex; align-items: center; gap: 6px; }
 .wg-repo-nome { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #fff; text-decoration: none; }
 .wg-repo-nome:hover { color: var(--red); }
+
+/* ============================================================
+   ESQUADRO · camada de refino visual (carrega por último)
+   Objetivo: menos "bufado", mais alinhamento.
+   - raios menores e consistentes (8 / 10 / 14)
+   - alturas normalizadas (26 / 36 / 40 / 44)
+   - grade de 4px, gaps previsíveis
+   - sombra de brilho removida, borda no lugar
+   ============================================================ */
+:root {
+  --ed: rgba(127, 127, 127, 0.24);
+  --ed-forte: rgba(127, 127, 127, 0.4);
+  --ed-fundo: rgba(127, 127, 127, 0.08);
+  --r-quadrado: 8px;
+  --r-campo: 10px;
+  --r-cartao: 14px;
+}
+
+/* topo: altura e ritmo */
+.topbar { height: 54px; padding: 0 10px; grid-template-columns: 44px minmax(0, 1fr) auto; }
+.topbar .icon-btn { width: 38px; height: 38px; border-radius: var(--r-quadrado); }
+.model { font-size: 15px; gap: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.model b { letter-spacing: 0.06em; }
+
+/* conversa: bolhas com canto reto no lado da fala */
+.thread { gap: 14px; padding-top: 14px; }
+.bubble { padding: 10px 13px; border-radius: var(--r-cartao); font-size: 14.5px; line-height: 1.52; max-width: min(88%, 560px); }
+.bubble.user { border-bottom-right-radius: 6px; }
+.bubble.assistant { max-width: 100%; }
+
+/* ações: uma linha só, altura única, sem pílula */
+.bubble-actions { display: flex; align-items: center; gap: 6px; margin-top: 6px; opacity: 1; flex-wrap: wrap; }
+.bubble-actions .worked { color: #6f6f6f; font-size: 11px; font-variant-numeric: tabular-nums; margin-right: 2px; }
+.acoes-msg { display: inline-flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.acoes-msg::-webkit-scrollbar { display: none; }
+.acoes-msg button,
+.bubble-actions button {
+  height: 26px; padding: 0 9px; border-radius: var(--r-quadrado);
+  border: 1px solid var(--ed); background: transparent; color: #a6a6a6;
+  font-size: 11px; letter-spacing: 0.01em; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+.acoes-msg button:hover,
+.bubble-actions button:hover { background: var(--ed-fundo); color: #fff; border-color: var(--ed-forte); }
+.acoes-voto { display: inline-flex; gap: 2px; padding-left: 6px; margin-left: 2px; border-left: 1px solid var(--ed); }
+.acoes-voto button { width: 26px; padding: 0; }
+.acoes-voto button.on { color: #fff; border-color: var(--ed-forte); }
+
+/* status de ferramenta: alinhado à esquerda, mesma altura dos chips */
+.tool-status { border-radius: var(--r-quadrado); padding: 5px 10px; font-size: 12px; gap: 7px; margin-bottom: 8px; border-color: var(--ed); background: var(--ed-fundo); }
+.tool-status svg, .tool-status .spin { width: 13px; height: 13px; }
+
+/* traço/raciocínio: cartão mais discreto e passos alinhados */
+.trace { border-radius: var(--r-campo); }
+.trace-step { padding-left: 2px; }
+
+/* barra de contexto do agente */
+.barra-agente {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px 0; font-size: 11px; color: #757575;
+  overflow-x: auto; scrollbar-width: none; white-space: nowrap;
+}
+.barra-agente::-webkit-scrollbar { display: none; }
+.barra-agente .barra-sep { color: #3a3a3a; }
+.barra-agente button { text-decoration: none; border-bottom: 1px solid var(--ed); padding-bottom: 1px; color: #b0b0b0; }
+
+/* assinatura: deixa de flutuar solta */
+.pro-link {
+  display: block; margin: 6px 16px 6px; padding: 8px 10px;
+  font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase;
+  color: #ff5a5a; text-align: center;
+  border: 1px solid rgba(255, 90, 90, 0.24); border-radius: var(--r-quadrado);
+}
+
+/* compositor: retângulo arredondado, sem halo */
+.dock {
+  height: 56px; border-radius: var(--r-campo); padding: 0 6px;
+  gap: 2px; box-shadow: none; border-color: var(--ed); bottom: 20px;
+}
+.dock-plus { width: 36px; height: 36px; border-radius: var(--r-quadrado); background: var(--ed-fundo); }
+.dock input { font-size: 15px; padding: 0 8px; }
+.dock-send { width: 40px; height: 40px; border-radius: var(--r-quadrado); }
+.dock-send svg { width: 17px; height: 17px; }
+
+/* cartões de sugestão e chips: mesma família de raio */
+.chip { border-radius: var(--r-quadrado); padding: 10px 14px; font-size: 14px; gap: 8px; }
+.hero-card { border-radius: var(--r-campo); }
+.hero h1 { font-size: clamp(22px, 6.4vw, 30px); }
+.rascunho-faixa { border-radius: var(--r-quadrado); }
+
+/* tema claro: bordas continuam legíveis */
+:root[data-theme="white"] .acoes-msg button,
+:root[data-theme="white"] .bubble-actions button { color: #5f5f5f; }
+:root[data-theme="white"] .dock { box-shadow: none; }

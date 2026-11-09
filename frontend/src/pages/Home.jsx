@@ -1575,9 +1575,6 @@ export default function Home() {
                           } : null}
                         />
                       )}
-                      {message.role === "assistant" && message.text && (
-                        <button type="button" onClick={async () => { say("Gerando voz local…"); const r = await voz.falar(message.text); say(r.ok ? `Falando (${r.motor}).` : `Voz indisponível: ${r.erro}`); }}>Ouvir</button>
-                      )}
                     </span>
                   </>
                 )}
