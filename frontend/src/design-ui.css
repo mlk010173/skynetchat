@@ -2335,3 +2335,133 @@
   .m-barra .motor-modelo{max-width:140px}
   .stage{padding-bottom:196px}
 }
+
+/* ============================================================
+   STREAMING · status, linha do tempo, fontes e controles
+   ============================================================ */
+.st-status{
+  display:inline-flex;align-items:center;gap:5px;margin-left:8px;
+  font-size:10.5px;letter-spacing:.02em;color:#8f8f8f;
+}
+.st-status .st-ponto{width:5px;height:5px;border-radius:50%;background:#7d7d7d;flex:none}
+.st-status.ativo{color:#e8e8e8}
+.st-status.ativo .st-ponto{background:var(--red);animation:stPulso 1.2s ease-in-out infinite}
+.st-status.ok .st-ponto{background:#3ecf8e}
+.st-status.aviso .st-ponto,.st-status.erro .st-ponto{background:#f0a33c}
+.st-status small{color:#6f6f6f;font-variant-numeric:tabular-nums}
+.st-status .st-motivo{color:#a9a9a9;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes stPulso{50%{opacity:.35;transform:scale(.8)}}
+
+.st-pensando{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#9a9a9a}
+.st-pensando b{font-weight:500;color:#cfcfcf}
+.st-pensando small{font-size:10.5px;color:#7a7a7a}
+.st-pontos{display:inline-flex;gap:3px}
+.st-pontos i{width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.35;animation:stPonto 1.15s ease-in-out infinite}
+.st-pontos i:nth-child(2){animation-delay:.14s}
+.st-pontos i:nth-child(3){animation-delay:.28s}
+@keyframes stPonto{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-2px)}}
+
+/* linha do tempo de atividades */
+.st-linha{border:1px solid rgba(127,127,127,.18);border-radius:10px;background:rgba(255,255,255,.02);margin:0 0 8px;overflow:hidden}
+.st-linha.viva{border-color:rgba(220,38,38,.3)}
+.st-linha-topo{
+  display:flex;align-items:center;gap:7px;width:100%;height:38px;padding:0 10px;
+  background:none;border:0;color:#dcdcdc;font-size:12px;cursor:pointer;text-align:left;
+}
+.st-linha-topo b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-linha-topo .st-tempo{margin-left:auto;font-size:10.5px;color:#7a7a7a;font-variant-numeric:tabular-nums}
+.st-icone{color:#9a9a9a;flex:none}
+.st-linha.viva .st-icone{color:#ff5d5d}
+.st-seta{color:#757575;transition:transform .16s ease;flex:none}
+.st-seta.girada{transform:rotate(180deg)}
+.st-linha-lista{list-style:none;margin:0;padding:2px 10px 8px}
+.st-etapa{display:flex;gap:9px;padding:6px 0;border-top:1px solid rgba(127,127,127,.1)}
+.st-etapa:first-child{border-top:0}
+.st-etapa-marca{width:18px;height:18px;display:grid;place-items:center;flex:none;margin-top:1px;color:#8c8c8c}
+.st-etapa.ativo .st-etapa-marca{color:#ff5d5d}
+.st-etapa.erro .st-etapa-marca{color:#f0a33c}
+.st-etapa-corpo{min-width:0;flex:1}
+.st-etapa-linha{display:flex;align-items:center;gap:6px;font-size:12px;color:#d2d2d2}
+.st-etapa-linha b{font-weight:500}
+.st-etapa-linha small{font-size:10.5px;color:#727272;font-variant-numeric:tabular-nums}
+.st-etapa-linha .st-visto{color:#3ecf8e;font-style:normal;font-size:10.5px}
+.st-etapa-linha .st-falhou{color:#f0a33c;font-style:normal;font-size:10.5px}
+.st-etapa p{margin:2px 0 0;font-size:11px;color:#7d7d7d;line-height:1.4;overflow:hidden;text-overflow:ellipsis}
+.st-etapa-itens{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.st-item{
+  display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 7px;border-radius:6px;
+  border:1px solid rgba(127,127,127,.18);background:transparent;color:#b3b3b3;font-size:10.5px;cursor:pointer;
+  max-width:100%;
+}
+.st-item span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px}
+.st-item-n{color:#7a7a7a;font-variant-numeric:tabular-nums}
+.st-item:hover{color:#fff;border-color:rgba(220,38,38,.4)}
+.st-ondas{display:inline-flex;gap:2px;align-items:flex-end;height:10px}
+.st-ondas i{width:2px;height:4px;background:#ff5d5d;border-radius:1px;animation:stOnda 1s ease-in-out infinite}
+.st-ondas i:nth-child(2){animation-delay:.15s;height:8px}
+.st-ondas i:nth-child(3){animation-delay:.3s}
+@keyframes stOnda{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1)}}
+
+/* pesquisa */
+.st-busca{display:flex;align-items:center;gap:7px;padding:6px 10px;margin-bottom:8px;border-radius:8px;background:rgba(255,255,255,.025);border:1px solid rgba(127,127,127,.16);font-size:11.5px;color:#bdbdbd}
+.st-busca.ativa{border-color:rgba(220,38,38,.32);color:#e6e6e6}
+.st-busca small{color:#7a7a7a;font-size:10.5px}
+.st-busca-favs{display:inline-flex;gap:3px;margin-left:auto}
+.st-busca-favs img{width:13px;height:13px;border-radius:3px;background:#222}
+
+/* painel de fontes */
+.st-fontes{border:1px solid rgba(127,127,127,.18);border-radius:10px;margin-top:8px;overflow:hidden;background:rgba(255,255,255,.02)}
+.st-fontes-topo{display:flex;align-items:center;gap:7px;width:100%;height:34px;padding:0 10px;background:none;border:0;color:#cfcfcf;font-size:11.5px;cursor:pointer;text-align:left}
+.st-fontes-topo b{font-weight:500}
+.st-fontes-dominios{margin-left:auto;font-size:10.5px;color:#757575;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52%}
+.st-fontes-lista{list-style:none;margin:0;padding:0 8px 8px}
+.st-fontes-lista li a{display:flex;align-items:center;gap:7px;padding:5px 4px;border-radius:6px;font-size:11.5px;color:#c9c9c9}
+.st-fontes-lista li a:hover{background:rgba(255,255,255,.05);color:#fff}
+.st-fonte-n{width:16px;color:#7a7a7a;font-size:10px;font-variant-numeric:tabular-nums;flex:none}
+.st-fontes-lista img{width:14px;height:14px;border-radius:3px;flex:none;background:#222}
+.st-fonte-txt{display:flex;flex-direction:column;min-width:0}
+.st-fonte-txt b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-fonte-txt small{color:#757575;font-size:10px}
+
+/* citação no texto */
+.st-cite{font-size:.72em;line-height:0;vertical-align:super}
+.st-cite a{
+  display:inline-flex;align-items:center;justify-content:center;min-width:14px;height:14px;
+  padding:0 3px;margin:0 1px;border-radius:4px;background:rgba(127,127,127,.16);
+  color:#d8d8d8;font-size:9.5px;font-weight:600;text-decoration:none;
+}
+.st-cite a:hover{background:rgba(220,38,38,.3);color:#fff}
+.st-cite.orfa{color:#7a7a7a;font-size:9.5px}
+
+/* arquivos e código */
+.st-arquivos{list-style:none;margin:6px 0;padding:0;display:grid;gap:4px}
+.st-arquivos li{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#c4c4c4}
+.st-arquivos small{color:#7a7a7a;font-size:10px}
+.st-arquivos small.erro{color:#f0a33c}
+.st-codigo{border:1px solid rgba(127,127,127,.18);border-radius:8px;margin:6px 0;overflow:hidden}
+.st-codigo > button{display:flex;align-items:center;gap:6px;width:100%;height:30px;padding:0 9px;background:none;border:0;color:#c9c9c9;font-size:11px;cursor:pointer}
+.st-codigo-estado{margin-left:auto;color:#7a7a7a;font-size:10px}
+.st-codigo-fonte,.st-codigo-saida{margin:0;padding:8px 10px;background:#0c0c0c;font-family:var(--mono);font-size:11.5px;color:#d6d6d6;overflow:auto;max-height:220px}
+
+/* corpo da resposta em stream */
+.st-resposta{position:relative}
+.st-cursor{display:inline-block;width:2px;height:1em;background:var(--red);vertical-align:-2px;animation:stCaret 1s steps(2) infinite}
+@keyframes stCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
+.st-cortada-aviso{margin:6px 0 0;font-size:11px;color:#f0a33c}
+
+/* controles */
+.st-controles{display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
+.st-ctrl{
+  display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:8px;
+  border:1px solid rgba(127,127,127,.22);background:transparent;color:#a9a9a9;font-size:11px;cursor:pointer;
+  transition:color .14s ease,border-color .14s ease,background .14s ease;
+}
+.st-ctrl:hover{color:#fff;border-color:rgba(220,38,38,.45);background:rgba(220,38,38,.1)}
+.st-ctrl.parar{color:#ff8a8a;border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.12)}
+.st-votos{display:inline-flex;gap:2px;border-left:1px solid rgba(127,127,127,.22);padding-left:6px;margin-left:2px}
+.st-votos button{width:26px;height:26px;border-radius:8px;border:1px solid transparent;background:none;color:#8f8f8f;font-size:10px;cursor:pointer}
+.st-votos button.on,.st-votos button:hover{color:#fff;border-color:rgba(127,127,127,.28)}
+
+@media (prefers-reduced-motion:reduce){
+  .st-pontos i,.st-ondas i,.st-status .st-ponto,.st-cursor{animation:none !important}
+}

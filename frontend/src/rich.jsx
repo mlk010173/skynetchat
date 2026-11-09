@@ -2,6 +2,7 @@
 // Suporta imagem, galeria, vídeo (YouTube/Vimeo/MP4), áudio, código, links e destaque.
 import { useMemo, useState } from "react";
 import { ArtefatoFrame } from "./artefato.jsx";
+import { CitationReference } from "./components/Streaming.jsx";
 
 const RE_CODIGO = /```([a-z0-9+#-]*)\n?([\s\S]*?)```/gi;
 const RE_IMG_MD = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/gi;
@@ -20,9 +21,9 @@ const vimeo = (u) => {
 };
 
 /** Negrito, itálico e código inline, sem HTML cru. */
-function inline(texto, chaveBase) {
+function inline(texto, chaveBase, fontes = []) {
   const partes = [];
-  const re = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g;
+  const re = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*|\[\d{1,2}\])/g;
   let ultimo = 0;
   let m;
   let i = 0;
@@ -31,6 +32,11 @@ function inline(texto, chaveBase) {
     const t = m[0];
     if (t.startsWith("**")) partes.push(<strong key={`${chaveBase}-b${i}`}>{t.slice(2, -2)}</strong>);
     else if (t.startsWith("`")) partes.push(<code key={`${chaveBase}-c${i}`} className="inline-code">{t.slice(1, -1)}</code>);
+    else if (/^\[\d+\]$/.test(t)) {
+      const n = Number(t.slice(1, -1));
+      const fonte = fontes.find((f) => Number(f.indice) === n);
+      partes.push(<CitationReference key={`${chaveBase}-cit${i}`} indice={n} fonte={fonte} />);
+    }
     else partes.push(<em key={`${chaveBase}-i${i}`}>{t.slice(1, -1)}</em>);
     ultimo = m.index + t.length;
     i += 1;
@@ -40,13 +46,13 @@ function inline(texto, chaveBase) {
 }
 
 /** Linha com links clicáveis (imagem solta vira figura). */
-function linhaComLinks(texto, chave) {
+function linhaComLinks(texto, chave, fontes = []) {
   const partes = [];
   let ultimo = 0;
   let m;
   let i = 0;
   while ((m = RE_URL.exec(texto))) {
-    if (m.index > ultimo) partes.push(...inline(texto.slice(ultimo, m.index), `${chave}-t${i}`));
+    if (m.index > ultimo) partes.push(...inline(texto.slice(ultimo, m.index), `${chave}-t${i}`, fontes));
     const url = m[1];
     if (ehImagem(url)) {
       partes.push(<img key={`${chave}-img${i}`} src={url} alt="" className="rich-img" loading="lazy" />);
@@ -62,7 +68,7 @@ function linhaComLinks(texto, chave) {
     ultimo = m.index + url.length;
     i += 1;
   }
-  if (ultimo < texto.length) partes.push(...inline(texto.slice(ultimo), `${chave}-tf`));
+  if (ultimo < texto.length) partes.push(...inline(texto.slice(ultimo), `${chave}-tf`, fontes));
   return partes;
 }
 
@@ -96,7 +102,7 @@ function BlocoCodigo({ linguagem, codigo }) {
  */
 import { embedDeMidia } from "./media.jsx";
 
-export default function RichText({ texto = "", vivo = false }) {
+export default function RichText({ texto = "", vivo = false, fontes = [] }) {
   // fallback: se o modelo devolver um documento HTML solto (sem cerca), vira artefato também
   const textoOriginal = String(texto || "");
   const htmlCru = (() => {
@@ -189,7 +195,7 @@ export default function RichText({ texto = "", vivo = false }) {
           const Tag = b.ordenada ? "ol" : "ul";
           return (
             <Tag key={b.chave} className="rich-lista">
-              {b.itens.map((item, i) => <li key={i}>{linhaComLinks(item, `l${b.chave}-${i}`)}</li>)}
+              {b.itens.map((item, i) => <li key={i}>{linhaComLinks(item, `l${b.chave}-${i}`, fontes)}</li>)}
             </Tag>
           );
         }
@@ -200,7 +206,7 @@ export default function RichText({ texto = "", vivo = false }) {
         return (
           <div key={b.chave} className="rich-bloco">
             {!soVideo && (
-              <p className="rich-p">{linhaComLinks(b.valor, `p${b.chave}`)}</p>
+              <p className="rich-p">{linhaComLinks(b.valor, `p${b.chave}`, fontes)}</p>
             )}
             {players.map((src, i) => (
               <div key={`emb${i}`} className="rich-embed">

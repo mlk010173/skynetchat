@@ -30,6 +30,8 @@ import PreviaAnexos from "../components/PreviaAnexos.jsx";
 import IndicadorProcesso from "../components/IndicadorProcesso.jsx";
 import { Lightbox } from "../widgets/avancado.jsx";
 import Traco from "../components/Traco.jsx";
+import { ActivityTimeline, SourcesPanel, StreamingStatus, GenerationControls, ResponseStream } from "../components/Streaming.jsx";
+import { criarGerenciador, resumoSeguro as resumoDasAtividades } from "../eventos.js";
 import { aplicarEvento, codigoNoDelta, encerrarTraco, grupoDoTool, linksNoTexto, tracoVazio } from "../traco.js";
 import { apagarRascunho, densidadeSalva, guardarDensidade, guardarRascunho, lerRascunho } from "../habilidades.js";
 import GravacaoAudio, { OndaSonora } from "../components/GravacaoAudio.jsx";
@@ -202,6 +204,8 @@ export default function Home() {
   const micRef = useRef(null);
   const convIdRef = useRef(null);
   const stageRef = useRef(null);
+  const gerenteRef = useRef(null); // um gerenciador de eventos por geração
+  const lendoAntigoRef = useRef(false);
 
   const say = useCallback((m) => { setToast(m); setTimeout(() => setToast(""), 5000); }, []);
 
@@ -364,9 +368,17 @@ export default function Home() {
   }, [say]);
 
 
+  const pertoDoFim = () => {
+    const el = stageRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+  };
+
   useEffect(() => {
     // só rola quando existe conversa: no estado vazio isso cortava o topo do hero
     if (!messages.length) return;
+    // respeita quem subiu para ler mensagens anteriores: nada de puxar a tela de volta
+    if (lendoAntigoRef.current) return;
     stageRef.current?.scrollTo({ top: stageRef.current.scrollHeight });
   }, [messages, busy]);
 
@@ -376,6 +388,18 @@ export default function Home() {
     const t = setInterval(() => setSegundosAoVivo((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [busy]);
+
+  const pararGeracao = useCallback(() => {
+    canceladoRef.current = true;
+    setBusy(false);
+    setFase("pensando");
+    say("Geração interrompida. O que já chegou continua na conversa.");
+  }, [say]);
+
+  const continuarGeracao = useCallback(() => {
+    say("Retomando de onde parou…");
+    send(null, "Continue a resposta anterior exatamente de onde parou, sem repetir o que já foi dito.");
+  }, [say, send]);
 
   const send = useCallback(async (event, textoDireto, opcoes = {}) => {
     if (event) event.preventDefault();
@@ -399,6 +423,7 @@ export default function Home() {
         traco: aplicarEvento(tracoVazio(), { tipo: "abrir", chave: "pensando", detalhe: "lendo o pedido" }),
       },
     ]);
+    gerenteRef.current = criarGerenciador();
     setBusy(true);
     canceladoRef.current = false;
     setFase(anexos.some((a) => /^image\//.test(a.tipo || "")) ? "imagem"
@@ -509,6 +534,29 @@ export default function Home() {
     if (camada) conteudo = `${conteudo}\n\n${camada}`;
 
     await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar }, {
+      onEvento: (ev) => {
+        const g = gerenteRef.current;
+        if (!g) return;
+        const est = g.aplicar(ev);
+        // deltas de texto e de resumo já entram pelos handlers dedicados:
+        // aqui só atualizamos o que é estrutural (etapas, fontes, fase)
+        if (/output_text\.delta$|reasoning_summary_text\.delta$|function_call_arguments\.delta$|code_interpreter_call\.code_delta$/.test(String(ev?.type || ""))) return;
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (!last || last.role !== "assistant") return prev;
+          copy[copy.length - 1] = {
+            ...last,
+            fase: est.fase,
+            atividades: est.atividades,
+            resumoAtividades: resumoDasAtividades(est),
+            fontes: est.fontes.length ? est.fontes : last.fontes,
+            erroStream: est.erro || null,
+            incompleto: est.fase === "incompleto",
+          };
+          return copy;
+        });
+      },
       onTool: (bruto) => setMessages((prev) => {
         // o backend às vezes manda o passo dentro de { tool: {...} }
         const toolEv = bruto && typeof bruto.tool === "object" && bruto.tool !== null ? bruto.tool : bruto || {};
@@ -698,11 +746,17 @@ export default function Home() {
           if (last?.role === "assistant") {
             let traco = last.traco || tracoVazio();
             traco = linksNoTexto(traco, last.text || "");
+            const est = gerenteRef.current?.ler();
             copy[copy.length - 1] = {
               ...last,
               secs: Math.max(1, Math.round((Date.now() - (last.started ?? Date.now())) / 1000)),
               toolStatus: last.toolStatus === "executando" ? "concluida" : last.toolStatus,
               traco: encerrarTraco(traco),
+              fase: est?.fase || last.fase,
+              fontes: est?.fontes?.length ? est.fontes : last.fontes,
+              atividades: est?.atividades?.length ? est.atividades : last.atividades,
+              resumoAtividades: est ? resumoDasAtividades(est) : last.resumoAtividades,
+              erroStream: null,
             };
           }
           return copy;
@@ -1153,6 +1207,7 @@ export default function Home() {
       <main
         className={"stage" + (arrastando ? " stage-arrastando" : "")}
         ref={stageRef}
+        onScroll={() => { lendoAntigoRef.current = !pertoDoFim(); }}
         onDragOver={(e) => { e.preventDefault(); if (!arrastando) setArrastando(true); }}
         onDragLeave={(e) => { if (e.currentTarget === e.target) setArrastando(false); }}
         onDrop={aoSoltar}
@@ -1211,6 +1266,14 @@ export default function Home() {
               <article key={index} className={`bubble ${message.role}${message.image ? " with-img" : ""}`}>
                 <div className="bubble-meta">
                   <span className={`bubble-quem ${message.role}`}>{message.role === "assistant" ? "SKYNET" : "Você"}</span>
+                  {message.role === "assistant" && message.fase && message.fase !== "ocioso" && (
+                    <StreamingStatus
+                      fase={message.fase}
+                      segundos={message.secs || 0}
+                      erro={message.erroStream}
+                      incompleto={message.incompleto}
+                    />
+                  )}
                   <time>{message.ts ? new Date(message.ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : ""}</time>
                 </div>
                 {editIdx === index ? (
@@ -1223,7 +1286,17 @@ export default function Home() {
                   </>
                 ) : (
                   <>
-                    {message.role === "assistant" && message.traco && message.traco.ordem.length > 0 && (
+                    {message.role === "assistant" && message.atividades && message.atividades.length > 0 && (
+                      <ActivityTimeline
+                        atividades={message.atividades}
+                        resumo={message.resumoAtividades}
+                        aoAbrirFonte={(item) => {
+                          const fonte = (message.fontes || []).find((f) => f.url === item.url);
+                          if (fonte) window.open(fonte.url, "_blank", "noopener");
+                        }}
+                      />
+                    )}
+                    {message.role === "assistant" && !(message.atividades && message.atividades.length) && message.traco && message.traco.ordem.length > 0 && (
                       <Traco
                         traco={message.traco}
                         aoVivo={busy && index === messages.length - 1 && !message.traco.fim}
@@ -1434,18 +1507,27 @@ export default function Home() {
                         parte.tipo === "artefato" ? (
                           <Artefato key={"a" + pi} spec={parte.spec} />
                         ) : (
-                          <RichText
+                          <ResponseStream
                             key={"t" + pi}
-                            texto={parte.conteudo}
-                            vivo={busy && index === messages.length - 1 && message.role === "assistant"}
-                          />
+                            vivo={message.role === "assistant" && busy && index === messages.length - 1}
+                            incompleto={Boolean(message.incompleto || message.erroStream)}
+                          >
+                            <RichText
+                              texto={parte.conteudo}
+                              vivo={false}
+                              fontes={message.fontes}
+                            />
+                          </ResponseStream>
                         )
                       )
                     )}
                     {(message.artefatos || (message.artefato ? [message.artefato] : [])).map((spec, ai) => (
                       <Artefato key={"art" + ai} spec={spec} />
                     ))}
-                    {message.role === "assistant" && message.fontes && message.fontes.length > 0 && (
+                    {message.role === "assistant" && message.fontes && message.fontes.length > 0 && message.fontes[0].indice && (
+                      <SourcesPanel fontes={message.fontes} />
+                    )}
+                    {message.role === "assistant" && message.fontes && message.fontes.length > 0 && !message.fontes[0].indice && (
                       <div className="tool-fontes">
                         <div className="fontes-chips">
                           {message.fontes.map((f, i) => (
@@ -1459,6 +1541,17 @@ export default function Home() {
                           <span className="fontes-nota">dados obtidos em {formatHora(message.toolQuando)}</span>
                         )}
                       </div>
+                    )}
+                    {message.role === "assistant" && busy && index === messages.length - 1 && (
+                      <GenerationControls gerando aoParar={pararGeracao} />
+                    )}
+                    {message.role === "assistant" && !busy && (message.erroStream || message.incompleto) && (
+                      <GenerationControls
+                        podeContinuar
+                        aoContinuar={continuarGeracao}
+                        aoCopiar={() => { navigator.clipboard?.writeText(message.text || ""); say("Resposta copiada."); }}
+                        aoRegenerar={() => { setDraft(String(message.text || "").slice(0, 200)); say("Trecho no campo para ajustar."); }}
+                      />
                     )}
                     <span className="bubble-actions">
                       {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}

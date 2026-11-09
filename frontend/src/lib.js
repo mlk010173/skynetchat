@@ -61,6 +61,35 @@ export async function streamChat({ conversationId, content, model, continuar }, 
   let buffer = "";
   let recebeu = false;
   let terminou = false;
+  let eventoAtual = null; // linha "event:" do SSE (Responses API)
+
+  // Eventos canônicos da Responses API: repassa ao gerenciador da interface
+  // e mantém o texto fluindo pelo mesmo caminho de antes.
+  const despachaCanonico = (ev, tipoForcado) => {
+    const tipo = tipoForcado
+      || (typeof ev?.type === "string" && (/^response\./.test(ev.type) || ev.type === "error") ? ev.type : null);
+    if (!tipo) return false;
+    handlers.onEvento?.({ ...ev, type: tipo });
+    if (tipo === "response.output_text.delta" && (ev.delta ?? ev.text)) {
+      recebeu = true;
+      handlers.onDelta(String(ev.delta ?? ev.text));
+    }
+    if (tipo === "response.output_text.done" && !recebeu) {
+      recebeu = true;
+      handlers.onDelta(String(ev.text ?? ""));
+    }
+    if (tipo === "response.completed") {
+      terminou = true;
+      handlers.onDone({ conversationId: ev.response?.conversation_id ?? null, model: ev.response?.model ?? null });
+    }
+    if (tipo === "response.failed" || tipo === "response.incomplete" || tipo === "error") {
+      const msg = ev.response?.error?.message || ev.message || ev.error?.message
+        || (tipo === "response.incomplete" ? "A resposta ficou incompleta." : "A geração falhou.");
+      handlers.onError(String(msg));
+    }
+    return true;
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -71,9 +100,15 @@ export async function streamChat({ conversationId, content, model, continuar }, 
     for (const bruta of linhas) {
       const linha = bruta.trim();
       if (!linha) continue;
+      if (linha.startsWith("event:")) {
+        eventoAtual = linha.slice(6).trim();
+        continue;
+      }
       if (linha.startsWith("data:")) {
         try {
           const ev = JSON.parse(linha.slice(5).trim());
+          if (despachaCanonico(ev, eventoAtual)) { eventoAtual = null; continue; }
+          eventoAtual = null;
           if (ev.tool && handlers.onTool) handlers.onTool(ev);
           if (ev.imagem && handlers.onImage) handlers.onImage(String(ev.imagem));
           if (ev.delta) { recebeu = true; handlers.onDelta(String(ev.delta)); }
@@ -87,7 +122,10 @@ export async function streamChat({ conversationId, content, model, continuar }, 
       const tipo = linha.slice(0, sep);
       const corpo = linha.slice(sep + 1);
       try {
-        if (tipo === "0") { recebeu = true; handlers.onDelta(JSON.parse(corpo)); }
+        if (tipo === "0") {
+          const bruto = JSON.parse(corpo);
+          if (!despachaCanonico(bruto)) { recebeu = true; handlers.onDelta(bruto); }
+        }
         else if (tipo === "2") {
           const itens = JSON.parse(corpo);
           for (const it of (Array.isArray(itens) ? itens : [itens])) {
@@ -196,6 +234,7 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onWidget: (s) => handlers.onWidget?.(s),
         onArquivo: (a) => handlers.onArquivo?.(a),
         onReason: (txt) => handlers.onReason?.(txt),
+        onEvento: (ev) => handlers.onEvento?.(ev),
         onModelo: (info) => handlers.onModelo?.(info),
         onPermissao: (perm) => handlers.onPermissao?.(perm),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },

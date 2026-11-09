@@ -1483,14 +1483,58 @@ Deno.serve(async (req) => {
   const stream = new ReadableStream({
     async start(controller) {
       const legado = new URL(req.url).searchParams.get("protocol") === "legacy";
-      const enviaEtapa = (o: Record<string, unknown>) => controller.enqueue(legado ? sse({ tool: o.ferramenta ?? o.tool, status: o.estado ?? o.status, ...o }) : tDados({ tipo: "etapa", ...o }));
+      const enviaEtapa = (o: Record<string, unknown>) => {
+        const fontes = Array.isArray(o.fontes) ? (o.fontes as { titulo?: string; url?: string }[]) : [];
+        const estado = String(o.estado ?? o.status ?? "");
+        if (estado === "concluida" || estado === "concluido") {
+          enviaEvento("response.output_item.done", {
+            output_index: 0,
+            item: {
+              type: "tool_call",
+              name: String(o.ferramenta ?? o.tool ?? "ferramenta"),
+              action: { sources: fontes.filter((f) => f?.url).map((f) => ({ url: f.url, title: f.titulo ?? f.url })) },
+            },
+          });
+        } else if (estado === "executando") {
+          enviaEvento("response.output_item.added", {
+            output_index: 0,
+            item: { type: "tool_call", name: String(o.ferramenta ?? o.tool ?? "ferramenta") },
+          });
+        }
+        controller.enqueue(legado ? sse({ tool: o.ferramenta ?? o.tool, status: o.estado ?? o.status, ...o }) : tDados({ tipo: "etapa", ...o }));
+      };
       const enviaModelo = (modelo: string, tentativas: string[]) => controller.enqueue(legado ? sse({ modelo, tentativas }) : tDados({ tipo: "modelo", modelo, tentativas }));
-      const enviaTexto = (d: string) => controller.enqueue(legado ? sse({ delta: d }) : tTexto(d));
-      const enviaRaciocinio = (t: string) => controller.enqueue(legado ? sse({ raciocinio: t }) : tDados({ tipo: "raciocinio", texto: t }));
-      const enviaErro = (e: string) => controller.enqueue(legado ? sse({ ok: false, error: e }) : tErro(e));
-      const enviaFim = (meta: Record<string, unknown>) => controller.enqueue(legado ? sse({ done: true, ...meta }) : tFim(meta));
+      const enviaTexto = (d: string) => {
+        enviaEvento("response.output_text.delta", { delta: d, output_index: 0, content_index: 0 });
+        controller.enqueue(legado ? sse({ delta: d }) : tTexto(d));
+      };
+      const enviaRaciocinio = (t: string) => {
+        // o provedor entrega um resumo do raciocínio; tratamos como reasoning_summary
+        enviaEvento("response.reasoning_summary_text.delta", { delta: t, summary_index: 0 });
+        controller.enqueue(legado ? sse({ raciocinio: t }) : tDados({ tipo: "raciocinio", texto: t }));
+      };
+      const enviaErro = (e: string) => {
+        // evento canônico da Responses API + erro no formato antigo (compatível)
+        controller.enqueue(sse({
+          type: "error",
+          message: e,
+          error: { message: e, type: "server_error" },
+        }));
+        controller.enqueue(legado ? sse({ ok: false, error: e }) : tErro(e));
+      };
+      const enviaFim = (meta: Record<string, unknown>) => {
+        controller.enqueue(sse({ type: "response.completed", response: { id: meta.conversationId ?? null, model: meta.model ?? null, status: "completed" } }));
+        controller.enqueue(legado ? sse({ done: true, ...meta }) : tFim(meta));
+      };
+      // ---- eventos canônicos (Responses API) para o gerenciador da interface ----
+      const enviaEvento = (type: string, extra: Record<string, unknown> = {}) => {
+        try { controller.enqueue(sse({ type, ...extra })); } catch { /* stream fechado */ }
+      };
       const inicioDoPedido = Date.now();
       try {
+        // abertura canônica: a interface sabe imediatamente que a geração começou
+        enviaEvento("response.created", { response: { id: conversationId ?? null, status: "in_progress", model: (typeof model === "string" ? model : null) } });
+        enviaEvento("response.in_progress", { response: { status: "in_progress" } });
         if (retomada) {
           enviaEtapa({
             ferramenta: "retomando",
