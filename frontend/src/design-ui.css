@@ -2076,3 +2076,33 @@
 :root[data-theme="white"] .acoes-msg button,
 :root[data-theme="white"] .bubble-actions button { color: #5f5f5f; }
 :root[data-theme="white"] .dock { box-shadow: none; }
+
+/* ESQUADRO · 2º passe: texto do agente alinhado ao fio da conversa */
+.bubble.assistant {
+  border-left: 2px solid transparent;
+  padding-left: 12px;
+  padding-right: 0;
+  line-height: 1.58;
+}
+.bubble.assistant:has(.rich.vivo),
+.bubble.assistant:has(.trilha.viva) {
+  border-left-color: rgba(220, 38, 38, 0.5);
+}
+.bubble.assistant:hover { border-color: transparent; border-left-color: rgba(127, 127, 127, 0.22); }
+.bubble.user { border-radius: 12px; border-bottom-right-radius: 6px; }
+
+/* barra de assinatura: fio, não caixa */
+.pro-link {
+  border: 0; border-top: 1px solid var(--ed);
+  border-radius: 0; margin: 8px 16px 0; padding: 8px 0 6px;
+  font-size: 10.5px; letter-spacing: 0.12em; color: #d94b4b;
+}
+.pro-link:hover { color: #ff6b6b; }
+
+/* trilhas: progresso quadrado */
+.trilha-progresso { border-radius: 2px; }
+.trilha-aro { border-radius: 8px; }
+
+/* passos do raciocínio alinhados a uma coluna só */
+.trilha-topo { padding-left: 0; }
+.trilha-resumo b { letter-spacing: 0; }
