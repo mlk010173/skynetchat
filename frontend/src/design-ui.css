@@ -2126,3 +2126,44 @@
 .traco:not(.vivo) .traco-pulso { background: rgba(127, 127, 127, 0.5); box-shadow: none; animation: none; }
 .traco:not(.vivo) .traco-topo b { color: #c9c9c9; }
 .traco .traco-seta { color: #6f6f6f; }
+
+/* ============================================================
+   ESQUADRO · SIDEBAR
+   Escala compacta e colunas alinhadas: ícone 16px em coluna fixa,
+   linha de 34px, títulos 12,5px, seções 10px com tracking.
+   ============================================================ */
+.drawer { width: min(86%, 312px); border-right: 1px solid rgba(127, 127, 127, 0.16); }
+.drawer-head { height: 56px; padding: 0 10px 0 12px; gap: 8px; border-bottom: 1px solid rgba(127, 127, 127, 0.1); }
+.brand { gap: 8px; font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; color: #f2f2f2; }
+.brand-logo { width: 22px; height: 22px; }
+.drawer-head .icon-btn { width: 32px; height: 32px; border-radius: 8px; }
+.dl-busca-wrap { padding: 8px 10px 2px; }
+.dl-busca { height: 34px; border-radius: 8px; font-size: 12.5px; padding: 0 10px; }
+.drawer-list { padding: 2px 8px 14px; }
+.dl-cta { height: 36px; border-radius: 8px; padding: 0 10px; gap: 8px; font-size: 12.5px; font-weight: 600; letter-spacing: 0; }
+.dl-cta svg { width: 16px; height: 16px; }
+.dl-cta kbd { width: 20px; height: 20px; border-radius: 4px; font-size: 10px; display: grid; place-items: center; }
+.dl-grupo { margin: 14px 0 3px; padding: 0 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.14em; color: #6e6e6e; text-transform: uppercase; }
+.dl-grupo-bloco + .dl-grupo-bloco { margin-top: 2px; }
+.drawer-item { min-height: 34px; padding: 6px 10px; gap: 9px; border-radius: 8px; align-items: flex-start; }
+.drawer-item .di-icon { width: 16px; height: 16px; margin-top: 2px; color: #9c9c9c; transition: color 0.14s ease; }
+.di-text { gap: 0; min-width: 0; flex: 1; }
+.di-title { font-size: 12.5px; font-weight: 500; line-height: 1.35; color: #e6e6e6; gap: 6px; align-items: center; min-width: 0; }
+.di-text small {
+  font-size: 11px; line-height: 1.35; color: #787878; margin-top: 1px; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.tag {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 4px; border-radius: 3px;
+  background: rgba(239, 59, 59, 0.12); color: #ff5d5d; border: 1px solid rgba(239, 59, 59, 0.28);
+}
+.drawer-item:hover { background: rgba(255, 255, 255, 0.045); }
+.drawer-item.active, .drawer-item:active { background: rgba(220, 38, 38, 0.11); box-shadow: inset 2px 0 0 var(--red); }
+.drawer-item.active .di-icon { color: #ff5d5d; }
+.drawer-item.active .di-title { color: #fff; }
+.panel-title { font-size: 10px; letter-spacing: 0.14em; margin: 10px 0 4px; padding: 0 10px; }
+.hist-busca { height: 34px; border-radius: 8px; font-size: 12.5px; }
+
+:root[data-theme="white"] .drawer-item:hover { background: rgba(0, 0, 0, 0.05); }
+:root[data-theme="white"] .di-title { color: #1a1a1a; }
+:root[data-theme="white"] .di-text small { color: #6a6a6a; }
