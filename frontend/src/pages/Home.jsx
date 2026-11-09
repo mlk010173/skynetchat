@@ -29,6 +29,8 @@ import AnexosSheet from "../components/AnexosSheet.jsx";
 import PreviaAnexos from "../components/PreviaAnexos.jsx";
 import IndicadorProcesso from "../components/IndicadorProcesso.jsx";
 import { Lightbox } from "../widgets/avancado.jsx";
+import Traco from "../components/Traco.jsx";
+import { aplicarEvento, codigoNoDelta, encerrarTraco, grupoDoTool, linksNoTexto, tracoVazio } from "../traco.js";
 import { apagarRascunho, densidadeSalva, guardarDensidade, guardarRascunho, lerRascunho } from "../habilidades.js";
 import GravacaoAudio, { OndaSonora } from "../components/GravacaoAudio.jsx";
 import { iniciarGravacao, duracaoLegivel } from "../gravador.js";
@@ -388,7 +390,14 @@ export default function Home() {
     setMessages((prev) => [
       ...prev,
       { role: "user", text, anexos },
-      { role: "assistant", mid, text: "", started: Date.now(), passos: [] },
+      {
+        role: "assistant",
+        mid,
+        text: "",
+        started: Date.now(),
+        passos: [],
+        traco: aplicarEvento(tracoVazio(), { tipo: "abrir", chave: "pensando", detalhe: "lendo o pedido" }),
+      },
     ]);
     setBusy(true);
     canceladoRef.current = false;
@@ -500,7 +509,9 @@ export default function Home() {
     if (camada) conteudo = `${conteudo}\n\n${camada}`;
 
     await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar }, {
-      onTool: (toolEv) => setMessages((prev) => {
+      onTool: (bruto) => setMessages((prev) => {
+        // o backend às vezes manda o passo dentro de { tool: {...} }
+        const toolEv = bruto && typeof bruto.tool === "object" && bruto.tool !== null ? bruto.tool : bruto || {};
         const copy = [...prev];
         const last = copy[copy.length - 1];
         if (!last || last.role !== "assistant") return prev;
@@ -538,9 +549,21 @@ export default function Home() {
           }
         }
 
+        let traco = last.traco || tracoVazio();
+        const grupoDoPasso = grupoDoTool(toolEv.tool || toolEv.titulo || "");
+        traco = aplicarEvento(traco, {
+          tipo: toolEv.status === "falhou" ? "erro" : toolEv.status === "executando" ? "abrir" : "fechar",
+          chave: grupoDoPasso,
+          detalhe: toolEv.detalhe || toolEv.titulo || toolEv.tool || "",
+        });
+        for (const f of (Array.isArray(toolEv.fontes) ? toolEv.fontes.slice(0, 8) : [])) {
+          traco = aplicarEvento(traco, { tipo: "item", chave: "fontes", item: { titulo: f.titulo, url: f.url, dominio: f.domain } });
+        }
+
         copy[copy.length - 1] = {
           ...last,
           passos,
+          traco,
           toolTitulo: toolEv.titulo,
           toolStatus: toolEv.status,
           toolName: toolEv.tool,
@@ -639,14 +662,32 @@ export default function Home() {
         const copy = [...prev];
         const last = copy[copy.length - 1];
         if (!last || last.role !== "assistant") { copy.push({ role: "assistant", text: "", arquivo: arq }); return copy; }
-        copy[copy.length - 1] = { ...last, arquivo: arq };
+        let traco = last.traco || tracoVazio();
+        traco = aplicarEvento(traco, { tipo: "abrir", chave: "arquivos", detalhe: "arquivo recebido do agente" });
+        traco = aplicarEvento(traco, { tipo: "item", chave: "arquivos", item: { titulo: arq?.nome || "arquivo", tamanho: arq?.conteudo ? String(arq.conteudo).length : 0 } });
+        traco = aplicarEvento(traco, { tipo: "fechar", chave: "arquivos" });
+        copy[copy.length - 1] = { ...last, arquivo: arq, traco };
+        return copy;
+      }),
+      onReason: (texto) => setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (!last || last.role !== "assistant" || !texto) return prev;
+        copy[copy.length - 1] = {
+          ...last,
+          raciocinio: ((last.raciocinio || "") + texto).slice(-4000),
+          traco: aplicarEvento(last.traco || tracoVazio(), { tipo: "texto", chave: "pensando", texto }),
+        };
         return copy;
       }),
       onDelta: (delta) => setMessages((prev) => {
         const copy = [...prev];
         const last = copy[copy.length - 1];
         if (!last || last.role !== "assistant") return prev;
-        copy[copy.length - 1] = { ...last, text: last.text + delta };
+        let traco = last.traco || tracoVazio();
+        traco = aplicarEvento(traco, { tipo: "texto", chave: "gerando", texto: delta });
+        traco = codigoNoDelta(traco, delta);
+        copy[copy.length - 1] = { ...last, text: last.text + delta, traco };
         return copy;
       }),
       onDone: (info) => {
@@ -655,10 +696,13 @@ export default function Home() {
           const copy = [...prev];
           const last = copy[copy.length - 1];
           if (last?.role === "assistant") {
+            let traco = last.traco || tracoVazio();
+            traco = linksNoTexto(traco, last.text || "");
             copy[copy.length - 1] = {
               ...last,
               secs: Math.max(1, Math.round((Date.now() - (last.started ?? Date.now())) / 1000)),
               toolStatus: last.toolStatus === "executando" ? "concluida" : last.toolStatus,
+              traco: encerrarTraco(traco),
             };
           }
           return copy;
@@ -669,7 +713,14 @@ export default function Home() {
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
-          if (last && last.role === "assistant") copy[copy.length - 1] = { ...last, text: aviso, local: true };
+          if (last && last.role === "assistant") {
+            copy[copy.length - 1] = {
+              ...last,
+              text: aviso,
+              local: true,
+              traco: encerrarTraco(aplicarEvento(last.traco || tracoVazio(), { tipo: "erro", chave: "gerando", detalhe: "servidor sem resposta · montando local" })),
+            };
+          }
           else copy.push({ role: "assistant", text: aviso, local: true, started: Date.now() });
           return copy;
         });
@@ -1272,6 +1323,12 @@ export default function Home() {
                   </>
                 ) : (
                   <>
+                    {message.role === "assistant" && message.traco && message.traco.ordem.length > 0 && (
+                      <Traco
+                        traco={message.traco}
+                        aoVivo={busy && index === messages.length - 1 && !message.traco.fim}
+                      />
+                    )}
                     {message.role === "assistant" && message.passos && message.passos.length > 0 && (() => {
                       const viva = message.passos.some((p) => p.estado === "executando");
                       const feitas = message.passos.filter((p) => p.estado !== "executando").length;
