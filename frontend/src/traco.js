@@ -155,8 +155,12 @@ export function duracao(traco, chave = null) {
 export function resumoTraco(traco) {
   if (!traco || !traco.ordem.length) return "preparando";
   const partes = [];
-  const ativo = traco.ordem.map((k) => traco.grupos[k]).find((g) => g && g.estado === "ativo");
+  const grupos = traco.ordem.map((k) => traco.grupos[k]).filter(Boolean);
+  const ativo = grupos.find((g) => g.estado === "ativo");
   if (ativo) partes.push(porChave[ativo.chave].rotulo.toLowerCase());
+  else partes.push(traco.fim ? "concluído" : "em andamento");
+  const n = grupos.length;
+  if (n > 1) partes.push(`${n} etapas`);
   const seg = duracao(traco);
   if (seg >= 2) partes.push(`${seg}s`);
   if (traco.resumo.fontes) partes.push(`${traco.resumo.fontes} fontes`);
