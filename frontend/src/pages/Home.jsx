@@ -25,6 +25,11 @@ import { lerConfig, assinarConfig } from "../agente-config.js";
 import Paleta from "../components/Paleta.jsx";
 import { Logotipo, Simbolo, aplicarFavicon } from "../components/Marca.jsx";
 import AcoesMensagem from "../components/AcoesMensagem.jsx";
+import AnexosSheet from "../components/AnexosSheet.jsx";
+import PreviaAnexos from "../components/PreviaAnexos.jsx";
+import IndicadorProcesso from "../components/IndicadorProcesso.jsx";
+import GravacaoAudio, { OndaSonora } from "../components/GravacaoAudio.jsx";
+import { iniciarGravacao, duracaoLegivel } from "../gravador.js";
 import { baixarArquivo, paraMarkdown } from "../habilidades.js";
 import { camadaDeComportamento } from "../comportamento.js";
 import { lerMemoria, memoriaParaPrompt } from "../memoria.js";
@@ -104,6 +109,24 @@ export default function Home() {
   const [active, setActive] = useState("Novo chat");
   const [draft, setDraft] = useState("");
   const [prints, setPrints] = useState([]);
+  const [anexosOpen, setAnexosOpen] = useState(false);
+  const [expandido, setExpandido] = useState(false);
+  const [gravando, setGravando] = useState(false);
+  const [pausado, setPausado] = useState(false);
+  const [niveis, setNiveis] = useState([]);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [fase, setFase] = useState("pensando");
+
+  // fase exibida no indicador: imagem, documento ou o estágio do pedido
+  const faseFinal = () => {
+    if (prints.some((p) => /^image\//.test(p.tipo || ""))) return "imagem";
+    if (prints.some((p) => !/^image\//.test(p.tipo || ""))) return "documento";
+    return fase;
+  };
+  const [enviandoAnim, setEnviandoAnim] = useState(false);
+  const canceladoRef = useRef(false);
+  const audioBlobRef = useRef(null);
+  const gravadorRef = useRef(null);
   const [paleta, setPaleta] = useState(false);
   const [acaoSheet, setAcaoSheet] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -180,6 +203,12 @@ export default function Home() {
     return () => window.removeEventListener("skynet:sugestao", aoSugerir);
   }, []);
   useEffect(() => { const t = setInterval(() => setPh((p) => (p + 1) % PLACEHOLDERS.length), 6000); return () => clearInterval(t); }, []);
+  // o indicador caminha sozinho: análise → geração
+  useEffect(() => {
+    if (!busy) return undefined;
+    const t = setTimeout(() => setFase((f) => (f === "imagem" || f === "documento" || f === "pesquisa" ? "gerando" : f)), 3200);
+    return () => clearTimeout(t);
+  }, [busy]);
   useEffect(() => { aplicarFavicon(document.documentElement.dataset.theme === "white" ? "#b91c1c" : "#ef4444"); }, []);
 
   useEffect(() => { getSession().then((s) => setLogged(!!s)); }, []);
@@ -306,6 +335,10 @@ export default function Home() {
       { role: "assistant", mid, text: "", started: Date.now(), passos: [] },
     ]);
     setBusy(true);
+    canceladoRef.current = false;
+    setFase(anexos.some((a) => /^image\//.test(a.tipo || "")) ? "imagem"
+      : anexos.some((a) => !/^image\//.test(a.tipo || "")) ? "documento"
+      : /pesquis|not[ií]cia|fonte|site|internet|v[ií]deo/i.test(text) ? "pesquisa" : "gerando");
 
     // pesquisa em segundo plano: roda junto com a resposta e atualiza o painel ao vivo
     const aoPasso = (estado) => {
@@ -633,37 +666,67 @@ export default function Home() {
   }, []);
 
   const toggleMic = async () => {
-    if (listening) { await finalizarDitado(); return; }
+    if (gravando) return;
     if (!navigator.mediaDevices?.getUserMedia) { say("Este navegador não dá acesso ao microfone."); return; }
     try {
-      say("Preparando o Whisper local (só na primeira vez)…");
-      const gravador = await voz.gravarMicrofone();
-      micRef.current = gravador;
+      const g = await iniciarGravacao({ onNivel: (n) => setNiveis((l) => [...l, n].slice(-28)) });
+      gravadorRef.current = g;
+      setGravando(true);
+      setPausado(false);
+      setNiveis([]);
       setMicSecs(0);
-      setListening(true);
-      say("Gravando. Toque no microfone para parar.");
-    } catch (e) {
-      say("Não consegui abrir o microfone: " + String(e).slice(0, 80));
+      clearInterval(micTimer.current);
+      micTimer.current = setInterval(() => setMicSecs((v) => v + 1), 1000);
+    } catch {
+      say("Não consegui abrir o microfone. Verifique a permissão do navegador.");
     }
   };
 
-  const finalizarDitado = async () => {
-    const gravador = micRef.current;
-    if (!gravador) return;
-    stopMic();
-    say("Transcrevendo com Whisper…");
+  const pararGravacao = async () => {
+    const g = gravadorRef.current;
+    if (!g) return;
+    clearInterval(micTimer.current);
+    const blob = await g.parar();
+    gravadorRef.current = null;
+    setGravando(false);
+    setPausado(false);
+    audioBlobRef.current = blob;
+    setAudioUrl(URL.createObjectURL(blob));
+    say("Ouça antes de usar ou descarte.");
+  };
+
+  const cancelarGravacao = () => {
+    gravadorRef.current?.cancelar();
+    gravadorRef.current = null;
+    clearInterval(micTimer.current);
+    setGravando(false);
+    setPausado(false);
+    setNiveis([]);
+    setAudioUrl(null);
+    audioBlobRef.current = null;
+    say("Gravação cancelada.");
+  };
+
+  const descartarAudio = () => {
+    setAudioUrl(null);
+    audioBlobRef.current = null;
+  };
+
+  const usarAudio = async () => {
+    const blob = audioBlobRef.current;
+    if (!blob) return;
+    setAudioUrl(null);
+    say("Transcrevendo o áudio…");
     try {
-      const blob = await gravador.finalizar();
       const pcm = await voz.audioParaFloat32(blob);
       const texto = await voz.transcrever(pcm);
-      if (texto) {
-        setDraft((cur) => (cur ? cur + " " : "") + texto);
-        say("Transcrito pelo Whisper.");
-      } else {
-        say("Não entendi o áudio. Tenta de novo mais perto do microfone.");
-      }
-    } catch (e) {
-      say("Falha na transcrição local: " + String(e).slice(0, 90));
+      if (texto) { setDraft((cur) => (cur ? `${cur} ` : "") + texto); say("Transcrito. Ajuste e envie."); }
+      else say("Não entendi o áudio. Tente de novo mais perto do microfone.");
+    } catch {
+      say("Não consegui transcrever agora. O áudio segue disponível para anexar.");
+      setPrints((p) => (p.length >= 8 ? p : [...p, { url: URL.createObjectURL(blob), nome: "audio.webm", tipo: blob.type || "audio/webm", tamanho: blob.size }]));
+    } finally {
+      audioBlobRef.current = null;
     }
   };
 
@@ -756,26 +819,53 @@ export default function Home() {
     });
     say(`${arquivos.length} arquivo(s) recebido(s).`);
   }, [say]);
-  const onFile = useCallback(async (event) => {
-    const f = event.target.files?.[0];
-    event.target.value = "";
-    if (!f) return;
-    if (/^image\//.test(f.type)) {
-      if (f.size > 40 * 1024 * 1024) { say("Imagem acima de 40 MB não abre no navegador."); return; }
-      try {
-        const url = await redimensionar(f, 1400);
-        setPrints((p) => (p.length >= 8 ? p : [...p, { url, nome: f.name || `print-${p.length + 1}.png`, tipo: f.type }]));
-        say(`Print "${f.name || "colado"}" anexado. Pode mandar mais de um.`);
-      } catch { say("Nao consegui abrir essa imagem."); }
-      return;
+  // anexos: uma rotina só, com limites de tamanho e quantidade
+  const receberArquivos = useCallback(async (lista) => {
+    const arquivos = [...(lista || [])];
+    if (!arquivos.length) return;
+    const vagas = Math.max(0, 8 - prints.length);
+    if (!vagas) { say("Limite de 8 anexos por mensagem."); return; }
+    const aceitos = arquivos.slice(0, vagas);
+    if (arquivos.length > vagas) say(`Só cabem mais ${vagas} anexo(s) nesta mensagem.`);
+    for (const f of aceitos) {
+      const ehImagem = /^image\//.test(f.type);
+      if (ehImagem) {
+        if (f.size > 40 * 1024 * 1024) { say(`"${f.name}" passa de 40 MB.`); continue; }
+        try {
+          const url = await redimensionar(f, 1400);
+          setPrints((p) => (p.length >= 8 ? p : [...p, { url, nome: f.name || `print-${p.length + 1}.png`, tipo: f.type || "image/png", tamanho: f.size }]));
+        } catch { say(`Não consegui abrir "${f.name}".`); }
+        continue;
+      }
+      if (f.size > 20 * 1024 * 1024) { say(`"${f.name}" passa de 20 MB.`); continue; }
+      const texto = /^text\//.test(f.type) || /\.(txt|md|json|csv|log|yml|yaml|js|ts|tsx|py|html|css)$/i.test(f.name);
+      if (texto) {
+        try {
+          const conteudo = await f.text();
+          setPrints((p) => [...p, { url: "", nome: f.name, tipo: f.type || "text/plain", tamanho: f.size }]);
+          setDraft((d) => `${d}${d ? "\n\n" : ""}Arquivo "${f.name}":\n${conteudo.slice(0, 120000)}\n`);
+          say(`"${f.name}" anexado e lido.`);
+          continue;
+        } catch { /* cai no aviso abaixo */ }
+      }
+      // PDF, doc, planilha: fica como anexo identificado, sem inventar leitura
+      setPrints((p) => [...p, { url: "", nome: f.name, tipo: f.type || "application/octet-stream", tamanho: f.size }]);
+      say(`"${f.name}" anexado. Esse formato não é lido inteiro aqui, mas o nome e o tipo vão junto no pedido.`);
     }
-    if (f.size > 6 * 1024 * 1024) { say("Arquivo acima de 6 MB para texto."); return; }
-    try {
-      const texto = await f.text();
-      setDraft((d) => `${d}${d ? "\n\n" : ""}Arquivo "${f.name}":\n${texto.slice(0, 120000)}\n`);
-      say(`Arquivo "${f.name}" anexado ao rascunho.`);
-    } catch { say("Nao consegui ler esse arquivo (use texto)."); }
-  }, [say]);
+  }, [prints.length, say]);
+
+  const aoColar = useCallback((ev) => {
+    const arquivos = [...(ev.clipboardData?.files || [])];
+    if (!arquivos.length) return;
+    ev.preventDefault();
+    receberArquivos(arquivos);
+  }, [receberArquivos]);
+
+  const onFile = useCallback(async (event) => {
+    const arquivos = [...(event.target.files || [])];
+    event.target.value = "";
+    await receberArquivos(arquivos);
+  }, [receberArquivos]);
   onFileRef.current = onFile;
 
   const rodarComando = useCallback(async (comando) => {
@@ -1415,23 +1505,19 @@ export default function Home() {
         <span className="barra-sep">·</span>
         <span>{lerArquivo().length} no arquivo</span>
       </div>
+      {(busy || gravando) && (
+        <IndicadorProcesso fase={gravando ? "documento" : faseFinal()} segundos={segundosAoVivo} />
+      )}
       <form className="dock" onSubmit={enviar}>
-        {prints.length > 0 && (
-          <div className="dock-prints">
-            {prints.map((p2, i) => (
-              <span key={i} className="print-chip">
-                <img src={p2.url} alt={p2.nome} />
-                <button type="button" aria-label="remover" onClick={() => setPrints((l) => l.filter((_, k) => k !== i))}>×</button>
-              </span>
-            ))}
-            <small>{prints.length} print(s) · toque em enviar</small>
-          </div>
-        )}
+        <PreviaAnexos
+          itens={prints}
+          aoRemover={(i) => setPrints((l) => l.filter((_, k) => k !== i))}
+        />
         <div className="plus-wrap">
           <button type="button" className="dock-plus" aria-label="Mais" onClick={() => { setPlusOpen((v) => !v); setModelOpen(false); }}><IconPlus /></button>
           {plusOpen && (
             <div className="plus-menu">
-              <button type="button" onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}>📎 Anexar print ou arquivo</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setAnexosOpen(true); }}>📎 Anexar foto, câmera ou arquivo</button>
               <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Gerar uma imagem"); }}>🖼 Criar imagem</button>
               <button type="button" onClick={() => { setPlusOpen(false); window.location.hash = "#/ferramentas"; }}>🧪 Ferramentas do agente</button>
               <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Pesquisar na web agora"); }}>💡 Pensar</button>
@@ -1452,27 +1538,83 @@ export default function Home() {
           )}
         </div>
         <input ref={fileRef} type="file" hidden onChange={onFile} accept="image/*,.txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.log,.yml,.yaml" />
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={PLACEHOLDERS[ph]}
-          aria-label="Mensagem"
-        />
+        <button
+          type="button"
+          className={`dock-expandir${expandido ? " on" : ""}`}
+          aria-label={expandido ? "recolher campo" : "expandir campo"}
+          aria-pressed={expandido}
+          onClick={() => setExpandido((v) => !v)}
+        >
+          {expandido ? "⤡" : "⤢"}
+        </button>
+        {expandido ? (
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onPaste={aoColar}
+            placeholder={PLACEHOLDERS[ph]}
+            aria-label="Mensagem"
+            rows={5}
+            autoFocus
+          />
+        ) : (
+          <input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onPaste={aoColar}
+            placeholder={PLACEHOLDERS[ph]}
+            aria-label="Mensagem"
+          />
+        )}
         {draft.length > 0 && (
           <span className="dock-contador" aria-live="polite">
             {draft.length > 1200 ? <b>{draft.length}</b> : draft.length}
           </span>
         )}
-        {listening ? (
-          <span className="rec-ui" aria-label="Gravando áudio">
-            <b className="rec-dot" /><span className="rec-time">{String(Math.floor(micSecs / 60)).padStart(2, "0")}:{String(micSecs % 60).padStart(2, "0")}</span>
-            <button type="button" className="rec-x" onClick={() => { micRef.current?.cancelar?.(); stopMic(); say("Gravação cancelada."); }} aria-label="Cancelar gravação">✕</button>
-          </span>
+        {(gravando || audioUrl) ? (
+          <GravacaoAudio
+            gravando={gravando}
+            pausado={pausado}
+            segundos={micSecs}
+            niveis={niveis}
+            url={audioUrl}
+            aoPausar={() => { gravadorRef.current?.pausar(); setPausado(true); }}
+            aoRetomar={() => { gravadorRef.current?.retomar(); setPausado(false); }}
+            aoParar={pararGravacao}
+            aoCancelar={cancelarGravacao}
+            aoUsar={usarAudio}
+            aoDescartar={descartarAudio}
+          />
         ) : (
           <button type="button" className="icon-btn muted" aria-label="Gravar áudio" onClick={toggleMic}><IconMic /></button>
         )}
-        <button type="submit" className="dock-send" aria-label="Voz ou enviar"><IconWave width={22} height={22} /></button>
+        {busy ? (
+          <button
+            type="button"
+            className="dock-send cancelar"
+            aria-label="Cancelar o envio"
+            onClick={() => { canceladoRef.current = true; setBusy(false); setFase("pensando"); say("Envio cancelado aqui. O servidor pode concluir o pedido em segundo plano."); }}
+          >
+            ✕
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className={`dock-send${enviandoAnim ? " animado" : ""}${draft.trim() || prints.length ? "" : " so-voz"}`}
+            aria-label="Enviar mensagem"
+            onClick={() => { setEnviandoAnim(true); setTimeout(() => setEnviandoAnim(false), 620); }}
+          >
+            <IconWave width={22} height={22} />
+          </button>
+        )}
       </form>
+
+      <AnexosSheet
+        aberta={anexosOpen}
+        aoFechar={() => setAnexosOpen(false)}
+        aoAnexar={receberArquivos}
+        say={say}
+      />
 
       <Paleta
         aberta={paleta}
