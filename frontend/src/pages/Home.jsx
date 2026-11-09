@@ -1329,7 +1329,7 @@ export default function Home() {
                         aoVivo={busy && index === messages.length - 1 && !message.traco.fim}
                       />
                     )}
-                    {message.role === "assistant" && message.passos && message.passos.length > 0 && (() => {
+                    {message.role === "assistant" && message.passos && message.passos.length > 0 && !(message.traco && message.traco.ordem && message.traco.ordem.length > 0) && (() => {
                       const viva = message.passos.some((p) => p.estado === "executando");
                       const feitas = message.passos.filter((p) => p.estado !== "executando").length;
                       const total = message.passos.length;

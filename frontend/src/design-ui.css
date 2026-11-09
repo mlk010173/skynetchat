@@ -2106,3 +2106,18 @@
 /* passos do raciocínio alinhados a uma coluna só */
 .trilha-topo { padding-left: 0; }
 .trilha-resumo b { letter-spacing: 0; }
+
+/* ESQUADRO · 3º passe: traço compacto (uma linha por etapa, sem duplicar) */
+.traco { border-radius: var(--r-campo); }
+.traco-topo { padding: 7px 10px; gap: 8px; }
+.traco-topo b { font-size: 12.5px; }
+.traco-tempo { font-size: 11px; }
+.traco-pulso { width: 6px; height: 6px; }
+.traco-lista { padding: 2px 10px 8px; gap: 0; }
+.traco-item { padding: 5px 0; gap: 8px; }
+.traco-icone { width: 20px; height: 20px; font-size: 11px; }
+.traco-linha b { font-size: 12px; font-weight: 500; }
+.traco-detalhe { font-size: 11px; color: #7c7c7c; margin: 1px 0 0; }
+.traco-item + .traco-item { border-top: 1px solid rgba(127, 127, 127, 0.12); }
+.trilha { border-radius: var(--r-campo); }
+.trilha-topo { padding: 7px 10px; gap: 8px; }
