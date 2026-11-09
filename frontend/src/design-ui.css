@@ -2321,3 +2321,17 @@
 .app:has(.thread) .modo-barra{display:none}
 /* estados de seleção dos chips de ferramenta */
 .m-tool[aria-pressed="true"]{color:#fff;border-color:rgba(220,38,38,.5);background:rgba(220,38,38,.14)}
+
+/* MOBILE · acabamento final do compositor */
+.m-brand{flex-wrap:nowrap;align-items:center}
+.m-brand > svg{flex:none}
+.m-barra .motor{flex:0 0 auto;max-width:44vw}
+.m-barra .motor-modelo{max-width:92px;min-width:0}
+.m-barra .m-motor-wrap{flex:0 0 auto;min-width:0}
+.stage{padding-bottom:calc(178px + env(safe-area-inset-bottom));overscroll-behavior:contain;scroll-behavior:smooth}
+.bubble-actions .worked{color:#6f6f6f;font-size:10.5px;font-variant-numeric:tabular-nums}
+.traco-topo .traco-tempo{font-variant-numeric:tabular-nums}
+@media (min-width:760px){
+  .m-barra .motor-modelo{max-width:140px}
+  .stage{padding-bottom:196px}
+}
