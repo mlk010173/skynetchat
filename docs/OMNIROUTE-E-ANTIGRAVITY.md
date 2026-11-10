@@ -9,8 +9,20 @@ Segredos a criar no projeto Supabase (Settings → Edge Functions → Secrets):
 
 | Nome | Valor |
 | --- | --- |
-| `SKYNET_PROVIDERS` | `[{"id":"omniroute","baseUrl":"https://SEU-HOST/v1","keyEnv":"OMNIROUTE_API_KEY"}]` |
+| `SKYNET_PROVIDERS` | `[{"id":"omniroute","baseUrl":"https://SEU-HOST/v1","keyEnv":"OMNIROUTE_API_KEY","models":["gpt-4o-mini","claude-3-5-sonnet"],"tier":"equilibrado"}]` |
 | `OMNIROUTE_API_KEY` | chave gerada no painel do OmniRoute |
+
+A lista `models` de cada provedor entra no catálogo devolvido por `/functions/v1/models`,
+então os modelos do gateway aparecem no seletor do app sem precisar de outro segredo.
+
+Para descobrir o endereço, a lista real de modelos e conferir a chave antes de gravar
+qualquer segredo:
+
+```bash
+node scripts/testar-gateway.mjs https://SEU-HOST/v1 SUA_CHAVE
+```
+
+Ele imprime o JSON pronto para colar em `SKYNET_PROVIDERS` e faz uma chamada real.
 
 Depois do segredo, redeploy apenas da função `chat`:
 
@@ -48,3 +60,18 @@ AUTO_TUNNEL_PROVIDER=cloudflare npx omni-antigravity-remote-chat
 
 O endereço público HTTPS aparece no terminal. Túnel gratuito troca de endereço
 a cada execução; endereço fixo exige domínio próprio configurado no provedor.
+
+## 3. Scripts prontos no repositório
+
+| Script | Para quê |
+| --- | --- |
+| `scripts/testar-gateway.mjs` | confere endereço e chave do gateway, lista modelos reais e imprime o JSON do segredo |
+| `scripts/deploy-chat.sh` | publica a função `chat` com um token pessoal do Supabase |
+| `scripts/antigravity-celular.sh` | abre o Antigravity em modo debug e sobe o espelho no celular |
+
+```bash
+node scripts/testar-gateway.mjs https://SEU-HOST/v1 SUA_CHAVE
+export SUPABASE_ACCESS_TOKEN=sbp_...
+./scripts/deploy-chat.sh SEU_PROJECT_REF
+./scripts/antigravity-celular.sh          # ou: ./scripts/antigravity-celular.sh publico
+```

@@ -76,7 +76,7 @@ export function providerOf(id: string): Provider | null {
 // ------------------------------------------------------------------ catálogo
 const TIERS: ModelTier[] = ["rapido", "equilibrado", "potente", "raciocinio"];
 
-export function catalog(): ModelInfo[] {
+function catalogoBase(): ModelInfo[] {
   // 1) Catálogo completo em JSON (recomendado)
   const raw = Deno.env.get("SKYNET_CATALOG");
   if (raw) {
@@ -106,6 +106,47 @@ export function catalog(): ModelInfo[] {
     tier: (i === 0 ? "equilibrado" : i === 1 ? "potente" : "rapido") as ModelTier,
     priority: i,
   }));
+}
+
+/**
+ * Modelos declarados dentro de cada provedor extra.
+ * `SKYNET_PROVIDERS` aceita, por provedor, uma lista `models` (array ou "a,b").
+ * Assim um gateway (OmniRoute, por exemplo) entra no catálogo com um segredo só:
+ *   [{"id":"omniroute","baseUrl":"https://host/v1","keyEnv":"OMNIROUTE_API_KEY",
+ *     "models":["gpt-4o-mini","claude-3-5-sonnet"],"tier":"equilibrado"}]
+ */
+export function modelosDosProvedoresExtras(): ModelInfo[] {
+  const extra = Deno.env.get("SKYNET_PROVIDERS");
+  if (!extra) return [];
+  let arr: unknown;
+  try { arr = JSON.parse(extra); } catch { return []; }
+  if (!Array.isArray(arr)) return [];
+
+  const saida: ModelInfo[] = [];
+  for (const p of arr) {
+    if (!p || typeof p.id !== "string") continue;
+    const brutos = Array.isArray(p.models) ? p.models : typeof p.models === "string" ? p.models.split(",") : [];
+    const tier = (TIERS.includes(p.tier) ? p.tier : "equilibrado") as ModelTier;
+    for (const bruto of brutos) {
+      const id = String(bruto ?? "").trim();
+      if (!id) continue;
+      saida.push({
+        id,
+        provider: p.id,
+        label: id,
+        tier,
+        priority: 100 + saida.length,
+      });
+    }
+  }
+  return saida;
+}
+
+export function catalog(): ModelInfo[] {
+  const base = catalogoBase();
+  const vistos = new Set(base.map((m) => `${m.provider}:${m.id}`));
+  const extras = modelosDosProvedoresExtras().filter((m) => !vistos.has(`${m.provider}:${m.id}`));
+  return extras.length ? [...base, ...extras] : base;
 }
 
 export function isKnown(id: string): boolean {
