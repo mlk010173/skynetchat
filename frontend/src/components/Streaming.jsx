@@ -8,17 +8,38 @@ import {
   IconImage, IconPlus, IconTheme, IconZap, IconClose,
 } from "./Icons.jsx";
 
+// ícones próprios do painel (mesmo traço 1.6 dos ícones do app)
+const svgBase = {
+  width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor",
+  strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true",
+};
+const Lupa = (p) => (
+  <svg {...svgBase} {...p}><circle cx="11" cy="11" r="7" /><path d="M20 20l-4.2-4.2" /></svg>
+);
+const Check = (p) => (
+  <svg {...svgBase} {...p}><path d="M20 6L9 17l-5-5" /></svg>
+);
+const Caneta = (p) => (
+  <svg {...svgBase} {...p}><path d="M4 20h4l10-10a2.1 2.1 0 0 0-3-3L5 17z" /><path d="M14 7l3 3" /></svg>
+);
+const Engrenagem = (p) => (
+  <svg {...svgBase} {...p}><circle cx="12" cy="12" r="3" /><path d="M12 3v2m0 14v2M4.2 7.5l1.7 1M18.1 15.5l1.7 1M4.2 16.5l1.7-1M18.1 8.5l1.7-1" /></svg>
+);
+const Faisca = (p) => (
+  <svg {...svgBase} {...p}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg>
+);
+
 const ICONES = {
   brain: IconBrain,
-  search: IconImage === null ? IconZap : IconZap,
+  search: Lupa,
   book: IconBook,
   folder: IconFolder,
   image: IconImage,
   code: IconCode,
-  gear: IconTheme,
-  pen: IconPlus,
-  check: IconBell,
-  spark: IconZap,
+  gear: Engrenagem,
+  pen: Caneta,
+  check: Check,
+  spark: Faisca,
 };
 
 const Seta = ({ aberto }) => (
