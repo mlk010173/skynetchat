@@ -389,18 +389,6 @@ export default function Home() {
     return () => clearInterval(t);
   }, [busy]);
 
-  const pararGeracao = useCallback(() => {
-    canceladoRef.current = true;
-    setBusy(false);
-    setFase("pensando");
-    say("Geração interrompida. O que já chegou continua na conversa.");
-  }, [say]);
-
-  const continuarGeracao = useCallback(() => {
-    say("Retomando de onde parou…");
-    send(null, "Continue a resposta anterior exatamente de onde parou, sem repetir o que já foi dito.");
-  }, [say, send]);
-
   const send = useCallback(async (event, textoDireto, opcoes = {}) => {
     if (event) event.preventDefault();
     const text = (typeof textoDireto === "string" ? textoDireto : draft).trim();
@@ -1107,6 +1095,18 @@ export default function Home() {
     setAcaoSheet(null);
     return send(null, texto);
   }, [send]);
+
+  const pararGeracao = useCallback(() => {
+    canceladoRef.current = true;
+    setBusy(false);
+    setFase("pensando");
+    say("Geração interrompida. O que já chegou continua na conversa.");
+  }, [say]);
+
+  const continuarGeracao = useCallback(() => {
+    say("Retomando de onde parou…");
+    send(null, "Continue a resposta anterior exatamente de onde parou, sem repetir o que já foi dito.");
+  }, [say, send]);
 
   const autorizarPermissao = useCallback(async (perm, autorizar) => {
     if (!perm?.id) return;
