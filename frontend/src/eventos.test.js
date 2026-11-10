@@ -157,3 +157,51 @@ describe("sequência completa de uma resposta com pesquisa", () => {
     expect(resumoSeguro(e)).toContain("pesquisou na web (2 fontes)");
   });
 });
+
+describe("resumo seguro, duração e citações", () => {
+  it("resume apenas o que aconteceu, sem raciocínio interno", () => {
+    const g = criarGerenciador();
+    g.aplicar({ type: "response.created", response: { id: "r1" } });
+    g.aplicar({ type: "response.output_item.added", item: { type: "web_search_call" } });
+    g.aplicar({ type: "response.output_item.done", item: { type: "web_search_call", action: { sources: [{ url: "https://a.com/x", title: "A" }] } } });
+    g.aplicar({ type: "response.output_text.delta", delta: "Olá" });
+    g.aplicar({ type: "response.reasoning_summary_text.delta", delta: "pensei nisto" });
+    g.aplicar({ type: "response.completed", response: {} });
+    const est = g.ler();
+    const resumo = resumoSeguro(est);
+    expect(resumo).toContain("pesquisou na web (1 fonte)");
+    expect(resumo).not.toContain("pensei nisto");
+    expect(est.texto).toBe("Olá");
+  });
+
+  it("calcula a duração de cada etapa encerrada", () => {
+    const est = {
+      terminadoEm: 10_000,
+      atividades: [
+        { chave: "pensando", inicio: 0, fim: 2_000, estado: "concluido" },
+        { chave: "gerando", inicio: 2_000, fim: null, estado: "concluido" },
+      ],
+    };
+    const linha = linhaDoTempo(est);
+    expect(linha[0].segundos).toBe(2);
+    expect(linha[1].segundos).toBe(8);
+  });
+
+  it("transforma [n] em citação sem tocar em links markdown", () => {
+    expect(comCitacoes("Fato [1] e [2], veja [texto](https://x.com)")).toBe(
+      "Fato [[1]](cite:1) e [[2]](cite:2), veja [texto](https://x.com)"
+    );
+  });
+
+  it("guarda código executado e arquivos lidos", () => {
+    const g = criarGerenciador();
+    g.aplicar({ type: "response.output_item.added", item: { type: "code_interpreter_call" } });
+    g.aplicar({ type: "response.code_interpreter_call.code_delta", delta: "print(1)" });
+    g.aplicar({ type: "response.code_interpreter_call.completed" });
+    g.aplicar({ type: "response.output_item.added", item: { type: "file_search_call" } });
+    g.aplicar({ type: "response.output_item.done", item: { type: "file_search_call" } });
+    const est = g.ler();
+    expect(est.codigo[0].codigo).toContain("print(1)");
+    expect(est.atividades.map((a) => a.chave)).toEqual(expect.arrayContaining(["codigo", "arquivos"]));
+  });
+});

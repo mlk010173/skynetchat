@@ -64,7 +64,7 @@ export function ThinkingIndicator({ rotulo = "Pensando", detalhe, ativo = true }
 }
 
 /* ----------------------------------------------------------------- linha do tempo */
-export function ActivityTimeline({ atividades = [], aoAbrirFonte, resumo }) {
+export function ActivityTimeline({ atividades = [], aoAbrirFonte, resumo, fontes = [], arquivos = [], codigo = [] }) {
   const [aberto, setAberto] = useState(false);
   if (!atividades.length) return null;
   const ativa = atividades.find((a) => a.estado === "ativo");
@@ -101,6 +101,19 @@ export function ActivityTimeline({ atividades = [], aoAbrirFonte, resumo }) {
                   {a.segundos >= 1 && <small>{a.segundos}s</small>}
                 </div>
                 {a.detalhe && <p>{a.detalhe}</p>}
+                {a.chave === "pesquisando" && (
+                  <SearchProgress fontes={fontes} consultados={a.itens?.length || 0} ativo={a.estado === "ativo"} />
+                )}
+                {a.chave === "arquivos" && (a.itens?.length || arquivos.length) ? (
+                  <FileAnalysisStatus arquivos={a.itens?.length ? a.itens : arquivos} />
+                ) : null}
+                {a.chave === "codigo" && (codigo.length || a.itens?.length) ? (
+                  <CodeExecutionStatus
+                    linguagem={a.detalhe || "código"}
+                    saida={(a.itens || []).map((i) => i.titulo).join("\n")}
+                    estado={a.estado === "ativo" ? "executando" : a.estado === "erro" ? "erro" : "concluido"}
+                  />
+                ) : null}
                 {a.itens?.length ? (
                   <div className="st-etapa-itens">
                     {a.itens.slice(0, 6).map((item) => (

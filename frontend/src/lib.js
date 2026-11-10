@@ -29,8 +29,20 @@ export async function api(path, opts = {}) {
   return res.json().catch(() => ({ ok: false, error: `Resposta inválida da função ${path}.` }));
 }
 
-/** Chat em streaming SSE (resposta ao vivo, digitação em tempo real). */
-export async function streamChat({ conversationId, content, model, continuar }, handlers) {
+/** Chat em streaming SSE (resposta ao vivo, digitação em tempo real).
+ *  Reconexão: só repete quando NADA chegou ainda, para nunca duplicar texto
+ *  que o usuário já viu. Se a conexão cair no meio, o conteúdo é preservado
+ *  e a interface recebe onIncompleto para oferecer continuar. */
+export async function streamChat(opcoes, handlers) {
+  const primeira = await streamChatInterno(opcoes, handlers);
+  if (primeira !== "retry") return;
+  handlers.onReconectando?.();
+  await new Promise((r) => setTimeout(r, 1200));
+  const segunda = await streamChatInterno(opcoes, handlers);
+  if (segunda === "retry") handlers.onError("Sem conexão com o servidor.");
+}
+
+async function streamChatInterno({ conversationId, content, model, continuar }, handlers) {
   const session = await getSession();
   let res;
   try {
@@ -45,8 +57,7 @@ export async function streamChat({ conversationId, content, model, continuar }, 
       body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), ...(continuar ? { continuar } : {}), content, model }),
     });
   } catch {
-    handlers.onError("Sem conexão com o servidor.");
-    return;
+    return "retry";
   }
   const ctype = res.headers.get("content-type") ?? "";
   if (!ctype.includes("text/event-stream")) {
@@ -169,7 +180,12 @@ export async function streamChat({ conversationId, content, model, continuar }, 
       } catch { /* quadro parcial */ }
     }
   }
-  if (!recebeu && !terminou) handlers.onError("Nao foi possivel responder agora.");
+  if (!recebeu && !terminou) { handlers.onError("Nao foi possivel responder agora."); return "erro"; }
+  if (recebeu && !terminou) {
+    handlers.onIncompleto?.("A conexão caiu antes do fim. O que já chegou está aqui.");
+    return "parcial";
+  }
+  return "ok";
 }
 
 /** Auth por código de 12 dígitos (modelo do site real). */
@@ -235,6 +251,8 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onArquivo: (a) => handlers.onArquivo?.(a),
         onReason: (txt) => handlers.onReason?.(txt),
         onEvento: (ev) => handlers.onEvento?.(ev),
+        onIncompleto: (motivo) => handlers.onIncompleto?.(motivo),
+        onReconectando: () => handlers.onReconectando?.(),
         onModelo: (info) => handlers.onModelo?.(info),
         onPermissao: (perm) => handlers.onPermissao?.(perm),
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },

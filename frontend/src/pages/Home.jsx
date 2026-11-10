@@ -551,6 +551,8 @@ export default function Home() {
             atividades: est.atividades,
             resumoAtividades: resumoDasAtividades(est),
             fontes: est.fontes.length ? est.fontes : last.fontes,
+            arquivosAnalisados: est.arquivos,
+            blocosCodigo: est.codigo,
             erroStream: est.erro || null,
             incompleto: est.fase === "incompleto",
           };
@@ -759,6 +761,24 @@ export default function Home() {
               erroStream: null,
             };
           }
+          return copy;
+        });
+      },
+      onReconectando: () => {
+        say("A conexão oscilou. Tentando retomar sem repetir o que já chegou.");
+      },
+      onIncompleto: (motivo) => {
+        setBusy(false);
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (!last || last.role !== "assistant") return prev;
+          copy[copy.length - 1] = {
+            ...last,
+            incompleto: true,
+            erroStream: motivo || "A conexão caiu antes do fim.",
+            traco: encerrarTraco(last.traco || tracoVazio(), "incompleto"),
+          };
           return copy;
         });
       },
@@ -1290,6 +1310,9 @@ export default function Home() {
                       <ActivityTimeline
                         atividades={message.atividades}
                         resumo={message.resumoAtividades}
+                        fontes={message.fontes || []}
+                        arquivos={message.arquivosAnalisados || []}
+                        codigo={message.blocosCodigo || []}
                         aoAbrirFonte={(item) => {
                           const fonte = (message.fontes || []).find((f) => f.url === item.url);
                           if (fonte) window.open(fonte.url, "_blank", "noopener");

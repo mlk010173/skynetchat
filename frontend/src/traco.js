@@ -115,11 +115,14 @@ export function aplicarEvento(traco = tracoVazio(), evento = {}) {
 }
 
 /** Encerra tudo o que ficou aberto (fim do streaming ou erro). */
-export function encerrarTraco(traco) {
+export function encerrarTraco(traco, estadoFinal = "concluido") {
   const t = copiar(traco);
   t.fim = Date.now();
   for (const g of Object.values(t.grupos)) {
-    if (g.estado === "ativo") { g.estado = "concluido"; g.fim = g.fim || t.fim; }
+    if (g.estado === "ativo") {
+      g.estado = estadoFinal === "incompleto" ? "incompleto" : "concluido";
+      g.fim = g.fim || t.fim;
+    }
   }
   return t;
 }

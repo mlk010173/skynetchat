@@ -233,7 +233,14 @@ export function criarGerenciador(inicial = {}) {
       if (a) a.codigo = (a.codigo || "") + String(evento.delta ?? "");
       return estado;
     }
-    if (intencao === "codigo_fim") { fecha("codigo"); return estado; }
+    if (intencao === "codigo_fim") {
+      const a = estado.atividades.find((x) => x.chave === "codigo");
+      if (a?.codigo && !estado.codigo.some((c) => c.codigo === a.codigo)) {
+        estado.codigo.push({ linguagem: a.detalhe || "python", codigo: a.codigo, saida: a.saida || "" });
+      }
+      fecha("codigo");
+      return estado;
+    }
     if (intencao === "imagem_inicio") { abre("imagens", "gerando imagem"); return estado; }
     if (intencao === "imagem_fim") { fecha("imagens"); return estado; }
 
