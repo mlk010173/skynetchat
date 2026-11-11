@@ -1581,7 +1581,7 @@ export default function Home() {
                       />
                     )}
                     <span className="bubble-actions">
-                      {message.secs ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
+                      {message.secs && !message.traco?.fim ? <small className="worked">Trabalhou por {message.secs}s</small> : null}
                       {message.role === "user" && !busy && <button type="button" onClick={() => comecarEdicao(index)}>Editar</button>}
                       {!busy && (
                         <AcoesMensagem
