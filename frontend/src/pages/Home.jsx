@@ -440,6 +440,7 @@ export default function Home() {
     const valeAPenaPesquisar = lerConfig().autoArtefato !== false && !conversaCurta && !sobreOAgente;
     if (valeAPenaPesquisar) montarArtefato(text, { imagens: anexos, aoPasso })
       .then((specs) => {
+        specsPesquisa = specs || null;
         setMessages((prev) => {
           const idx = prev.findIndex((m) => m.mid === mid);
           if (idx < 0) return prev;
@@ -459,6 +460,7 @@ export default function Home() {
           };
           return copy;
         });
+        void talvezFundamentar();
       })
       .catch(() => {});
 
@@ -524,6 +526,63 @@ export default function Home() {
       (opcoes && opcoes.extra) || ""
     );
     if (camada) conteudo = `${conteudo}\n\n${camada}`;
+
+    let textoResposta = "";
+    let specsPesquisa = null;
+    let fundamentou = false;
+
+    // quando o modelo diz que não tem acesso, mas a pesquisa trouxe fontes reais,
+    // a resposta é refeita com base no que foi lido agora (com citação numerada)
+    const talvezFundamentar = async () => {
+      if (fundamentou || !specsPesquisa || canceladoRef.current) return;
+      const dossie = specsPesquisa.find((x) => x.tipo === "fontes");
+      const itens = (dossie?.itens || []).filter((f) => f.url && (f.trecho || f.resumo)).slice(0, 5);
+      if (itens.length < 2) return;
+      const resposta = textoResposta.trim();
+      const semBase = !resposta || /n[ãa]o tenho acesso|n[ãa]o consigo (acessar|pesquisar|ver)|sem acesso a|n[ãa]o posso (acessar|pesquisar)|me indicar um per[íi]odo|n[ãa]o (estou|tenho) (conectado|atualizad)/i.test(resposta);
+      if (!semBase) return;
+      fundamentou = true;
+      // espera o fim do primeiro stream encerrar o estado de envio, senão o
+      // segundo pedido herdaria busy=false e o botão de parar não apareceria
+      await new Promise((r) => setTimeout(r, 60));
+      const contexto = itens.map((f, i) => {
+        const dominio = (() => { try { return new URL(f.url).hostname.replace(/^www\./, ""); } catch { return ""; } })();
+        const trecho = String(f.trecho || f.resumo || "").replace(/\s+/g, " ").slice(0, 600);
+        return `[${i + 1}] ${f.titulo || dominio} — ${dominio}${f.quando ? " · " + f.quando : ""}\n${trecho}`;
+      }).join("\n\n");
+      const pedido = `${text}\n\nFontes lidas agora (use somente elas e cite [n]):\n${contexto}\n\nResponda direto em português, curto, citando [n] a cada afirmação tirada de uma fonte.`;
+      const mid2 = "f" + Date.now().toString(36);
+      setMessages((prev) => [...prev, {
+        role: "assistant", mid: mid2, text: "", started: Date.now(), passos: [],
+        fundamentada: itens.length,
+        traco: aplicarEvento(tracoVazio(), { tipo: "abrir", chave: "fontes", detalhe: `${itens.length} fontes lidas` }),
+      }]);
+      setBusy(true);
+      await streamChatAuto({ conversationId: convIdRef.current, content: pedido, model }, {
+        onDelta: (delta) => setMessages((prev) => {
+          const i = prev.findIndex((m) => m.mid === mid2);
+          if (i < 0) return prev;
+          const copy = [...prev];
+          copy[i] = { ...copy[i], text: copy[i].text + delta };
+          return copy;
+        }),
+        onDone: () => setMessages((prev) => {
+          const i = prev.findIndex((m) => m.mid === mid2);
+          if (i < 0) return prev;
+          const copy = [...prev];
+          copy[i] = { ...copy[i], secs: Math.max(1, Math.round((Date.now() - copy[i].started) / 1000)) };
+          return copy;
+        }),
+        onError: () => setMessages((prev) => {
+          const i = prev.findIndex((m) => m.mid === mid2);
+          if (i < 0) return prev;
+          const copy = [...prev];
+          copy[i] = { ...copy[i], text: copy[i].text || "Não consegui responder com as fontes agora." };
+          return copy;
+        }),
+      }).catch(() => {});
+      setBusy(false);
+    };
 
     await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar }, {
       onEvento: (ev) => {
@@ -729,6 +788,7 @@ export default function Home() {
         let traco = last.traco || tracoVazio();
         traco = aplicarEvento(traco, { tipo: "texto", chave: "gerando", texto: delta });
         traco = codigoNoDelta(traco, delta);
+        textoResposta += delta;
         copy[copy.length - 1] = { ...last, text: last.text + delta, traco };
         return copy;
       }),
@@ -755,6 +815,8 @@ export default function Home() {
           }
           return copy;
         });
+        // a resposta terminou sem base: se a pesquisa trouxe fontes, refaz com elas
+        void talvezFundamentar();
       },
       onReconectando: () => {
         say("A conexão oscilou. Tentando retomar sem repetir o que já chegou.");
