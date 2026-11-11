@@ -535,8 +535,22 @@ export default function Home() {
     // a resposta é refeita com base no que foi lido agora (com citação numerada)
     const talvezFundamentar = async () => {
       if (fundamentou || !specsPesquisa || canceladoRef.current) return;
+      const noticias = specsPesquisa.find((x) => x.tipo === "noticias");
       const dossie = specsPesquisa.find((x) => x.tipo === "fontes");
-      const itens = (dossie?.itens || []).filter((f) => f.url && (f.trecho || f.resumo)).slice(0, 5);
+      // notícias primeiro (têm data e veículo), depois o dossiê de páginas lidas
+      const candidatos = [
+        ...(noticias?.itens || []).map((n) => ({
+          titulo: n.title || n.titulo,
+          url: n.url,
+          resumo: n.snippet || n.resumo || "",
+          quando: n.quando || n.data || n.published || "",
+        })),
+        ...(dossie?.itens || []),
+      ];
+      const vistos = new Set();
+      const itens = candidatos
+        .filter((f) => f?.url && (f.trecho || f.resumo) && !vistos.has(f.url) && vistos.add(f.url))
+        .slice(0, 6);
       if (itens.length < 2) return;
       const resposta = textoResposta.trim();
       const semBase = !resposta || /n[ãa]o tenho acesso|n[ãa]o consigo (acessar|pesquisar|ver)|sem acesso a|n[ãa]o posso (acessar|pesquisar)|me indicar um per[íi]odo|n[ãa]o (estou|tenho) (conectado|atualizad)/i.test(resposta);
@@ -550,7 +564,7 @@ export default function Home() {
         const trecho = String(f.trecho || f.resumo || "").replace(/\s+/g, " ").slice(0, 600);
         return `[${i + 1}] ${f.titulo || dominio} — ${dominio}${f.quando ? " · " + f.quando : ""}\n${trecho}`;
       }).join("\n\n");
-      const pedido = `${text}\n\nFontes lidas agora (use somente elas e cite [n]):\n${contexto}\n\nResponda direto em português, curto, citando [n] a cada afirmação tirada de uma fonte.`;
+      const pedido = `${text}\n\nFontes lidas agora (use somente elas e cite [n]):\n${contexto}\n\nResponda em português, curto, citando [n] a cada afirmação tirada de uma fonte. Se as fontes não responderem à pergunta, diga isso em uma frase e resuma o que elas cobrem, também com [n].`;
       const mid2 = "f" + Date.now().toString(36);
       setMessages((prev) => [...prev, {
         role: "assistant", mid: mid2, text: "", started: Date.now(), passos: [],
