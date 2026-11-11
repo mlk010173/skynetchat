@@ -2640,3 +2640,7 @@
   border-radius:6px; background:var(--superficie-1); color:#9a9a9a; font-size:13px; line-height:1;
 }
 .art-pesquisa .art-etapas{ margin-top:8px; }
+
+/* POLISH · na tela inicial o selo do modo já está no switch: evita dizer duas vezes */
+.app:has(.hero) .m-brand-tag{ display: none; }
+.app:has(.hero) .hero-eyebrow{ opacity: .9; }
