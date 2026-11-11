@@ -10,35 +10,32 @@ import AutomationsPanel from "./AutomationsPanel.jsx";
 import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
-  { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens"] },
-  { titulo: "Ferramentas", itens: ["Codex", "CRM", "Lembretes", "Arquivo", "Devtool", "Permissões", "Integrações", "Automações", "E-mail", "Memória", "Projetos"] },
-  { titulo: "Crescer", itens: ["Indique e Ganhe", "Monetize com SKYNETchat", "Conversas em grupo"] },
-  { titulo: "Descobrir", itens: ["Conheça o SKYNETchat", "Prompts", "Suporte", "Atualizações"] },
+  { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens", "Prompts"] },
+  { titulo: "Ferramentas", itens: ["Codex", "Widgets", "Ferramentas do Agente", "CRM", "Lembretes", "Arquivo", "Devtool", "Permissões"] },
+  { titulo: "Operações & Dados", itens: ["Integrações", "Automações", "E-mail", "Memória"] },
+  { titulo: "Sistema", itens: ["Conheça o SKYNETchat", "Atualizações", "Suporte"] },
 ];
 
 const items = [
   { label: "Novo chat", desc: "Inicie uma conversa do zero", icon: IconEdit },
-  { label: "Indique e Ganhe", desc: "Convide amigos e ganhe assinatura PRO", icon: IconGift },
-  { label: "Monetize com SKYNETchat", tag: "NOVO", icon: IconMoney },
-  { label: "Atualizações", desc: "Veja as novidades e melhorias recentes", icon: IconBell },
-  { label: "Imagens", tag: "BETA", desc: "Gere e explore imagens com IA", icon: IconImage },
-  { label: "Conversas em grupo", tag: "NOVO", desc: "Colabore com múltiplos agentes", icon: IconUsers },
-  { label: "Codex", tag: "NOVO", desc: "Terminal real e seguro", icon: IconCode },
-  { label: "CRM", tag: "NOVO", desc: "Contatos, pipeline e atividades", icon: IconUsers },
-  { label: "Lembretes", tag: "NOVO", desc: "O que o chat anota para você não esquecer", icon: IconBell },
-  { label: "Devtool", tag: "NOVO", desc: "JSON, base64, hash, JWT, cron e conversões", icon: IconServer },
-  { label: "Permissões", tag: "NOVO", desc: "Autorize o que o SKYNET executa", icon: IconServer },
-  { label: "Integrações", tag: "REAL", desc: "Central de integrações e estado ao vivo", icon: IconPlug },
-  { label: "Automações", tag: "REAL", desc: "Central de automações e agendamentos", icon: IconZap },
+  { label: "Histórico de conversas", desc: "Revise chats anteriores salvos", icon: IconHistory },
+  { label: "Imagens", desc: "Gere imagens sob demanda com IA", icon: IconImage },
+  { label: "Prompts", desc: "Diretrizes e prompts estruturados", icon: IconChat },
+  { label: "Codex", tag: "REAL", desc: "Terminal e sandbox seguro", icon: IconCode },
+  { label: "Widgets", tag: "MODULAR", desc: "Painel extensível de widgets", icon: IconZap },
+  { label: "Ferramentas do Agente", desc: "Teste ao vivo das capacidades do modelo", icon: IconBrain },
+  { label: "CRM", desc: "Contatos, pipeline e atividades", icon: IconUsers },
+  { label: "Lembretes", desc: "Compromissos autônomos salvos", icon: IconBell },
+  { label: "Devtool", desc: "JSON, base64, hash, JWT e conversões", icon: IconServer },
+  { label: "Permissões", desc: "Autorize as ações executadas pelo SKYNET", icon: IconServer },
+  { label: "Integrações", tag: "REAL", desc: "Central de integrações e conexões ativas", icon: IconPlug },
+  { label: "Automações", tag: "REAL", desc: "Rotinas agendadas e triggers no banco", icon: IconZap },
   { label: "E-mail", tag: "REAL", desc: "Painel de E-mail via Gmail API", icon: IconMail },
   { label: "Memória", tag: "REAL", desc: "Painel de Memória de Longo Prazo", icon: IconBook },
-
-  { label: "Projetos", tag: "NOVO", desc: "Organize tarefas e entregas", icon: IconFolder },
-  { label: "Arquivo", tag: "NOVO", desc: "Dossiês guardados com fontes e trechos", icon: IconFolder },
-  { label: "Histórico de conversas", desc: "Revise chats anteriores", icon: IconHistory },
-  { label: "Conheça o SKYNETchat", desc: "Descubra como funciona o projeto", icon: IconBook },
-  { label: "Prompts", desc: "Prompts úteis para usar com a IA", icon: IconChat },
-  { label: "Suporte", desc: "Tire dúvidas e fale com o suporte", icon: IconLife },
+  { label: "Arquivo", desc: "Dossiês guardados com fontes e trechos", icon: IconFolder },
+  { label: "Conheça o SKYNETchat", desc: "Arquitetura e funcionamento", icon: IconBook },
+  { label: "Atualizações", desc: "Novidades e melhorias recentes", icon: IconBell },
+  { label: "Suporte", desc: "Dúvidas e canal de suporte", icon: IconLife },
 ];
 
 /** Drawer lateral: interface do site real com backend próprio. */
@@ -230,7 +227,10 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "Prompts") setView("prompts");
     else if (label === "Suporte") setView("support");
     else if (label === "Conheça o SKYNETchat") setView("about");
+    else if (label === "Imagens") { draftFill?.("/imagem "); onClose(); }
     else if (label === "Codex") { navigate("/codex"); onClose(); }
+    else if (label === "Widgets") { navigate("/widgets"); onClose(); }
+    else if (label === "Ferramentas do Agente") { navigate("/ferramentas"); onClose(); }
     else if (label === "Integrações") { navigate("/integracoes"); onClose(); }
     else if (label === "Permissões") { navigate("/permissoes"); onClose(); }
     else if (label === "CRM") { navigate("/crm"); onClose(); }
@@ -244,7 +244,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   };
 
   const soon = (label) => {
-    say(`"${label}" ainda não existe nesta versão. O que já funciona: chat com IA real, histórico, prompts, atualizações, Terminal Codex, Integrações e Automações.`);
+    say(`"${label}" está disponível através do menu de ferramentas.`);
     onClose();
   };
 

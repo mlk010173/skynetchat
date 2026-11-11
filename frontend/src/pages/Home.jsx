@@ -9,7 +9,13 @@ import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconIm
 import Sidebar from "../components/Sidebar.jsx";
 import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
 
-const PLACEHOLDERS = ["Pesquise sem censura...", "Pergunte sem medo.", "Vá além", "Sem filtros, sem limites."];
+const PLACEHOLDERS = [
+  "Pesquise fontes e fatos em tempo real...",
+  "Escreva, depure e execute código...",
+  "Automatize fluxos, envie e-mails e consulte memórias...",
+  "Analise documentos e extraia dados precisos...",
+  "Consulte clima, cotações e inteligência ao vivo...",
+];
 import { useAuth } from "../auth.jsx";
 import { AGENT_URL, api, getSession, setModelList, streamChatAuto, supabase } from "../lib.js";
 import { responderLocal } from "../fallback.js";
@@ -41,12 +47,12 @@ import { camadaDeComportamento } from "../comportamento.js";
 import { lerMemoria, memoriaParaPrompt } from "../memoria.js";
 
 const actions = [
-  { label: "Pesquisar na web agora", icon: IconGlobe, color: "#60a5fa", desc: "manchetes e fontes ao vivo" },
-  { label: "Abrir um site e ler a página", icon: IconGlobe, color: "#a78bfa", desc: "navegação real no site" },
-  { label: "Gerar uma imagem", icon: IconImage, color: "#fbbf24", desc: "NVIDIA, Hugging Face, fallback" },
-  { label: "Tocar uma música ou vídeo", icon: IconWave, color: "#f472b6", desc: "player dentro do chat" },
-  { label: "Clima de hoje com gráfico", icon: IconBrain, color: "#34d399", desc: "24h e 5 dias, interativo" },
-  { label: "Criar um widget para o painel", icon: IconCode, color: "#ff6b6b", desc: "salva em /widgets" },
+  { label: "Pesquisar na web agora", icon: IconGlobe, color: "#60a5fa", desc: "fontes primárias e notícias ao vivo" },
+  { label: "Abrir um site e ler a página", icon: IconGlobe, color: "#a78bfa", desc: "leitura profunda e extração" },
+  { label: "Gerar uma imagem", icon: IconImage, color: "#fbbf24", desc: "geração direta sob comando" },
+  { label: "Tocar uma música ou vídeo", icon: IconWave, color: "#f472b6", desc: "player integrado no chat" },
+  { label: "Clima de hoje com gráfico", icon: IconBrain, color: "#34d399", desc: "previsão horária e 5 dias interativo" },
+  { label: "Criar um widget para o painel", icon: IconCode, color: "#ff6b6b", desc: "painel dinâmico em /widgets" },
 ];
 
 function formatHora(isoStr) {
