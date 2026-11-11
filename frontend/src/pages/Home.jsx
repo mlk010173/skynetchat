@@ -455,7 +455,6 @@ export default function Home() {
           if (dossie) guardarDossie(text, dossie);
           copy[idx] = {
             ...alvoMsg,
-            text: alvoMsg.text || resumoDoArtefato(specs),
             artefatos: specs,
           };
           return copy;
@@ -834,6 +833,7 @@ export default function Home() {
               atividades: est?.atividades?.length ? est.atividades : last.atividades,
               resumoAtividades: est ? resumoDasAtividades(est) : last.resumoAtividades,
               erroStream: null,
+              text: last.text || resumoDoArtefato(last.artefatos || []) || last.text,
             };
           }
           return copy;
