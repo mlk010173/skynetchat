@@ -553,7 +553,11 @@ export default function Home() {
         .slice(0, 6);
       if (itens.length < 2) return;
       const resposta = textoResposta.trim();
-      const semBase = !resposta || /n[ãa]o tenho acesso|n[ãa]o consigo (acessar|pesquisar|ver)|sem acesso a|n[ãa]o posso (acessar|pesquisar)|me indicar um per[íi]odo|n[ãa]o (estou|tenho) (conectado|atualizad)/i.test(resposta);
+      const negou = /n[ãa]o tenho acesso|n[ãa]o consigo (acessar|pesquisar|ver)|sem acesso a|n[ãa]o posso (acessar|pesquisar)|me indicar um per[íi]odo|n[ãa]o (estou|tenho) (conectado|atualizad)/i.test(resposta);
+      // resposta vazia ou só o resumo do painel não respondem à pergunta
+      const resumoDePainel = /^reuni \d+ fontes|^pain[eé]is? (prontos|de apoio)|^levantei \d+ publica/i.test(resposta);
+      const citou = /\[\d+\]/.test(resposta);
+      const semBase = !resposta || negou || resumoDePainel || (resposta.length < 90 && !citou);
       if (!semBase) return;
       fundamentou = true;
       // espera o fim do primeiro stream encerrar o estado de envio, senão o

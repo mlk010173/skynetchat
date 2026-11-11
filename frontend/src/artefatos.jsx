@@ -1092,7 +1092,11 @@ export function resumoDoArtefato(entrada) {
   if (Array.isArray(entrada) && entrada.length > 1) {
     const f = entrada.find((x) => x.tipo === "fontes");
     const n = (f?.itens || []).length;
-    return n ? `Reuni ${n} fontes e ${entrada.length - 1} painel(is) de apoio.` : "Painéis de apoio prontos.";
+    const extras = entrada.length - 1;
+    if (!n) return "Painéis prontos abaixo.";
+    return extras > 0
+      ? `Reuni ${n} ${n === 1 ? "fonte" : "fontes"} e ${extras} ${extras === 1 ? "painel" : "painéis"} de apoio.`
+      : `Reuni ${n} ${n === 1 ? "fonte" : "fontes"}.`;
   }
   const n = (spec.itens || []).length;
   if (spec.tipo === "videos") return `Encontrei ${n} vídeos no YouTube agora.`;
