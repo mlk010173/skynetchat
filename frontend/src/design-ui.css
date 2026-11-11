@@ -2644,3 +2644,11 @@
 /* POLISH · na tela inicial o selo do modo já está no switch: evita dizer duas vezes */
 .app:has(.hero) .m-brand-tag{ display: none; }
 .app:has(.hero) .hero-eyebrow{ opacity: .9; }
+
+/* POLISH · ações da mensagem só aparecem quando a mensagem é o alvo */
+@media (hover:hover) and (pointer:fine){
+  .bubble.assistant .acoes-msg{ opacity:0; transition:opacity .18s var(--sky-ease); }
+  .bubble:hover .acoes-msg,
+  .bubble:focus-within .acoes-msg{ opacity:1; }
+}
+.acoes-msg{ padding-top:2px; }

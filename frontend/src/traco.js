@@ -160,12 +160,25 @@ export function resumoTraco(traco) {
   const partes = [];
   const grupos = traco.ordem.map((k) => traco.grupos[k]).filter(Boolean);
   const ativo = grupos.find((g) => g.estado === "ativo");
-  if (ativo) partes.push(porChave[ativo.chave].rotulo.toLowerCase());
-  else partes.push(traco.fim ? "concluído" : "em andamento");
-  const n = grupos.length;
-  if (n > 1) partes.push(`${n} etapas`);
-  if (traco.resumo.fontes) partes.push(`${traco.resumo.fontes} fontes`);
-  if (traco.resumo.arquivos) partes.push(`${traco.resumo.arquivos} arquivos`);
+  if (ativo) {
+    partes.push(porChave[ativo.chave].rotulo.toLowerCase());
+    return partes.join(" · ");
+  }
+  // concluído: verbo no passado, como o ChatGPT e o Grok fazem no cabeçalho
+  const tem = (k) => grupos.some((g) => g.chave === k);
+  if (tem("pesquisando") || tem("fontes")) {
+    partes.push("pesquisou na web");
+    if (traco.resumo.fontes) partes.push(`${traco.resumo.fontes} ${traco.resumo.fontes === 1 ? "fonte" : "fontes"}`);
+  } else if (tem("codigo")) {
+    partes.push("executou código");
+  } else if (tem("arquivos")) {
+    partes.push(traco.resumo.arquivos ? `leu ${traco.resumo.arquivos} ${traco.resumo.arquivos === 1 ? "arquivo" : "arquivos"}` : "leu arquivos");
+  } else if (tem("imagens")) {
+    partes.push("analisou imagens");
+  } else {
+    partes.push("pensou");
+  }
+  if (tem("links") && traco.resumo.links) partes.push(`${traco.resumo.links} ${traco.resumo.links === 1 ? "link" : "links"}`);
   return partes.join(" · ") || "preparando";
 }
 

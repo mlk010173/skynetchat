@@ -11,6 +11,8 @@ const iconeEstado = (estado) => {
   return "";
 };
 
+const maiuscula = (t = "") => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
+
 export default function Traco({ traco, aoVivo = false, abertoInicial = true }) {
   const [aberto, setAberto] = useState(abertoInicial);
   const [agora, setAgora] = useState(Date.now());
@@ -35,8 +37,8 @@ export default function Traco({ traco, aoVivo = false, abertoInicial = true }) {
     <section className={`traco${aoVivo ? " vivo" : ""}`} aria-label="o que está acontecendo">
       <button type="button" className="traco-topo" onClick={() => setAberto((v) => !v)} aria-expanded={aberto}>
         <span className="traco-pulso" aria-hidden="true" />
-        <b>{aberto ? (ativo ? ativo.rotulo : "Concluído") : resumoTraco(traco)}</b>
-        <span className="traco-tempo">{total}s</span>
+        <b>{aberto ? (ativo ? ativo.rotulo : "Concluído") : maiuscula(resumoTraco(traco))}</b>
+        <span className="traco-tempo">{traco.fim ? `em ${total}s` : `${total}s`}</span>
         <span className="traco-seta" aria-hidden="true">{aberto ? "▾" : "▸"}</span>
       </button>
 
