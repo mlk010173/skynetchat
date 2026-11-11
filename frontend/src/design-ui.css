@@ -2479,3 +2479,147 @@
   .st-etapa .st-busca,.st-etapa .st-codigo,.st-etapa .st-arquivo{padding:6px 8px}
   .st-linha-topo{min-height:40px}
 }
+
+/* ============================================================
+   POLISH · hierarquia, tipografia e estados
+   Referências de mercado (ChatGPT, Grok, Base44): menos cromo,
+   superfícies por luminância em vez de bordas, leitura confortável.
+   ============================================================ */
+:root{
+  --texto-corpo: #e9e9e9;
+  --texto-fraco: #8a8a8a;
+  --texto-fraco-2: #6d6d6d;
+  --superficie-1: rgba(255,255,255,.035);
+  --superficie-2: rgba(255,255,255,.06);
+  --fio: rgba(255,255,255,.08);
+  --raio-1: 10px;
+  --raio-2: 14px;
+  --raio-3: 18px;
+}
+:root[data-theme="white"]{
+  --texto-corpo: #1b1b1b;
+  --texto-fraco: #5f5f5f;
+  --texto-fraco-2: #767676;
+  --superficie-1: rgba(0,0,0,.035);
+  --superficie-2: rgba(0,0,0,.06);
+  --fio: rgba(0,0,0,.1);
+}
+
+/* foco e seleção, iguais em toda a interface */
+:where(button, a, input, textarea, [tabindex]):focus-visible{
+  outline: 2px solid var(--sky-accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+::selection{ background: rgba(220,38,38,.32); color: #fff; }
+
+/* ---------------------------------------------------- tela vazia */
+.stage > .hero{ padding-top: 12px; }
+.hero-eyebrow{
+  display: inline-block; margin: 0 0 14px;
+  font-size: 9.5px; letter-spacing: .16em; color: var(--texto-fraco-2);
+  background: none; border: 0; padding: 0;
+}
+.hero h1{
+  font-size: clamp(26px, 4.4vw, 38px); line-height: 1.12; letter-spacing: -.02em;
+  margin: 0 0 12px; max-width: 22ch;
+}
+.hero p.hero-sub{
+  font-size: 14.5px; line-height: 1.6; color: var(--texto-fraco);
+  max-width: 56ch; margin: 0 0 22px;
+}
+.hero-cards{
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px; max-width: 680px;
+}
+.hero-card{
+  border: 1px solid transparent !important;
+  background: var(--superficie-1) !important;
+  border-radius: var(--raio-2); padding: 11px 12px; gap: 10px;
+  transition: background .16s var(--sky-ease), border-color .16s var(--sky-ease), transform .16s var(--sky-ease);
+}
+.hero-card:hover{ background: var(--superficie-2) !important; border-color: var(--fio) !important; }
+.hero-card:active{ transform: scale(.995); }
+.hero-card-icone{
+  width: 28px; height: 28px; border-radius: 8px; flex: none;
+  display: grid; place-items: center;
+  background: var(--superficie-1) !important; border-color: transparent !important;
+}
+.hero-card-texto b{ font-size: 13px; font-weight: 550; letter-spacing: -.005em; color: var(--texto-corpo); }
+.hero-card-texto small{ font-size: 11px; color: var(--texto-fraco-2); line-height: 1.45; }
+.hero-card-seta{ color: var(--texto-fraco-2); opacity: 0; transition: opacity .16s var(--sky-ease); }
+.hero-card:hover .hero-card-seta{ opacity: 1; }
+.hero-dica{
+  font-size: 10.5px; color: var(--texto-fraco-2); margin: 16px 0 0; line-height: 1.5;
+  border-top: 1px solid var(--fio); padding-top: 10px; max-width: 680px;
+}
+
+/* ---------------------------------------------------- mensagens */
+.thread{ gap: 18px; }
+.bubble{ font-size: 15.5px; line-height: 1.68; color: var(--texto-corpo); letter-spacing: .001em; }
+.bubble.assistant{ max-width: 70ch; }
+.bubble.user{
+  max-width: 82%; margin-left: auto;
+  background: var(--superficie-2); border: 1px solid var(--fio);
+  border-radius: 16px 16px 4px 16px; padding: 10px 14px;
+  font-size: 15px; line-height: 1.62;
+}
+.bubble-meta{ gap: 8px; margin-bottom: 6px; }
+.bubble-quem{
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--texto-fraco-2); font-weight: 600;
+}
+.bubble-meta time{ font-size: 10.5px; color: var(--texto-fraco-2); opacity: .8; }
+.rich-p{ margin: 0 0 12px; }
+.rich-p:last-child{ margin-bottom: 0; }
+.rich-lista{ margin: 0 0 12px; padding-left: 20px; }
+.rich-lista li{ margin: 4px 0; }
+.rich-bloco strong, .bubble strong{ font-weight: 600; color: #fff; }
+:root[data-theme="white"] .rich-bloco strong, :root[data-theme="white"] .bubble strong{ color: #000; }
+.rich-code{
+  background: #0c0c0c; border: 1px solid var(--fio); border-radius: var(--raio-1);
+  margin: 12px 0; overflow: hidden;
+}
+.rich-code-top{ font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-fraco-2); }
+.inline-code{ background: var(--superficie-2); border-radius: 5px; padding: 1px 5px; font-size: .92em; }
+.bubble-actions{ gap: 4px; margin-top: 10px; opacity: .85; }
+.bubble-actions button, .bubble-actions a{ font-size: 11px; height: 26px; border-radius: 7px; }
+
+/* ---------------------------------------------------- estado do agente */
+.modo-barra{ border: 0; background: none; padding: 0 0 6px; gap: 8px; }
+.modo-switch{ background: var(--superficie-1); border-radius: 999px; padding: 2px; }
+.modo-nota{ font-size: 10.5px; color: var(--texto-fraco-2); }
+
+/* ---------------------------------------------------- compositor */
+.m-dock{ box-shadow: 0 -18px 40px rgba(0,0,0,.45); }
+.m-campo input, .m-campo textarea{ font-size: 15px; }
+.m-campo::after{
+  content: ""; position: absolute; inset: auto 0 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--fio), transparent);
+  pointer-events: none;
+}
+.m-campo:focus-within::after{ background: linear-gradient(90deg, transparent, var(--sky-accent), transparent); }
+.m-tool{
+  height: 30px; border-color: transparent; background: var(--superficie-1);
+  font-size: 11.5px; color: #b3b3b3;
+}
+.m-tool:hover{ background: var(--superficie-2); color: #fff; border-color: var(--fio); }
+.m-barra .motor{ border-color: transparent; background: var(--superficie-1); }
+.m-barra .motor:hover{ border-color: var(--fio); }
+.dock-send:disabled, .m-barra .dock-send[disabled]{ opacity: .45; box-shadow: none; }
+.barra-agente{ color: var(--texto-fraco-2); font-size: 10px; gap: 5px; }
+.pro-link{ color: #8f3a3a; }
+
+/* ---------------------------------------------------- movimento contido */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important; scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 719px){
+  .hero-cards{ grid-template-columns: 1fr; gap: 6px; }
+  .hero h1{ max-width: none; }
+  .bubble.user{ max-width: 88%; }
+}
