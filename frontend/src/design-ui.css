@@ -2623,3 +2623,20 @@
   .hero h1{ max-width: none; }
   .bubble.user{ max-width: 88%; }
 }
+
+/* POLISH · painel de pesquisa recolhível */
+.art-pesquisa-topo{
+  display:flex; align-items:center; gap:8px; width:100%;
+  background:none; border:0; padding:2px 0; cursor:pointer;
+  font-size:12px; color:var(--texto-fraco);
+}
+.art-pesquisa-resumo{ color:#cfcfcf; font-weight:550; }
+.art-pesquisa-topo small{
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:11px; color:var(--texto-fraco-2); min-width:0;
+}
+.art-pesquisa-seta{
+  margin-left:auto; width:20px; height:20px; display:grid; place-items:center;
+  border-radius:6px; background:var(--superficie-1); color:#9a9a9a; font-size:13px; line-height:1;
+}
+.art-pesquisa .art-etapas{ margin-top:8px; }

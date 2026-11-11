@@ -651,7 +651,23 @@ function Grafico({ spec }) {
 
 function Pesquisa({ spec }) {
   const etapas = spec.etapas || [];
+  const [aberto, setAberto] = useState(spec.carregando === true);
+  const ultima = etapas[etapas.length - 1];
   return (
+    <div className="art-pesquisa">
+      <button
+        type="button"
+        className="art-pesquisa-topo"
+        aria-expanded={aberto}
+        onClick={() => setAberto((v) => !v)}
+      >
+        <span className="art-pesquisa-resumo">
+          {spec.carregando ? "buscando…" : `${etapas.length} ${etapas.length === 1 ? "etapa" : "etapas"}`}
+        </span>
+        {!aberto && ultima ? <small>{limpar(ultima.titulo)}</small> : null}
+        <span className="art-pesquisa-seta" aria-hidden="true">{aberto ? "−" : "+"}</span>
+      </button>
+      {aberto ? (
     <ol className="art-etapas">
       {etapas.map((e, i) => (
         <li key={i} className={e.estado || ""}>
@@ -664,6 +680,8 @@ function Pesquisa({ spec }) {
       ))}
       {spec.carregando ? <li className="rodando"><span className="art-etapa-ponto" /><span className="art-etapa-txt"><b>buscando…</b></span></li> : null}
     </ol>
+      ) : null}
+    </div>
   );
 }
 

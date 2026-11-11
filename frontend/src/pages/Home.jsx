@@ -434,7 +434,11 @@ export default function Home() {
       });
     };
 
-    if (lerConfig().autoArtefato !== false) montarArtefato(text, { imagens: anexos, aoPasso })
+    // conversa fiada e pergunta sobre o próprio agente não viram painel de pesquisa
+    const conversaCurta = text.length < 28;
+    const sobreOAgente = /\b(o que voc[eê]|voc[eê] (acha|prefere|consegue)|quem [eé] voc[eê]|em \d+ linhas|explique em)\b/i.test(text);
+    const valeAPenaPesquisar = lerConfig().autoArtefato !== false && !conversaCurta && !sobreOAgente;
+    if (valeAPenaPesquisar) montarArtefato(text, { imagens: anexos, aoPasso })
       .then((specs) => {
         setMessages((prev) => {
           const idx = prev.findIndex((m) => m.mid === mid);
