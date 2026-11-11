@@ -530,11 +530,12 @@ export default function Home() {
     let textoResposta = "";
     let specsPesquisa = null;
     let fundamentou = false;
+    let stream1Ativo = true;
 
     // quando o modelo diz que não tem acesso, mas a pesquisa trouxe fontes reais,
     // a resposta é refeita com base no que foi lido agora (com citação numerada)
     const talvezFundamentar = async () => {
-      if (fundamentou || !specsPesquisa || canceladoRef.current) return;
+      if (fundamentou || !specsPesquisa || canceladoRef.current || stream1Ativo) return;
       const noticias = specsPesquisa.find((x) => x.tipo === "noticias");
       const dossie = specsPesquisa.find((x) => x.tipo === "fontes");
       // notícias primeiro (têm data e veículo), depois o dossiê de páginas lidas
@@ -800,26 +801,30 @@ export default function Home() {
         return copy;
       }),
       onDelta: (delta) => setMessages((prev) => {
+        const i = prev.findIndex((m) => m.mid === mid);
+        if (i < 0) return prev;
         const copy = [...prev];
-        const last = copy[copy.length - 1];
-        if (!last || last.role !== "assistant") return prev;
+        const last = copy[i];
         let traco = last.traco || tracoVazio();
         traco = aplicarEvento(traco, { tipo: "texto", chave: "gerando", texto: delta });
         traco = codigoNoDelta(traco, delta);
         textoResposta += delta;
-        copy[copy.length - 1] = { ...last, text: last.text + delta, traco };
+        copy[i] = { ...last, text: last.text + delta, traco };
         return copy;
       }),
       onDone: (info) => {
         if (info.conversationId) convIdRef.current = info.conversationId;
+        stream1Ativo = false;
         setMessages((prev) => {
+          const i = prev.findIndex((m) => m.mid === mid);
+          if (i < 0) return prev;
           const copy = [...prev];
-          const last = copy[copy.length - 1];
+          const last = copy[i];
           if (last?.role === "assistant") {
             let traco = last.traco || tracoVazio();
             traco = linksNoTexto(traco, last.text || "");
             const est = gerenteRef.current?.ler();
-            copy[copy.length - 1] = {
+            copy[i] = {
               ...last,
               secs: Math.max(1, Math.round((Date.now() - (last.started ?? Date.now())) / 1000)),
               toolStatus: last.toolStatus === "executando" ? "concluida" : last.toolStatus,
