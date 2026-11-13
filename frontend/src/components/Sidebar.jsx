@@ -4,16 +4,20 @@ import {
   IconBell, IconBook, IconBrain, IconChat, IconClose, IconCode, IconEdit, IconFolder,
   IconGift, IconGlobe, IconHistory, IconImage, IconInstagram, IconLife, IconMail, IconMoney,
   IconPlug, IconServer, IconTheme, IconUser, IconUsers, IconZap,
+  IconSpark, IconWrench, IconClock, IconDatabase,
 } from "./Icons.jsx";
 import { api, contaAuth, getSession } from "../lib.js";
 import AutomationsPanel from "./AutomationsPanel.jsx";
 import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
-  { titulo: "Conversa", itens: ["Novo chat", "Histórico de conversas", "Imagens", "Prompts"] },
-  { titulo: "Ferramentas", itens: ["Codex", "Widgets", "Ferramentas do Agente", "CRM", "Lembretes", "Arquivo", "Devtool", "Permissões"] },
-  { titulo: "Operações & Dados", itens: ["Integrações", "Automações", "E-mail", "Memória"] },
-  { titulo: "Sistema", itens: ["Conheça o SKYNETchat", "Atualizações", "Suporte"] },
+  { titulo: "Conversas", itens: ["Novo chat", "Prompts"] },
+  { titulo: "Histórico", itens: ["Histórico de conversas", "Arquivo"] },
+  { titulo: "Recursos de IA", itens: ["Imagens", "Memória"] },
+  { titulo: "Ferramentas do agente", itens: ["Codex", "Widgets", "Ferramentas do Agente", "Permissões"] },
+  { titulo: "Integrações", itens: ["Integrações", "Automações", "E-mail"] },
+  { titulo: "Produtividade", itens: ["CRM", "Lembretes", "Devtool"] },
+  { titulo: "Conta e configurações", itens: ["Conheça o SKYNETchat", "Atualizações", "Suporte"] },
 ];
 
 const items = [
@@ -22,19 +26,19 @@ const items = [
   { label: "Imagens", desc: "Gere imagens sob demanda com IA", icon: IconImage },
   { label: "Prompts", desc: "Diretrizes e prompts estruturados", icon: IconChat },
   { label: "Codex", tag: "REAL", desc: "Terminal e sandbox seguro", icon: IconCode },
-  { label: "Widgets", tag: "MODULAR", desc: "Painel extensível de widgets", icon: IconZap },
+  { label: "Widgets", tag: "MODULAR", desc: "Painel extensível de widgets", icon: IconSpark },
   { label: "Ferramentas do Agente", desc: "Teste ao vivo das capacidades do modelo", icon: IconBrain },
   { label: "CRM", desc: "Contatos, pipeline e atividades", icon: IconUsers },
   { label: "Lembretes", desc: "Compromissos autônomos salvos", icon: IconBell },
-  { label: "Devtool", desc: "JSON, base64, hash, JWT e conversões", icon: IconServer },
+  { label: "Devtool", desc: "JSON, base64, hash, JWT e conversões", icon: IconWrench },
   { label: "Permissões", desc: "Autorize as ações executadas pelo SKYNET", icon: IconServer },
   { label: "Integrações", tag: "REAL", desc: "Central de integrações e conexões ativas", icon: IconPlug },
   { label: "Automações", tag: "REAL", desc: "Rotinas agendadas e triggers no banco", icon: IconZap },
   { label: "E-mail", tag: "REAL", desc: "Painel de E-mail via Gmail API", icon: IconMail },
-  { label: "Memória", tag: "REAL", desc: "Painel de Memória de Longo Prazo", icon: IconBook },
+  { label: "Memória", tag: "REAL", desc: "Painel de Memória de Longo Prazo", icon: IconDatabase },
   { label: "Arquivo", desc: "Dossiês guardados com fontes e trechos", icon: IconFolder },
   { label: "Conheça o SKYNETchat", desc: "Arquitetura e funcionamento", icon: IconBook },
-  { label: "Atualizações", desc: "Novidades e melhorias recentes", icon: IconBell },
+  { label: "Atualizações", desc: "Novidades e melhorias recentes", icon: IconClock },
   { label: "Suporte", desc: "Dúvidas e canal de suporte", icon: IconLife },
 ];
 

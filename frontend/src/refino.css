@@ -1,0 +1,216 @@
+/* ==========================================================================
+   refino.css — SKYNETchat · acabamento final e hierarquia visual
+   Entra por último (depois de sistema.css). Trabalha três coisas:
+   1. contraste real medido por pixel, nos dois temas;
+   2. hierarquia tipográfica e respiro do topo, do hero e do composer;
+   3. estados de interação e detalhes de identidade.
+   Não reescreve estrutura: o layout continua em design-ui.css.
+   ========================================================================== */
+
+/* ------------------------------------------------- 1. contraste dos tokens */
+/* medido: fg-3/fg-4 originais davam 2.9:1 e 2.2:1 em texto pequeno */
+:root {
+  --sk-fg-2: #bcc2c8;
+  --sk-fg-3: #9ba2a9;
+  --sk-fg-4: #838b92;
+}
+
+:root[data-theme="white"] {
+  --sk-fg-2: #444b52;
+  --sk-fg-3: #5a636a;
+  --sk-fg-4: #69727a;
+}
+
+/* ------------------------------------------------------ 2. base tipográfica */
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* opacidade não é hierarquia: cor é que hierarquiza */
+.hero-eyebrow, .hero-dica, .hero-card small, .dl-grupo, .m-tool,
+.motor-modelo, .dock-contador, .dock-hint { opacity: 1 !important; }
+
+/* --------------------------------------------------------------- 3. topbar */
+.topbar.m-top {
+  height: 58px;
+  padding: 0 14px;
+  gap: 12px;
+  background: color-mix(in oklab, var(--sk-bg) 92%, transparent);
+  border-bottom: 1px solid var(--sk-line);
+}
+
+.m-brand { gap: 9px; padding: 6px 10px 6px 8px; border-radius: 10px; transition: background var(--sk-fast); }
+.m-brand:hover { background: var(--sk-surface-2); }
+
+.m-brand-tag {
+  font-size: 10.5px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px;
+  color: var(--sk-acc); background: var(--sk-acc-soft); border: 1px solid var(--sk-acc-line);
+}
+
+.topbar-ctx {
+  display: none; min-width: 0; flex-direction: column; gap: 1px;
+  padding-left: 12px; border-left: 1px solid var(--sk-line); margin-left: 2px;
+}
+.topbar-ctx strong {
+  font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: var(--sk-fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.topbar-ctx small { font-size: 11.5px; color: var(--sk-fg-3); }
+
+.topbar-acoes { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+.topbar-modelo {
+  display: none; align-items: center; gap: 7px; height: 34px; padding: 0 11px;
+  border-radius: 9px; border: 1px solid var(--sk-line); background: var(--sk-surface-2);
+  color: var(--sk-fg-2); font-size: 12.5px; font-weight: 500; cursor: pointer;
+  transition: border-color var(--sk-fast), color var(--sk-fast), background var(--sk-fast);
+}
+.topbar-modelo:hover { border-color: var(--sk-line-3); color: var(--sk-fg); }
+.topbar-modelo i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--sk-ok);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--sk-ok) 18%, transparent);
+}
+
+@media (min-width: 900px) {
+  .topbar-ctx { display: flex; }
+  .topbar-modelo { display: inline-flex; }
+  .topbar.m-top { height: 62px; padding: 0 18px; }
+}
+
+/* ---------------------------------------------------------------- 4. hero */
+.stage { --sk-conteudo: 1080px; }
+.hero { width: 100%; max-width: var(--sk-conteudo); margin: 0 auto; gap: 0; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px; width: fit-content;
+  font-size: 11px; font-weight: 650; letter-spacing: 0.16em; color: var(--sk-fg-2);
+}
+.hero-eyebrow::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--sk-acc); box-shadow: 0 0 0 3px var(--sk-acc-soft);
+}
+
+.hero h1 {
+  margin: 14px 0 0;
+  font-size: clamp(30px, 3.1vw, 42px);
+  line-height: 1.06;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+
+.hero-sub { margin: 12px 0 0; max-width: 58ch; font-size: 15.5px; line-height: 1.55; color: var(--sk-fg-2); }
+
+.hero-cards { margin-top: 26px; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(248px, 1fr)); }
+
+.hero-card {
+  min-height: 86px; padding: 14px 14px 14px 13px; gap: 12px; align-items: flex-start;
+  border-radius: 12px; border: 1px solid var(--sk-line); background: var(--sk-surface-2);
+  transition: transform 160ms cubic-bezier(0.22, 0.61, 0.36, 1), border-color 160ms, background 160ms, box-shadow 160ms;
+}
+.hero-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--sk-line-3);
+  background: var(--sk-surface-3);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+:root[data-theme="white"] .hero-card:hover { box-shadow: 0 10px 22px rgba(16, 18, 20, 0.08); }
+.hero-card:active { transform: translateY(0); }
+.hero-card:focus-visible { outline: 2px solid var(--sk-acc); outline-offset: 2px; }
+
+.hero-card-icone {
+  width: 34px; height: 34px; flex: none; border-radius: 9px; display: grid; place-items: center;
+  background: var(--sk-surface-3); border: 1px solid var(--sk-line);
+  color: var(--sk-fg-2) !important;
+  transition: color 160ms, border-color 160ms, background 160ms;
+}
+.hero-card:hover .hero-card-icone {
+  color: var(--sk-acc) !important;
+  border-color: var(--sk-acc-line);
+  background: var(--sk-acc-soft);
+}
+
+.hero-card-texto { gap: 3px; }
+.hero-card-texto b {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.008em;
+  color: var(--sk-fg) !important; white-space: normal;
+}
+.hero-card-texto small { font-size: 12.5px; line-height: 1.45; color: var(--sk-fg-3) !important; }
+
+.hero-card-seta { align-self: center; color: var(--sk-fg-4); font-size: 14px; transition: transform 160ms, color 160ms; }
+.hero-card:hover .hero-card-seta { transform: translateX(2px); color: var(--sk-acc); }
+
+.hero-dica {
+  margin: 20px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  font-size: 12.5px; line-height: 1.5; color: var(--sk-fg-3) !important;
+}
+
+/* --------------------------------------------------------------- 5. drawer */
+.dl-grupo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.13em; color: var(--sk-fg-3); margin: 18px 0 6px; }
+.dl-grupo:first-of-type { margin-top: 8px; }
+
+.drawer-item {
+  min-height: 38px; border-radius: 9px; padding: 7px 10px; gap: 10px;
+  transition: background var(--sk-fast), color var(--sk-fast);
+}
+.drawer-item:hover { background: var(--sk-surface-2); }
+.drawer-item.active { background: var(--sk-surface-3); }
+.di-title { font-size: 13.5px; font-weight: 500; }
+
+.dl-tag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 5px;
+  color: var(--sk-fg-3); background: var(--sk-surface-3); border: 1px solid var(--sk-line);
+}
+
+/* ------------------------------------------------------------ 6. composer */
+.dock { max-width: 820px; margin-inline: auto; }
+.dock:focus-within {
+  border-color: color-mix(in oklab, var(--sk-acc) 42%, var(--sk-line));
+  box-shadow: 0 0 0 3px var(--sk-acc-soft), 0 18px 40px rgba(0, 0, 0, 0.24);
+}
+:root[data-theme="white"] .dock:focus-within {
+  box-shadow: 0 0 0 3px var(--sk-acc-soft), 0 14px 30px rgba(16, 18, 20, 0.1);
+}
+
+.m-tool {
+  min-height: 32px; padding: 0 11px; font-size: 12.5px; border-radius: 8px;
+  color: var(--sk-fg-2); border: 1px solid var(--sk-line); background: transparent;
+  transition: background var(--sk-fast), color var(--sk-fast), border-color var(--sk-fast);
+}
+.m-tool:hover { color: var(--sk-fg); border-color: var(--sk-line-3); background: var(--sk-surface-2); }
+
+.motor { min-height: 38px; border-radius: 10px; }
+.motor-tag {
+  font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--sk-acc); background: var(--sk-acc-soft); border: 1px solid var(--sk-acc-line);
+  padding: 1px 6px; border-radius: 999px;
+}
+.motor-modelo { font-size: 12px; color: var(--sk-fg-3); max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dock-contador { font-size: 12px; color: var(--sk-fg-3); }
+
+/* -------------------------------------------------- 7. foco e movimento */
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--sk-acc); outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card, .hero-card-icone, .hero-card-seta, .dock { transition: none !important; transform: none !important; }
+}
+
+/* ------------------------------------------------------- 8. telas pequenas */
+@media (max-width: 899px) {
+  .topbar.m-top { height: 54px; padding: 0 10px; }
+  .hero h1 { font-size: clamp(27px, 7.4vw, 34px); }
+  .hero-sub { font-size: 14.5px; }
+  .hero-cards { margin-top: 20px; gap: 9px; grid-template-columns: 1fr; }
+  .hero-card { min-height: 72px; padding: 12px; }
+  .hero-card-texto b { font-size: 13.5px; }
+  .hero-card-texto small { font-size: 12px; }
+  .hero-dica { font-size: 12px; margin-top: 16px; }
+  .dl-grupo { margin: 14px 0 5px; }
+}
+
+/* a dica do hero ainda herdava um cinza fixo claro: alinha no token */
+.hero .hero-dica,
+.hero p.hero-dica {
+  color: var(--sk-fg-3) !important;
+}
+:root[data-theme="white"] .hero .hero-dica { color: #55606a !important; }

@@ -5,7 +5,7 @@ import { FavReal, Marca, marcaDe } from "../marcas.jsx";
 import ClimaCard from "../clima.jsx";
 import { NavegadorAoVivo } from "../artefato.jsx";
 import { chaveStorage, criarWidget, carregarWidgets, daSpec, porPalavras, salvarWidgets } from "../widgets/registry.js";
-import { IconBell, IconBrain, IconChatPlus, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconSearch, IconStop, IconTheme, IconTools, IconWave } from "../components/Icons.jsx";
+import { IconBell, IconBrain, IconChatPlus, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconMoon, IconPlus, IconSearch, IconSpark, IconStop, IconSun, IconTheme, IconTools, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
 
@@ -182,6 +182,20 @@ export default function Home() {
   const [modo, setModo] = useState(() => localStorage.getItem("skynet-modo") || "4.5");
   const trocarModo = (m) => { setModo(m); localStorage.setItem("skynet-modo", m); setModel(m === "4.5" ? "melhor" : "auto"); };
   useEffect(() => { if (!model) setModel((localStorage.getItem("skynet-modo") || "4.5") === "4.5" ? "melhor" : "auto"); }, [model]);
+
+  // título curto da sessão para o topo (primeira pergunta, ou o nome do item ativo)
+  const tituloSessao = (() => {
+    const primeira = messages.find((m) => m.role === "user" && m.text);
+    if (!primeira) return active && active !== "Novo chat" ? active : "Nova sessão";
+    const t = primeira.text.replace(/\s+/g, " ").trim();
+    return t.length > 46 ? t.slice(0, 46) + "…" : t;
+  })();
+
+  const alternarTema = useCallback(() => {
+    const proximo = document.documentElement.dataset.theme === "white" ? "black" : "white";
+    document.documentElement.dataset.theme = proximo;
+    try { localStorage.setItem("skynet-theme-bg", proximo); } catch (e) {}
+  }, []);
   const [models, setModels] = useState([]);
   const [toast, setToast] = useState("");
   const [notifs, setNotifs] = useState([]);
@@ -1257,7 +1271,26 @@ export default function Home() {
           <span className="m-brand-tag">{modo === "4.5" ? "agente" : "rápido"}</span>
         </div>
 
-        <div className="m-top-acoes">
+        <div className="topbar-ctx">
+          <strong>{tituloSessao}</strong>
+          <small>{busy ? "executando agora" : messages.length ? `${messages.length} mensagens nesta sessão` : "pronto para executar"}</small>
+        </div>
+
+        <div className="topbar-acoes">
+          <button
+            type="button"
+            className="topbar-modelo"
+            onClick={() => { setModelOpen((v) => !v); setPlusOpen(false); }}
+            aria-label="Escolher modelo"
+            aria-expanded={modelOpen}
+          >
+            <i aria-hidden="true" />
+            {labelFor(model)}
+          </button>
+          <button type="button" className="icon-btn" onClick={alternarTema} aria-label="Alternar tema claro e escuro" title="Alternar tema">
+            <span className="ico-sol" aria-hidden="true"><IconSun width={17} height={17} /></span>
+            <span className="ico-lua" aria-hidden="true"><IconMoon width={17} height={17} /></span>
+          </button>
           <button type="button" className="icon-btn" onClick={() => pick("Novo chat")} aria-label="Nova conversa" title="Nova conversa">
             <IconChatPlus />
           </button>
