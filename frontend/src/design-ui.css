@@ -2652,3 +2652,7 @@
   .bubble:focus-within .acoes-msg{ opacity:1; }
 }
 .acoes-msg{ padding-top:2px; }
+
+/* alvo de toque de 44px sem mexer no visual de 26px do botão de expandir o campo */
+.m-campo .dock-expandir { position: relative; }
+.m-campo .dock-expandir::after { content: ""; position: absolute; inset: -9px; }

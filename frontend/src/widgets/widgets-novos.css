@@ -289,3 +289,9 @@
 .wx-confirma button:first-of-type { border-color: rgba(240, 74, 81, .5); color: #f04a51; }
 .wx-restaurar { align-self: center; min-height: 40px; padding: 0 16px; margin-bottom: 16px; border-radius: 8px; border: 1px dashed var(--sk-line, #1f1f1f); background: none; color: var(--sk-fg-3, #8a8a8a); font-size: 13px; cursor: pointer; }
 .wx-restaurar:hover { color: var(--sk-fg, #f2f2f2); border-style: solid; }
+
+/* alvos de toque: fontes do rodapé viram chips de 40px (antes 19px de altura) */
+.wx-fontes { gap: 4px; }
+.wx-fontes a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 8px; border-radius: 8px; text-decoration: none; }
+.wx-fontes a:hover { background: var(--wx-surf2); color: var(--wx-fg); }
+.wx-rodape { align-items: center; }
