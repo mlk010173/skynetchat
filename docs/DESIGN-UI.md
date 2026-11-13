@@ -118,3 +118,19 @@ três pontos animados com "SKYNET está escrevendo" em vez de `●●●`.
 
 Galeria ganhou barra fixa com busca por componente (filtra seções), contador `NumberTicker`
 e âncoras (Tipografia, Superfícies, Movimento, Dados, Ações) com estado vazio.
+
+## Cabeçalhos de produção (Vercel)
+
+Os `headers` e o rewrite do SPA vivem no `vercel.json` da raiz. Eles **só** são
+aplicados quando o deploy carrega esse arquivo, o que acontece no fluxo por push
+no GitHub. Deploys feitos pela API com upload inline de arquivos enviam apenas
+`site/` e a Vercel serve a versão sem CSP, sem X-Frame-Options e sem rewrite
+(rotas do SPA passam a dar 404).
+
+Depois de publicar, rode:
+
+```bash
+scripts/verificar-headers.sh https://skynetchat-xi.vercel.app
+```
+
+Sai 0 quando os seis cabeçalhos e as rotas `/chat` e `/rota/qualquer` respondem 200.
