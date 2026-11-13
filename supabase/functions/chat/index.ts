@@ -11,6 +11,10 @@ import {
   pareceAprovacao, pedidoParaContinuar, pedidoPorId, marcarContinuado,
 } from "../_shared/permissoes.ts";
 import { liberar, ipDe, respostaLimite } from "../_shared/limite.ts";
+import { aplicarOrcamento, chaveValida, montarUso, RegistroIdempotencia } from "../_shared/orcamento.ts";
+
+// protege contra duplo clique/retry imediato dentro do mesmo isolate (120s)
+const EXECUCOES = new RegistroIdempotencia(120_000, 500);
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -1336,7 +1340,7 @@ Deno.serve(async (req) => {
   if (!conta && !userId && !(await liberar("chat-anon:" + ipDe(req), ANON_LIMIT, "hour"))) return respostaLimite();
 
   // ---- corpo ----
-  let body: { conversationId?: string; content?: string; model?: string; continuar?: string };
+  let body: { conversationId?: string; content?: string; model?: string; continuar?: string; execucaoId?: string };
   try {
     body = await req.json();
   } catch {
@@ -1349,6 +1353,13 @@ Deno.serve(async (req) => {
     .trim();
   if (!content) return json({ ok: false, error: "Mensagem vazia." }, 400);
   if (content.length > 4000) return json({ ok: false, error: "Mensagem longa demais (máx. 4000 caracteres)." }, 400);
+
+  // idempotência: o mesmo execucaoId não processa (nem cobra) duas vezes
+  const execucaoId = chaveValida(body.execucaoId) ? body.execucaoId : null;
+  if (execucaoId && !EXECUCOES.reservar(execucaoId)) {
+    return json({ ok: false, duplicado: true, error: "Esta mensagem já está sendo processada." }, 409);
+  }
+  const inicioExecucao = Date.now();
 
   // ---- rate-limit anônimo por IP (persistido no banco) ----
   if (!userId) {
@@ -1485,8 +1496,20 @@ Deno.serve(async (req) => {
   const minhasP = userId ? memoriasDaConta(userId) : Promise.resolve([] as string[]);
   const [histResp, minhas] = await Promise.all([historicoP, minhasP]);
   const history = (histResp as any)?.data as { role: string; content: string }[] | undefined;
+  let omitidasPorOrcamento = 0;
   if (history?.length) {
-    for (const m of history.reverse()) messages.push({ role: m.role, content: m.content });
+    // histórico cronológico dentro de um orçamento de tokens; o que sobra vira resumo curto
+    const cronologico = history.slice().reverse().map((m) => ({ role: m.role, content: m.content }));
+    const orc = aplicarOrcamento(cronologico, {
+      orcamentoTokens: Number(Deno.env.get("SKYNET_CONTEXT_TOKENS") ?? 6000),
+      reservaTokens: 1800,
+      minimoRecentes: 6,
+    });
+    omitidasPorOrcamento = orc.omitidas;
+    if (orc.resumoOmitido) {
+      messages.push({ role: "system", content: `Resumo das ${orc.omitidas} mensagens anteriores desta conversa (já tratadas, não repita):\n${orc.resumoOmitido}` });
+    }
+    for (const m of orc.mensagens) messages.push(m);
   }
   const systemParts = [
     "Você é o SKYNET, um assistente de IA direto, útil e honesto. Responda em português.",
@@ -1608,6 +1631,7 @@ Deno.serve(async (req) => {
         controller.enqueue(legado ? sse({ raciocinio: t }) : tDados({ tipo: "raciocinio", texto: t }));
       };
       const enviaErro = (e: string) => {
+        if (execucaoId) EXECUCOES.liberar(execucaoId); // falhou sem resposta: pode reenviar
         // evento canônico da Responses API + erro no formato antigo (compatível)
         controller.enqueue(sse({
           type: "error",
@@ -1617,6 +1641,22 @@ Deno.serve(async (req) => {
         controller.enqueue(legado ? sse({ ok: false, error: e }) : tErro(e));
       };
       const enviaFim = (meta: Record<string, unknown>) => {
+        if (execucaoId) EXECUCOES.concluir(execucaoId);
+        try {
+          // métrica real por mensagem (estimativa de tokens; o provedor não devolve contagem no stream)
+          const uso = montarUso({
+            execucaoId: execucaoId ?? "sem-chave",
+            modelo: String(meta.model ?? "auto"),
+            sistema: partesFinal.join("\n\n"),
+            historico: messages,
+            pedido: content,
+            resposta: "",
+            omitidas: omitidasPorOrcamento,
+            tentativas: Array.isArray(meta.tentativas) ? (meta.tentativas as unknown[]).length : 1,
+            inicio: inicioExecucao,
+          });
+          controller.enqueue(sse({ type: "skynet.usage", uso }));
+        } catch { /* métrica nunca derruba a resposta */ }
         controller.enqueue(sse({ type: "response.completed", response: { id: meta.conversationId ?? null, model: meta.model ?? null, status: "completed" } }));
         controller.enqueue(legado ? sse({ done: true, ...meta }) : tFim(meta));
       };
@@ -2245,6 +2285,7 @@ Deno.serve(async (req) => {
         const nome = String((err as Error)?.name ?? "erro");
         const msg = String((err as Error)?.message ?? err).slice(0, 160);
         console.error("[chat] falha no stream:", nome, msg);
+        if (execucaoId) EXECUCOES.liberar(execucaoId);
         enviaErro(`Sem conexão com o provedor de IA (${nome}: ${msg}).`);
         controller.close();
       }

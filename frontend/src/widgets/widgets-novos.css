@@ -1,0 +1,290 @@
+/* widgets-novos.css — estilos dos widgets novos do clima e da Central.
+   Prefixos: `wx-` (experiência de clima / ClimaGoogle / ClimaHome) e
+   `wg-` (biblioteca e corpos novos, complementando o que já existe em styles.css).
+   Só tokens do sistema (--sk-*), com fallback. Tema claro herda automaticamente. */
+
+
+/* ============================================================ 1. clima (wx-)
+   Escala ESQUADRO: raios 8 a 14px, borda em vez de sombra, grade de 4px, alvos >= 40px. */
+
+.wx { --wx-fg: var(--sk-fg, #f2f2f2); --wx-fg2: var(--sk-fg-2, #b5b5b5); --wx-fg3: var(--sk-fg-3, #8a8a8a);
+  --wx-line: var(--sk-line, #1f1f1f); --wx-surf: var(--sk-surface, #0b0b0b); --wx-surf2: var(--sk-surface-2, #141414);
+  --wx-acc: var(--sk-acc-hi, #f04a51);
+  color: var(--wx-fg); background: var(--wx-surf); border: 1px solid var(--wx-line);
+  border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 16px;
+  width: 100%; max-width: 100%; box-sizing: border-box; container-type: inline-size; }
+.wx *, .wx *::before, .wx *::after { box-sizing: border-box; }
+.wx button { font: inherit; color: inherit; }
+.wx button:focus-visible, .wx a:focus-visible, .wx input:focus-visible { outline: 2px solid var(--wx-acc); outline-offset: 2px; border-radius: 8px; }
+.wx-compacto { padding: 12px; gap: 12px; border-radius: 12px; }
+
+/* cabeçalho */
+.wx-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wx-cidade { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; min-width: 0; padding: 0 8px 0 0;
+  background: none; border: 0; cursor: pointer; border-radius: 8px; }
+.wx-cidade b { font-size: 16px; font-weight: 650; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wx-cidade span { font-size: 12px; color: var(--wx-fg3); }
+.wx-cidade i { font-style: normal; font-size: 10px; color: var(--wx-fg3); }
+.wx-acoes { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.wx-icone-btn { width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 8px;
+  background: none; border: 1px solid transparent; color: var(--wx-fg2); font-size: 18px; line-height: 1; cursor: pointer; }
+.wx-icone-btn:hover:not(:disabled) { background: var(--wx-surf2); border-color: var(--wx-line); color: var(--wx-fg); }
+.wx-icone-btn:disabled { opacity: .5; cursor: progress; }
+.wx-unid { font-size: 13px; font-weight: 650; }
+.wx-icone-btn.girando { animation: wxGira 900ms linear infinite; }
+@keyframes wxGira { to { transform: rotate(360deg); } }
+.wx-btn { min-height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--wx-line);
+  background: var(--wx-surf2); color: var(--wx-fg); cursor: pointer; }
+.wx-btn:hover { border-color: var(--sk-line-3, #333); }
+
+/* busca de cidade */
+.wx-busca { display: flex; flex-direction: column; gap: 8px; }
+.wx-busca input { width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--wx-line);
+  background: var(--wx-surf2); color: var(--wx-fg); font: inherit; font-size: 15px; }
+.wx-busca ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--wx-line); border-radius: 10px; overflow: hidden; }
+.wx-busca ul:empty { display: none; }
+.wx-busca li + li { border-top: 1px solid var(--wx-line); }
+.wx-busca li button { width: 100%; min-height: 40px; padding: 8px 12px; text-align: left; background: none; border: 0; cursor: pointer; font-size: 14px; }
+.wx-busca li button:hover { background: var(--wx-surf2); }
+.wx-vazio { margin: 0; font-size: 13px; color: var(--wx-fg3); }
+
+.wx-aviso { margin: 0; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--wx-line); background: var(--wx-surf2); font-size: 13px; color: var(--wx-fg2); }
+.wx-aviso-forte { border-color: rgba(242, 176, 61, .4); color: #f2b03d; }
+
+/* alertas reais (INMET) */
+.wx-alertas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.wx-alertas li { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid rgba(242, 176, 61, .4); background: rgba(242, 176, 61, .08); font-size: 13px; }
+.wx-alertas b { color: #f2b03d; font-size: 13px; }
+.wx-alertas span { color: var(--wx-fg2); }
+
+/* agora */
+.wx-agora { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 16px; }
+.wx-icone { color: var(--wx-fg); flex: 0 0 auto; }
+.wx-agora-temp { display: flex; align-items: flex-start; line-height: 1; }
+.wx-agora-temp b { font-size: 56px; font-weight: 300; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.wx-agora-temp span { font-size: 20px; margin: 6px 0 0 2px; color: var(--wx-fg2); }
+.wx-agora-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.wx-agora-txt p { margin: 0; font-size: 15px; font-weight: 600; text-transform: capitalize; }
+.wx-agora-txt small { font-size: 12px; color: var(--wx-fg3); font-variant-numeric: tabular-nums; }
+.wx-compacto .wx-agora-temp b { font-size: 40px; }
+
+/* abas e gráfico */
+.wx-abas { display: flex; gap: 4px; padding: 4px; border-radius: 10px; border: 1px solid var(--wx-line); background: var(--wx-surf2); }
+.wx-abas button { flex: 1; min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: none; cursor: pointer; font-size: 13px; color: var(--wx-fg3); }
+.wx-abas button.ativa { background: var(--wx-surf); color: var(--wx-fg); box-shadow: inset 0 0 0 1px var(--wx-line); }
+.wx-grafico { display: flex; flex-direction: column; gap: 4px; touch-action: pan-y; }
+.wx-grafico-leitura { display: flex; align-items: baseline; gap: 8px; min-height: 24px; }
+.wx-grafico-leitura b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.wx-grafico-leitura span { font-size: 12px; color: var(--wx-fg3); }
+.wx-grafico-svg { width: 100%; height: 96px; display: block; cursor: crosshair; touch-action: none; user-select: none; }
+.wx-grafico-area { fill: var(--wx-acc); opacity: .12; }
+.wx-grafico-linha { fill: none; stroke: var(--wx-acc); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.wx-grafico-guia { stroke: var(--wx-fg3); stroke-width: 1; stroke-dasharray: 3 3; }
+.wx-grafico-ponto { fill: var(--wx-surf); stroke: var(--wx-acc); stroke-width: 2; }
+.wx-grafico-eixo { display: flex; justify-content: space-between; font-size: 11px; color: var(--wx-fg3); font-variant-numeric: tabular-nums; }
+
+/* próximos dias */
+.wx-dias { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.wx-dias::-webkit-scrollbar { display: none; }
+.wx-dias li { flex: 1 0 64px; min-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 10px; border: 1px solid var(--wx-line); }
+.wx-dias li span { font-size: 12px; color: var(--wx-fg3); text-transform: capitalize; }
+.wx-dias li small { font-size: 11px; color: #60a5fa; font-variant-numeric: tabular-nums; }
+.wx-dias li b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.wx-dias li em { font-size: 12px; font-style: normal; color: var(--wx-fg3); font-variant-numeric: tabular-nums; }
+
+/* detalhes */
+.wx-detalhes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@container (min-width: 520px) { .wx-detalhes { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.wx-detalhe { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 10px; border: 1px solid var(--wx-line); min-width: 0; }
+.wx-detalhe-rotulo { font-size: 12px; color: var(--wx-fg3); }
+.wx-detalhe-valor { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wx-detalhe small { font-size: 11px; color: var(--wx-fg3); }
+
+/* rodapé */
+.wx-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding-top: 12px; border-top: 1px solid var(--wx-line); font-size: 12px; color: var(--wx-fg3); }
+.wx-fontes { display: inline-flex; gap: 12px; flex-wrap: wrap; }
+.wx-fontes a { color: var(--wx-fg2); text-decoration: underline; text-underline-offset: 2px; }
+
+/* carregamento e erro */
+.wx-esqueleto { border-radius: 10px; background: linear-gradient(90deg, var(--wx-surf2), #1c1c1c, var(--wx-surf2)); background-size: 200% 100%; animation: wxBrilho 1.4s ease-in-out infinite; }
+.wx-esq-topo { height: 72px; } .wx-esq-graf { height: 96px; } .wx-esq-dias { height: 88px; }
+@keyframes wxBrilho { to { background-position: -200% 0; } }
+.wx-erro { align-items: flex-start; }
+.wx-erro p { margin: 0; color: var(--wx-fg2); font-size: 14px; }
+
+@media (max-width: 420px) {
+  .wx { padding: 12px; }
+  .wx-agora { grid-template-columns: auto 1fr; }
+  .wx-agora-txt { grid-column: 1 / -1; }
+  .wx-agora-temp b { font-size: 48px; }
+}
+@media (prefers-reduced-motion: reduce) { .wx-esqueleto, .wx-icone-btn.girando { animation: none; } }
+
+/* ================================================== 2. biblioteca (wg- novos) */
+
+.wg-central { padding: 18px 20px 64px; max-width: 1400px; margin: 0 auto; }
+.wg-central-topo { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.wg-central-topo h1 { margin: 0 0 4px; font-size: 22px; }
+.wg-filtros { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.wg-filtros button { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--sk-line);
+  background: var(--sk-surface-2); color: var(--sk-fg-2); font: inherit; font-size: 12px; cursor: pointer; }
+.wg-filtros button[aria-pressed="true"] { border-color: var(--sk-acc-line); color: var(--sk-fg); background: var(--sk-acc-soft); }
+.wg-catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.wg-item-cat { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px;
+  border: 1px solid var(--sk-line); background: var(--sk-surface); }
+.wg-item-cat h3 { margin: 0; font-size: 13.5px; display: flex; align-items: center; gap: 6px; }
+.wg-item-cat p { margin: 0; font-size: 12px; color: var(--sk-fg-2); line-height: 1.4; }
+.wg-item-cat-rodape { display: flex; align-items: center; gap: 6px; margin-top: auto; padding-top: 6px; flex-wrap: wrap; }
+.wg-selo { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px;
+  border-radius: 999px; border: 1px solid var(--sk-line-2); color: var(--sk-fg-3); }
+.wg-selo.instalado { border-color: rgba(61,214,140,.45); color: var(--sk-ok); }
+.wg-selo.cat { border-color: var(--sk-line-2); }
+.wg-central-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.wg-central-card { display: flex; flex-direction: column; border: 1px solid var(--sk-line); border-radius: 14px;
+  background: var(--sk-surface); overflow: hidden; min-height: 220px; }
+.wg-central-card-topo { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--sk-line); }
+.wg-central-card-topo h2 { margin: 0; font-size: 12.5px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wg-central-card-corpo { flex: 1; padding: 10px; overflow: auto; font-size: 12.5px; }
+.wg-central-card-pe { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--sk-line);
+  font-size: 10.5px; color: var(--sk-fg-3); flex-wrap: wrap; }
+.wg-central-card-pe button { background: none; border: 0; color: var(--sk-fg-3); font: inherit; cursor: pointer;
+  text-decoration: underline; padding: 0; min-height: 24px; }
+.wg-central-card-pe button:hover { color: var(--sk-fg); }
+.wg-config-form { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--sk-bg-soft);
+  border-bottom: 1px solid var(--sk-line); }
+.wg-config-form label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--sk-fg-3); }
+.wg-config-form input, .wg-config-form select { min-height: 36px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid var(--sk-line-2); background: var(--sk-surface); color: inherit; font: inherit; font-size: 12px; }
+.wg-config-form input[type="checkbox"] { min-height: 0; width: 18px; height: 18px; }
+.wg-config-form .linha-check { flex-direction: row; align-items: center; gap: 8px; }
+.wg-config-form .acoes { display: flex; gap: 6px; }
+.wg-dica-nl { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 14px;
+  border: 1px dashed var(--sk-line-2); background: var(--sk-bg-soft); margin-bottom: 14px; }
+.wg-dica-nl .linha { display: flex; gap: 8px; flex-wrap: wrap; }
+.wg-dica-nl input { flex: 1; min-width: 220px; min-height: 40px; padding: 0 10px; border-radius: 10px;
+  border: 1px solid var(--sk-line-2); background: var(--sk-surface); color: inherit; font: inherit; font-size: 13px; }
+.wg-dica-nl small { color: var(--sk-fg-3); font-size: 11px; }
+.wg-dica-nl .exemplos { display: flex; gap: 6px; flex-wrap: wrap; }
+.wg-dica-nl .exemplos button { padding: 4px 9px; border-radius: 999px; border: 1px dashed var(--sk-line-2);
+  background: none; color: var(--sk-fg-3); font: inherit; font-size: 11px; cursor: pointer; }
+.wg-central-vazio { border: 1px dashed var(--sk-line-2); border-radius: 14px; padding: 28px; text-align: center;
+  color: var(--sk-fg-2); font-size: 12.5px; }
+
+/* corpos novos (prefixo wg-, dentro de .wg-central-card-corpo e de .wg-corpo) */
+.wg-moeda { display: flex; flex-direction: column; gap: 8px; }
+.wg-moeda-linha { display: flex; gap: 6px; align-items: center; }
+.wg-moeda-linha input { min-width: 0; flex: 1; min-height: 38px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid var(--sk-line-2); background: var(--sk-surface-2); color: inherit; font: inherit; font-size: 13px; }
+.wg-moeda-linha select { min-height: 38px; border-radius: 8px; border: 1px solid var(--sk-line-2);
+  background: var(--sk-surface-2); color: inherit; font: inherit; font-size: 12px; padding: 0 6px; }
+.wg-moeda-resultado { display: flex; flex-direction: column; gap: 2px; }
+.wg-moeda-resultado b { font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.wg-moeda-tabela { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.wg-moeda-tabela li { display: flex; justify-content: space-between; gap: 8px; font-size: 12px;
+  padding: 3px 0; border-bottom: 1px solid var(--sk-line); font-variant-numeric: tabular-nums; }
+.wg-moeda-tabela .alta { color: var(--sk-ok); }
+.wg-moeda-tabela .baixa { color: var(--sk-acc); }
+.wg-relogios { display: flex; flex-direction: column; gap: 4px; }
+.wg-relogio { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 4px 0;
+  border-bottom: 1px solid var(--sk-line); font-variant-numeric: tabular-nums; }
+.wg-relogio b { font-size: 16px; font-weight: 600; }
+.wg-relogio small { color: var(--sk-fg-3); font-size: 11px; display: block; }
+.wg-cronometro { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.wg-cronometro .mostrador { font-size: 34px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; font-weight: 300; line-height: 1; }
+.wg-cronometro .acoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.wg-cronometro .acoes button, .wg-mini-btn { min-height: 36px; min-width: 38px; padding: 0 10px; border-radius: 999px;
+  border: 1px solid var(--sk-line-2); background: var(--sk-surface-2); color: var(--sk-fg-2);
+  font: inherit; font-size: 12px; cursor: pointer; }
+.wg-cronometro .acoes button:hover, .wg-mini-btn:hover { color: var(--sk-fg); border-color: var(--sk-line-3); }
+.wg-cronometro .acoes button.principal { background: var(--sk-acc-soft); border-color: var(--sk-acc-line); color: var(--sk-fg); }
+.wg-tarefas { display: flex; flex-direction: column; gap: 6px; }
+.wg-tarefa { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.wg-tarefa input { width: 18px; height: 18px; flex: 0 0 auto; }
+.wg-tarefa label { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
+.wg-tarefa.feita label { color: var(--sk-fg-3); text-decoration: line-through; }
+.wg-tarefa button { background: none; border: 0; color: var(--sk-fg-3); cursor: pointer; font: inherit; min-height: 28px; }
+.wg-tarefa button:hover { color: var(--sk-acc); }
+.wg-nota-area { width: 100%; min-height: 130px; resize: vertical; padding: 8px; border-radius: 10px;
+  border: 1px solid var(--sk-line-2); background: var(--sk-surface-2); color: inherit; font: inherit; font-size: 12.5px; line-height: 1.45; }
+.wg-calc { display: flex; flex-direction: column; gap: 6px; }
+.wg-calc-tela { text-align: right; padding: 8px 10px; border-radius: 10px; background: var(--sk-surface-2);
+  border: 1px solid var(--sk-line-2); font-variant-numeric: tabular-nums; }
+.wg-calc-tela b { display: block; font-size: 20px; font-weight: 500; overflow-x: auto; white-space: nowrap; }
+.wg-calc-tela small { color: var(--sk-fg-3); font-size: 11px; overflow-wrap: anywhere; }
+.wg-calc-teclas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.wg-calc-teclas button { min-height: 38px; border-radius: 8px; border: 1px solid var(--sk-line-2);
+  background: var(--sk-surface-2); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.wg-calc-teclas button:hover { border-color: var(--sk-line-3); }
+.wg-calc-teclas button.funcao { color: var(--sk-fg-2); }
+.wg-calc-teclas button.igual { background: var(--sk-acc-soft); border-color: var(--sk-acc-line); }
+.wg-conversor { display: flex; flex-direction: column; gap: 8px; }
+.wg-conversor .linha { display: flex; gap: 6px; align-items: center; }
+.wg-conversor input, .wg-conversor select { min-height: 36px; border-radius: 8px; border: 1px solid var(--sk-line-2);
+  background: var(--sk-surface-2); color: inherit; font: inherit; font-size: 12.5px; padding: 0 8px; min-width: 0; }
+.wg-conversor input { flex: 1; }
+.wg-conversor .resultado { font-size: 18px; font-variant-numeric: tabular-nums; }
+.wg-monitor { display: flex; flex-direction: column; gap: 6px; }
+.wg-monitor-url { display: flex; gap: 6px; }
+.wg-monitor-url input { flex: 1; min-width: 0; min-height: 36px; padding: 0 8px; border-radius: 8px;
+  border: 1px solid var(--sk-line-2); background: var(--sk-surface-2); color: inherit; font: inherit; font-size: 12.5px; }
+.wg-monitor-estado { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.wg-monitor-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px;
+  font-size: 11px; color: var(--sk-fg-3); font-variant-numeric: tabular-nums; }
+.wg-ar { display: flex; flex-direction: column; gap: 6px; }
+.wg-ar .valor { font-size: 30px; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; }
+.wg-ar .faixa { display: flex; flex-direction: column; gap: 3px; }
+.wg-ar .legenda { display: flex; justify-content: space-between; font-size: 10px; color: var(--sk-fg-3); }
+
+/* responsivo */
+@media (max-width: 560px) {
+  .wx { padding: 13px 13px 11px; }
+  .wx-temp { font-size: clamp(46px, 18cqw, 64px); }
+  .wx-hero { gap: 8px; }
+  .wx-icone-grande { width: 46px; height: 46px; }
+  .wx-dia { grid-template-columns: 52px 22px 40px 66px minmax(0, 1fr) 34px; gap: 5px; font-size: 12px; }
+  .wx-detalhes { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); }
+  .wg-central { padding: 14px 12px 48px; }
+  .wg-central-grade { grid-template-columns: 1fr; }
+  .wg-catalogo { grid-template-columns: 1fr; }
+}
+@media (min-width: 1200px) {
+  .wx { padding: 20px 22px 16px; }
+  .wx-graf-svg { height: 152px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-girando, .wx-esqueleto span { animation: none; }
+  .wx-graf-svg { cursor: default; }
+}
+
+@media (prefers-contrast: more) {
+  .wx, .wx-det, .wg-central-card { border-color: var(--sk-line-3); }
+  .wx-abas button[aria-selected="true"] { text-decoration: underline; text-underline-offset: 3px; }
+}
+
+:root[data-theme="white"] .wx,
+:root[data-theme="white"] .wg-central-card,
+:root[data-theme="white"] .wg-item-cat {
+  background: var(--sk-surface); border-color: var(--sk-line);
+}
+:root[data-theme="white"] .wx-temp sup { color: var(--sk-fg-2); }
+:root[data-theme="white"] .wx-graf-ponto { stroke: var(--sk-surface); }
+:root[data-theme="white"] .wx-aviso-topo { color: #1b1b1b; }
+
+/* ============================================================ 3. clima na Home */
+.wx-home { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 640px; margin: 0 auto 16px; position: relative; }
+.wx-mover { display: flex; justify-content: flex-end; gap: 4px; }
+.wx-mover button { min-height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--sk-line, #1f1f1f); background: none; color: var(--sk-fg-3, #8a8a8a); font-size: 12px; cursor: pointer; }
+.wx-mover button:hover:not(:disabled) { color: var(--sk-fg, #f2f2f2); background: var(--sk-surface-2, #141414); }
+.wx-mover button:disabled { opacity: .4; cursor: default; }
+.wx-pilula { display: inline-flex; align-self: flex-start; border: 1px solid var(--sk-line, #1f1f1f); border-radius: 999px; background: var(--sk-surface, #0b0b0b); overflow: hidden; }
+.wx-pilula button { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; background: none; border: 0; color: var(--sk-fg, #f2f2f2); cursor: pointer; font-size: 14px; }
+.wx-pilula button span { color: var(--sk-fg-3, #8a8a8a); font-size: 13px; }
+.wx-pilula .wx-pilula-x { padding: 0 12px; border-left: 1px solid var(--sk-line, #1f1f1f); color: var(--sk-fg-3, #8a8a8a); font-size: 18px; }
+.wx-confirma { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--sk-line, #1f1f1f); border-radius: 10px; background: var(--sk-surface-2, #141414); }
+.wx-confirma p { flex: 1 1 100%; margin: 0; font-size: 13px; color: var(--sk-fg-2, #b5b5b5); }
+.wx-confirma button { min-height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--sk-line, #1f1f1f); background: none; color: var(--sk-fg, #f2f2f2); cursor: pointer; }
+.wx-confirma button:first-of-type { border-color: rgba(240, 74, 81, .5); color: #f04a51; }
+.wx-restaurar { align-self: center; min-height: 40px; padding: 0 16px; margin-bottom: 16px; border-radius: 8px; border: 1px dashed var(--sk-line, #1f1f1f); background: none; color: var(--sk-fg-3, #8a8a8a); font-size: 13px; cursor: pointer; }
+.wx-restaurar:hover { color: var(--sk-fg, #f2f2f2); border-style: solid; }

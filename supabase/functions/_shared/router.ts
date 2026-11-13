@@ -3,6 +3,8 @@
 // servidor decide quem responde, com base em saúde, latência e prioridade.
 // Se um modelo falhar, demorar ou der erro, o próximo da fila assume sozinho.
 
+import { atende, capacidadesDe, lerSobrescritas, type Requisitos } from "./capacidades.ts";
+
 export type ModelTier = "rapido" | "equilibrado" | "potente" | "raciocinio";
 
 export interface Provider {
@@ -190,9 +192,20 @@ function pontuacao(m: ModelInfo, h: HealthRow | undefined): number {
 export async function pickChain(
   svc: any,
   pedido: string | undefined,
-  opts: { apenasConhecidos?: boolean; rapido?: boolean; forte?: boolean } = {},
-): Promise<{ fila: ModelInfo[]; pedido: string; auto: boolean }> {
-  const todos = catalog().filter((m) => providerOf(m.provider));
+  opts: { apenasConhecidos?: boolean; rapido?: boolean; forte?: boolean; requisitos?: Requisitos } = {},
+): Promise<{ fila: ModelInfo[]; pedido: string; auto: boolean; semCompativel?: boolean }> {
+  const sobrescritas = lerSobrescritas(Deno.env.get("SKYNET_CAPACIDADES"));
+  // modelos de imagem, áudio puro, moderação e calibração nunca conversam: saem SEMPRE do
+  // roteador de chat (antes entravam na fila de exploração), e os requisitos do pedido
+  // (visão, ferramentas, contexto) filtram o restante.
+  const conversaveis = catalog().filter((m) => providerOf(m.provider) && atende(capacidadesDe(m.id, sobrescritas), {}));
+  const exigentes = opts.requisitos && Object.values(opts.requisitos).some(Boolean)
+    ? conversaveis.filter((m) => atende(capacidadesDe(m.id, sobrescritas), opts.requisitos!))
+    : conversaveis;
+  // se nenhum modelo declara o que o pedido exige, tenta com todos (melhor tentar do que calar)
+  // e avisa quem chamou
+  const semCompativel = exigentes.length === 0 && conversaveis.length > 0;
+  const todos = exigentes.length ? exigentes : conversaveis;
   if (!todos.length) return { fila: [], pedido: pedido ?? "auto", auto: true };
 
   const h = await health(svc);
@@ -246,7 +259,7 @@ export async function pickChain(
     if (!jaTem && filaFinal[0].id !== escolhido.id) filaFinal[filaFinal.length - 1] = escolhido;
   }
 
-  return { fila: filaFinal, pedido: pedido ?? "auto", auto };
+  return { fila: filaFinal, pedido: pedido ?? "auto", auto, ...(semCompativel ? { semCompativel } : {}) };
 }
 
 // ------------------------------------------------------------------ registro

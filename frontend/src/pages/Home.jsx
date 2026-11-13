@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import MediaPlayer from "../media.jsx";
 import { FavReal, Marca, marcaDe } from "../marcas.jsx";
 import ClimaCard from "../clima.jsx";
+import ClimaHome, { RestaurarClima, useClimaHome } from "../widgets/ClimaHome.jsx";
+import BannerCookies from "../components/BannerCookies.jsx";
 import { NavegadorAoVivo } from "../artefato.jsx";
 import { chaveStorage, criarWidget, carregarWidgets, daSpec, porPalavras, salvarWidgets } from "../widgets/registry.js";
 import { IconBell, IconBrain, IconChatPlus, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconMoon, IconPlus, IconSearch, IconSpark, IconStop, IconSun, IconTheme, IconTools, IconWave } from "../components/Icons.jsx";
@@ -124,6 +126,7 @@ const tamanhoLegivel = (bytes = 0) => {
 };
 
 export default function Home() {
+  const [climaHome] = useClimaHome();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState("Novo chat");
   const [draft, setDraft] = useState("");
@@ -1237,6 +1240,7 @@ export default function Home() {
 
   return (
     <div className="app">
+      <BannerCookies />
       <Sidebar
         open={open} onClose={() => setOpen(false)} active={active} onSelect={pick}
         logged={logged} onLogout={async () => { await supabase.auth.signOut(); setLogged(false); setActive("Novo chat"); say("Sessão encerrada."); }}
@@ -1382,6 +1386,7 @@ export default function Home() {
           </section>
         {messages.length === 0 ? (
           <section className="hero">
+            {climaHome.posicao === "antes" ? <ClimaHome /> : null}
             <p className="hero-eyebrow">INTELIGÊNCIA OPERACIONAL · AO VIVO</p>
             <h1>O que vamos <span className="red">executar</span> agora?</h1>
             <p className="hero-sub">Pesquisa na web, sites, imagens, vídeo, clima, arquivos e widgets: o SKYNET faz e mostra o resultado aqui.</p>
@@ -1405,6 +1410,8 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            {climaHome.posicao === "depois" ? <ClimaHome /> : null}
+            <RestaurarClima />
             <p className="hero-dica">Enter envia · Shift+Enter quebra linha · tudo roda com o modelo escolhido pelo roteador do servidor</p>
           </section>
         ) : (

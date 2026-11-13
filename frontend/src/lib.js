@@ -33,7 +33,14 @@ export async function api(path, opts = {}) {
  *  Reconexão: só repete quando NADA chegou ainda, para nunca duplicar texto
  *  que o usuário já viu. Se a conexão cair no meio, o conteúdo é preservado
  *  e a interface recebe onIncompleto para oferecer continuar. */
-export async function streamChat(opcoes, handlers) {
+export function novaExecucaoId() {
+  const alea = (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
+  return `r${alea}`.slice(0, 40);
+}
+
+export async function streamChat(opcoesEntrada, handlers) {
+  // a MESMA chave vale para a retentativa: o servidor reconhece o reenvio e não processa duas vezes
+  const opcoes = { ...opcoesEntrada, execucaoId: opcoesEntrada.execucaoId || novaExecucaoId() };
   const primeira = await streamChatInterno(opcoes, handlers);
   if (primeira !== "retry") return;
   handlers.onReconectando?.();
@@ -42,7 +49,7 @@ export async function streamChat(opcoes, handlers) {
   if (segunda === "retry") handlers.onError("Sem conexão com o servidor.");
 }
 
-async function streamChatInterno({ conversationId, content, model, continuar, signal }, handlers) {
+async function streamChatInterno({ conversationId, content, model, continuar, signal, execucaoId }, handlers) {
   const session = await getSession();
   let res;
   try {
@@ -54,7 +61,7 @@ async function streamChatInterno({ conversationId, content, model, continuar, si
         ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
       },
       // conversa nova: o campo vai ausente (null faz o servidor recusar)
-      body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), ...(continuar ? { continuar } : {}), content, model }),
+      body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), ...(continuar ? { continuar } : {}), ...(execucaoId ? { execucaoId } : {}), content, model }),
       ...(signal ? { signal } : {}),
     });
   } catch (erro) {
@@ -64,6 +71,11 @@ async function streamChatInterno({ conversationId, content, model, continuar, si
   const ctype = res.headers.get("content-type") ?? "";
   if (!ctype.includes("text/event-stream")) {
     const data = await res.json().catch(() => null);
+    if (res.status === 409 && data?.duplicado) {
+      // o servidor já está processando este mesmo envio: não duplica, não mostra erro
+      handlers.onDuplicado?.();
+      return "duplicado";
+    }
     if (data?.error) handlers.onError(String(data.error));
     else if (!res.ok) handlers.onError(`Erro do servidor (HTTP ${res.status}).`);
     else handlers.onError("Resposta inesperada do servidor.");
@@ -249,7 +261,10 @@ export async function streamChatAuto({ conversationId, content, model, continuar
     let recebeuTexto = false;
     const r = await new Promise((resolve) => {
       if (signal?.aborted) { resolve({ ok: false, abortado: true }); return; }
-      streamChat({ conversationId, content, model: tentativa, continuar, signal }, {
+      // chave por TENTATIVA de modelo: trocar de modelo é outro processamento legítimo,
+      // mas dentro da mesma tentativa o retry de rede reutiliza a chave
+      streamChat({ conversationId, content, model: tentativa, continuar, signal, execucaoId: novaExecucaoId() }, {
+        onDuplicado: () => resolve({ ok: false, abortado: true }),
         onTool: (toolEv) => handlers.onTool?.(toolEv),
         onImage: (url) => handlers.onImage?.(url),
         onMidia: (m) => handlers.onMidia?.(m),
