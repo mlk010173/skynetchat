@@ -3,6 +3,8 @@
 // login: valida código (bcrypt) e emite sessão real
 import { createClient } from "npm:@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs@2.4.3";
+import { ipDe } from "../_shared/limite.ts";
+import { turnstileValidar } from "../_shared/firebase.ts";
 
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -58,22 +60,25 @@ async function mintSession(email: string) {
 const json = (status: number, body: object) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
 
-async function ipDoPedido(req: Request): Promise<string> {
-  const bruto = req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "desconhecido";
-  return bruto.split(",")[0].trim();
-}
-
-
+// IP vem de ipDe() (_shared/limite.ts): cf-connecting-ip antes de x-forwarded-for,
+// porque x-forwarded-for é forjável pelo cliente e liberava cadastro ilimitado.
 async function dentroDoLimite(ip: string): Promise<boolean> {
   const desde = new Date(Date.now() - 3600_000).toISOString();
-  const { count } = await admin.from("anon_requests").select("id", { count: "exact", head: true }).eq("ip", ip).gte("created_at", desde);
-  await admin.from("anon_requests").insert({ ip });
-  return (count ?? 0) < LIMITE_HORA;
+  const chave = `sgn:${ip}`;
+  const { count } = await admin
+    .from("anon_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("ip", chave)
+    .gte("created_at", desde);
+  // conta ANTES de gravar: o insert vinha primeiro e o próprio pedido entrava na conta
+  if ((count ?? 0) >= LIMITE_HORA) return false;
+  await admin.from("anon_requests").insert({ ip: chave });
+  return true;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" } });
-  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: false, limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover"] });
+  if (req.method === "GET") return json(200, { ok: true, turnstile_ativo: !!(Deno.env.get("TURNSTILE_SECRET") ?? ""), limite_por_hora: LIMITE_HORA, acoes: ["signup", "login", "recover"] });
   let body: any = {};
   try { body = await req.json(); } catch { return json(400, { ok: false, error: "bad_request" }); }
   const action = String(body.action || "");
@@ -83,8 +88,18 @@ Deno.serve(async (req) => {
   if (action === "newcode") return json(410, { ok: false, error: "recovery_not_configured", message: "A recuperação segura ainda não está configurada. O código existente não foi alterado." });
 
   if (action === "signup" || action === "recover") {
-    const ip = await ipDoPedido(req);
+    const ip = ipDe(req);
     if (!(await dentroDoLimite(ip))) return json(429, { ok: false, error: "muitas tentativas por hora" });
+  }
+
+  // Cadastro: valida o Turnstile sempre que a proteção estiver configurada.
+  // Sem o secret o cadastro segue funcionando (turnstileValidar é fail-open),
+  // mas o limite por IP acima já é real e não dá mais para forjar o cabeçalho.
+  if (action === "signup" && (Deno.env.get("TURNSTILE_SECRET") ?? "")) {
+    const captcha = await turnstileValidar(String(body.turnstile_token ?? body.cfToken ?? ""), ipDe(req));
+    if (!captcha.ok) {
+      return json(403, { ok: false, error: "Verificação de segurança falhou.", motivo: captcha.motivo });
+    }
   }
 
   if (action === "signup") {
@@ -141,7 +156,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === "login") {
-    const ip = await ipDoPedido(req);
+    const ip = ipDe(req);
     const desde = new Date(Date.now() - 3600_000).toISOString();
     const { count } = await admin.from("auth_attempts").select("ip", { count: "exact", head: true }).eq("ip", ip).gte("at", desde);
     if ((count ?? 0) >= 10) return json(429, { ok: false, error: "muitas tentativas. tente novamente em alguns minutos" });

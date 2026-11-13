@@ -4,7 +4,7 @@
 // detecção de FERRAMENTAS REAIS e resposta em STREAMING (SSE).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { catalog, hedgeMs, pickChain, providerOf, registrar, timeoutMs } from "../_shared/router.ts";
-import { contaDaSessao, consumirMensagem, memoriasDaConta } from "../_shared/sessao.ts";
+import { contaDaSessao, consumirMensagem, contaPorAuthUserId, memoriasDaConta } from "../_shared/sessao.ts";
 import { infraTudo } from "../_shared/infra.ts";
 import {
   politicaDa, pedirAutorizacao, autorizacaoVale, PADROES, ROTULOS as ROTULOS_PERM,
@@ -1177,7 +1177,9 @@ Deno.serve(async (req) => {
     const { data } = await svc.auth.getUser(authHeader.slice(7));
     userId = data?.user?.id ?? null;
     const meta: any = data?.user ?? {};
-    const papelBruto = String(meta?.app_metadata?.role ?? meta?.user_metadata?.role ?? "").toLowerCase();
+    // Só app_metadata: user_metadata é gravável pelo cliente (signUp options.data)
+    // e permitia o próprio usuário se declarar "dev" e escapar da cota.
+    const papelBruto = String(meta?.app_metadata?.role ?? "").toLowerCase();
     if (["admin", "dev", "owner", "dono"].includes(papelBruto)) papel = "dev";
     const nick = data?.user?.user_metadata?.nickname;
     if (typeof nick === "string" && nick.trim()) nickname = nick.trim().slice(0, 40);
@@ -1186,8 +1188,16 @@ Deno.serve(async (req) => {
   // ---- sessão do login por código secreto ----
   const conta = await contaDaSessao(req);
   if (!conta && userId && papel !== "dev") {
-    // usuário de e-mail/senha também tem teto diário (antes não contava nada)
-    const usoEmail = await consumirMensagem(userId, "pro").catch(() => ({ pode: true, usado: 0, limite: 0 }));
+    // A cota é da CONTA (accounts.id). Usar o uid do Auth gravava órfãos em
+    // acc_uso e, quando a conta ainda não existia, o upsert falhava calado.
+    const dono = await contaPorAuthUserId(userId);
+    if (!dono) {
+      return json({ ok: false, error: "Conta não sincronizada. Saia e entre de novo." }, 403);
+    }
+    if (dono.bloqueada) return json({ ok: false, error: "Esta conta está bloqueada." }, 403);
+    contaId = dono.id;
+    if (dono.role === "admin") papel = "dev";
+    const usoEmail = await consumirMensagem(dono.id, dono.role === "admin" ? "admin" : dono.tier);
     if (!usoEmail.pode) {
       return json({
         ok: false,

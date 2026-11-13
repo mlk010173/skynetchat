@@ -47,24 +47,48 @@ export async function contaDaSessao(req: Request): Promise<Conta | null> {
 export const limiteDiario = (tier: string) =>
   tier === "pro" ? 400 : tier === "admin" ? 2000 : 40;
 
-/** Soma 1 no uso do dia e diz se ainda pode conversar. */
+/** Conta dona de um usuário do Supabase Auth (login por e-mail/senha). */
+export async function contaPorAuthUserId(
+  authUserId: string,
+): Promise<{ id: string; tier: string; role: string | null; bloqueada: boolean } | null> {
+  const db = svc();
+  const { data } = await db
+    .from("accounts")
+    .select("id, tier, role, blocked")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    tier: (data.tier as string) ?? "free",
+    role: (data.role as string) ?? null,
+    bloqueada: data.blocked === true,
+  };
+}
+
+/**
+ * Soma 1 no uso do dia e diz se ainda pode conversar.
+ * Atômico (RPC acc_consumir_mensagem) e fail-closed: se o banco não responder,
+ * a mensagem é negada em vez de liberada de graça.
+ */
 export async function consumirMensagem(accountId: string, tier: string) {
   const db = svc();
   const dia = new Date().toISOString().slice(0, 10);
-  const { data } = await db
-    .from("acc_uso")
-    .select("mensagens")
-    .eq("account_id", accountId)
-    .eq("dia", dia)
-    .maybeSingle();
-  const atual = Number(data?.mensagens ?? 0);
   const limite = limiteDiario(tier);
-  if (atual >= limite) return { pode: false, usado: atual, limite };
-  await db.from("acc_uso").upsert(
-    { account_id: accountId, dia, mensagens: atual + 1 },
-    { onConflict: "account_id,dia" },
-  );
-  return { pode: true, usado: atual + 1, limite };
+  const { data, error } = await db.rpc("acc_consumir_mensagem", {
+    p_account_id: accountId,
+    p_dia: dia,
+    p_limite: limite,
+  });
+  if (error || typeof data !== "number") {
+    console.error("[acc_uso] falha ao contabilizar", {
+      account_id: accountId,
+      dia,
+      erro: error?.message ?? "resposta inesperada",
+    });
+    return { pode: false, usado: limite, limite };
+  }
+  return { pode: data <= limite, usado: data, limite };
 }
 
 /** Memórias da conta formatadas para entrar no prompt do sistema. */
