@@ -14,9 +14,9 @@ const GRUPOS = [
   { titulo: "Conversas", itens: ["Novo chat", "Prompts"] },
   { titulo: "Histórico", itens: ["Histórico de conversas", "Arquivo"] },
   { titulo: "Recursos de IA", itens: ["Imagens", "Memória"] },
-  { titulo: "Ferramentas do agente", itens: ["Codex", "Widgets", "Ferramentas do Agente", "Permissões"] },
+  { titulo: "Ferramentas do agente", itens: ["Computador", "Codex", "Widgets", "Ferramentas do Agente", "Permissões"] },
   { titulo: "Integrações", itens: ["Integrações", "Automações", "E-mail"] },
-  { titulo: "Produtividade", itens: ["CRM", "Lembretes", "Devtool"] },
+  { titulo: "Produtividade", itens: ["CRM", "Lembretes", "Devtool", "Inspecionar"] },
   { titulo: "Conta e configurações", itens: ["Conheça o SKYNETchat", "Atualizações", "Suporte"] },
 ];
 
@@ -25,6 +25,8 @@ const items = [
   { label: "Histórico de conversas", desc: "Revise chats anteriores salvos", icon: IconHistory },
   { label: "Imagens", desc: "Gere imagens sob demanda com IA", icon: IconImage },
   { label: "Prompts", desc: "Diretrizes e prompts estruturados", icon: IconChat },
+  { label: "Computador", tag: "REAL", desc: "Navegador real com tela ao vivo", icon: IconServer },
+  { label: "Inspecionar", tag: "REAL", desc: "DOM, console, rede e desempenho da página", icon: IconCode },
   { label: "Codex", tag: "REAL", desc: "Terminal e sandbox seguro", icon: IconCode },
   { label: "Widgets", tag: "MODULAR", desc: "Painel extensível de widgets", icon: IconSpark },
   { label: "Ferramentas do Agente", desc: "Teste ao vivo das capacidades do modelo", icon: IconBrain },
@@ -232,6 +234,8 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
     else if (label === "Suporte") setView("support");
     else if (label === "Conheça o SKYNETchat") setView("about");
     else if (label === "Imagens") { draftFill?.("/imagem "); onClose(); }
+    else if (label === "Computador") { navigate("/computador"); onClose(); }
+    else if (label === "Inspecionar") { navigate("/inspecionar"); onClose(); }
     else if (label === "Codex") { navigate("/codex"); onClose(); }
     else if (label === "Widgets") { navigate("/widgets"); onClose(); }
     else if (label === "Ferramentas do Agente") { navigate("/ferramentas"); onClose(); }

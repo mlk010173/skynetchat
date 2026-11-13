@@ -8,6 +8,8 @@ import "./styles.css";
 import "./design-ui.css";
 import "./sistema.css";
 import "./refino.css";
+import "./layout.css";
+import "./computador.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

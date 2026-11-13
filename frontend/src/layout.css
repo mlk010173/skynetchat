@@ -1,0 +1,48 @@
+/* ============================================================================
+   LAYOUT · coluna única (hero, conversa, barra de modo e composer)
+   Última camada da cascata (importada depois de refino.css).
+   Causa medida: o composer ficava 124px à direita porque duas regras somavam
+   centralização (margin-inline:auto em refino.css + left:50%/translateX em
+   design-ui.css), e hero/thread/dock tinham 3 larguras diferentes.
+   ========================================================================== */
+:root { --sk-col: 760px; }
+
+/* uma largura só, centralizada por margin e nada além disso */
+.hero,
+.thread,
+.modo-barra,
+.barra-agente {
+  width: 100%;
+  max-width: var(--sk-col);
+  margin-inline: auto;
+}
+
+/* o composer fica no fluxo, na mesma coluna, sem left/transform herdados */
+.dock,
+.dock.m-dock {
+  position: relative;
+  left: auto;
+  right: auto;
+  transform: none;
+  width: calc(100% - 24px);
+  max-width: var(--sk-col);
+  margin: 0 auto calc(10px + env(safe-area-inset-bottom));
+}
+
+/* o vão morto vinha de um padding que reservava espaço para um composer
+   que já não é flutuante */
+.stage { padding-bottom: 24px; }
+
+/* conversa vazia: hero centrado na altura disponível, sem margin-block gigante */
+.stage > .hero { margin-block: auto; padding-block: 12px 24px; }
+
+@media (min-width: 760px) {
+  .stage { padding-inline: 24px; }
+  .dock, .dock.m-dock { width: calc(100% - 48px); }
+}
+
+@media (max-width: 480px) {
+  .stage { padding-inline: 12px; }
+  /* mesma borda do conteúdo: o composer acompanha o hero (12px) */
+  .dock, .dock.m-dock { width: calc(100% - 24px); }
+}

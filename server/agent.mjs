@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { timingSafeEqual } from "node:crypto";
+import { criarComputador, ACOES_DISPONIVEIS as ACOES_COMPUTADOR } from "./computer.mjs";
 
 const run = promisify(execFile);
 const PORT = process.env.PORT ?? 10000;
@@ -15,6 +16,10 @@ const TOKEN = process.env.AGENT_TOKEN ?? "";
 const SUPA_URL = process.env.SUPABASE_URL ?? "";
 const SUPA_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? "";
 const memoriaOk = () => Boolean(SUPA_URL && SUPA_KEY);
+
+// SKYNET COMPUTER montado no mesmo processo: /compute/<acao> exige o mesmo token
+// do agente. O navegador (Chromium) só sobe quando alguém chama "iniciar".
+const computador = criarComputador({ autorizado: agenteAutorizado, prefixo: "/compute", instalarSinais: true });
 
 function agenteAutorizado(req) {
   const token = String(req.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
@@ -157,6 +162,8 @@ export function htmlParaTexto(html) {
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/[ \t\u00a0]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -248,12 +255,81 @@ async function buscarDuckDuckGo(consulta) {
   return [];
 }
 
+// Feeds de notícia com URL REAL do publicador e data de publicação.
+// O RSS de busca do Google News foi removido: ele devolve link opaco
+// (news.google.com/rss/articles/CBMi...) que nao abre a materia e nao traz data util.
+const FEEDS_NOTICIAS = [
+  { url: "https://agenciabrasil.ebc.com.br/rss/politica/feed.xml", fonte: "Agencia Brasil (EBC)", oficial: true },
+  { url: "https://agenciabrasil.ebc.com.br/rss/geral/feed.xml", fonte: "Agencia Brasil (EBC)", oficial: true },
+  { url: "https://g1.globo.com/rss/g1/politica/", fonte: "G1 Politica", oficial: false },
+  { url: "https://www.poder360.com.br/feed/", fonte: "Poder360", oficial: false },
+  { url: "https://feeds.folha.uol.com.br/poder/rss091.xml", fonte: "Folha Poder", oficial: false },
+];
+
+const PARADAS = new Set(["para","com","sobre","hoje","agora","quais","qual","noticia","noticias","notícia","notícias","governo","ultimas","últimas","mais","recente","recentes","favor","diga","mostre","lista","sobre"]);
+
+export function termosDaConsulta(q) {
+  return String(q || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 4 && !PARADAS.has(t))
+    .slice(0, 8);
+}
+
+// RFC 822 ("Thu, 12 Nov 2026 20:48:00 -0300") ou ISO -> Date
+export function dataDePublicacao(bruta) {
+  const t = String(bruta ?? "").trim();
+  if (!t) return null;
+  const d = new Date(t.replace(/\s+[A-Z]{2,4}$/, ""));
+  if (Number.isNaN(d.getTime())) {
+    const d2 = new Date(t);
+    return Number.isNaN(d2.getTime()) ? null : d2;
+  }
+  return d;
+}
+
+async function buscarNoticias(consulta, limite = 10) {
+  const blocos = await Promise.all(FEEDS_NOTICIAS.map((f) => buscarRSS(f.url, f.fonte, 6)));
+  const termos = termosDaConsulta(consulta);
+  const todas = [];
+  blocos.forEach((lista, i) => {
+    for (const r of lista || []) {
+      const data = dataDePublicacao(r.quando);
+      todas.push({
+        titulo: r.titulo,
+        url: r.url,
+        trecho: r.trecho,
+        fonte: r.fonte,
+        oficial: FEEDS_NOTICIAS[i].oficial,
+        publicado_em: data ? data.toISOString() : null,
+        quando: data ? data.toISOString() : r.quando || "",
+        _ts: data ? data.getTime() : 0,
+      });
+    }
+  });
+  if (!todas.length) return [];
+  // relevância: casa termos do pedido no título/trecho; sem casar nada, mantém as mais recentes
+  const pontuada = todas.map((r) => {
+    const alvo = `${r.titulo} ${r.trecho}`.toLowerCase();
+    const acertos = termos.filter((t) => alvo.includes(t)).length;
+    return { ...r, _acertos: acertos };
+  });
+  const relevantes = pontuada.filter((r) => r._acertos > 0);
+  const base = relevantes.length >= 3 ? relevantes : pontuada;
+  base.sort((a, b) => (b._acertos - a._acertos) || (b._ts - a._ts));
+  return base.slice(0, limite).map(({ _ts, _acertos, ...r }) => r);
+}
+
+const PEDE_NOTICIA = /\b(not[ií]cia|not[ií]cias|manchete|manchetes|jornal|governo|planalto|congresso|stf|pol[ií]tica|economia|infla[cç][aã]o|d[oó]lar|hoje|agora|atuais|recentes)\b/i;
+
 async function pesquisarWeb(consulta) {
   const q = String(consulta ?? "").trim().slice(0, 300);
   if (!q) return { ok: false, erro: "consulta vazia" };
   const enc = encodeURIComponent(q);
+  const querNoticia = PEDE_NOTICIA.test(q);
   const [noticias, web, wiki] = await Promise.all([
-    buscarRSS(`https://news.google.com/rss/search?q=${enc}&hl=pt-BR&gl=BR&ceid=BR:pt-419`, "noticias", 4),
+    buscarNoticias(q, querNoticia ? 10 : 4),
     buscarRSS(`https://www.bing.com/search?q=${enc}&format=rss&setlang=pt-BR`, "web", 5),
     buscarWikipedia(q),
   ]);
@@ -266,7 +342,15 @@ async function pesquisarWeb(consulta) {
     vistos.add(r.url); unicos.push(r);
   }
   if (!unicos.length) return { ok: false, erro: "nenhuma fonte respondeu agora" };
-  return { ok: true, consulta: q, quando: new Date().toISOString(), fontes: ["google-news", "bing", "wikipedia"], resultados: unicos };
+  return {
+    ok: true,
+    consulta: q,
+    quando: new Date().toISOString(),
+    coletado_em: new Date().toISOString(),
+    fontes: ["agencia-brasil", "g1", "poder360", "folha", "bing", "wikipedia"],
+    noticias_com_data: unicos.filter((r) => r.publicado_em).length,
+    resultados: unicos,
+  };
 }
 
 const SUPA_FN = "https://rkgwhhtenfozdwzpvxjj.supabase.co/functions/v1";
@@ -483,7 +567,17 @@ export const handler = async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
   if (req.method === "OPTIONS") return json(res, 204, {});
 
-  if (url.pathname === "/health") return json(res, 200, { ok: true, servico: "skynet-agent", versao: VERSION, ferramentas: FERRAMENTAS.length });
+  if (url.pathname === "/health") return json(res, 200, { ok: true, servico: "skynet-agent", versao: VERSION, ferramentas: FERRAMENTAS.length, computador: ACOES_COMPUTADOR.length });
+
+  // ---- SKYNET COMPUTER / LIVE WORKSPACE (/compute/iniciar, /compute/tela, ...) ----
+  if (url.pathname === "/compute" || url.pathname.startsWith("/compute/")) {
+    if (!agenteAutorizado(req)) return json(res, 401, { ok: false, erro: "nao autorizado" });
+    if (url.pathname === "/compute" && req.method !== "POST") {
+      return json(res, 200, { ok: true, acoes: ACOES_COMPUTADOR });
+    }
+    await computador.atender(req, res, url);
+    return;
+  }
   if (url.pathname === "/tools") return json(res, 200, { ok: true, ferramentas: FERRAMENTAS.filter((f) => !f.protegida && !["memoria_salvar", "memoria_buscar", "perguntar"].includes(f.nome)) });
 
   if (url.pathname === "/mcp" && req.method === "POST") {

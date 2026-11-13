@@ -190,7 +190,7 @@ function pontuacao(m: ModelInfo, h: HealthRow | undefined): number {
 export async function pickChain(
   svc: any,
   pedido: string | undefined,
-  opts: { apenasConhecidos?: boolean; rapido?: boolean } = {},
+  opts: { apenasConhecidos?: boolean; rapido?: boolean; forte?: boolean } = {},
 ): Promise<{ fila: ModelInfo[]; pedido: string; auto: boolean }> {
   const todos = catalog().filter((m) => providerOf(m.provider));
   if (!todos.length) return { fila: [], pedido: pedido ?? "auto", auto: true };
@@ -212,6 +212,16 @@ export async function pickChain(
     const leves = ordenado.filter((m) => m.tier === "rapido" || m.tier === "equilibrado");
     const fortes = ordenado.filter((m) => m.tier !== "rapido" && m.tier !== "equilibrado");
     if (leves.length) fila = [...leves, ...fortes];
+  }
+
+  // MODO FORTE: pedido com ferramenta ou texto longo precisa de modelo que
+  // sintetize conteúdo real. Modelo leve tende a devolver chamada de ferramenta
+  // em XML ou resposta vazia, e o usuário fica sem a resposta.
+  if (opts.forte && (auto || pedidoLimpo === "melhor")) {
+    const fortes = ordenado.filter((m) => m.tier === "potente" || m.tier === "raciocinio");
+    const medios = ordenado.filter((m) => m.tier === "equilibrado");
+    const leves = ordenado.filter((m) => m.tier === "rapido");
+    fila = [...fortes, ...medios, ...leves];
   }
 
   const pedidoValido = todos.find((m) => m.id.toLowerCase() === pedidoLimpo);

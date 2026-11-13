@@ -3,14 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      // tema escolhido pelo usuário vale já na primeira pintura (evita flash e perda ao recarregar)
+      (function () {
+        try {
+          var salvo = localStorage.getItem("skynet-theme-bg");
+          var tema = salvo === "white" ? "white" : "black";
+          document.documentElement.dataset.theme = tema;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", tema === "white" ? "#f7f7f8" : "#0a0a0a");
+        } catch (e) {
+          document.documentElement.dataset.theme = "black";
+        }
+      })();
+    </script>
     <title>SKYNETchat — Inteligência Artificial Operacional</title>
     <meta name="description" content="SKYNETchat — Chat e agente operacional de IA em português com pesquisa profunda em tempo real, sandbox Codex e automações persistentes." />
     <meta name="theme-color" content="#0a0a0a" />
     <link rel="icon" type="image/png" sizes="96x96" href="./favicon-96-v2.png" />
     <link rel="apple-touch-icon" href="./apple-touch-icon-v2.png" />
     <link rel="manifest" href="./manifest-v2.json" />
-    <script type="module" crossorigin src="./assets/index-CZygicae.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Cbh0a_a5.css">
+    <script type="module" crossorigin src="./assets/index-DZe_l2ex.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DAvC6Nh9.css">
   </head>
   <body>
     <div id="root"></div>

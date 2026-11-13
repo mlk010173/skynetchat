@@ -17,6 +17,7 @@ import Sandbox from "./pages/Sandbox.jsx";
 import Lembretes from "./pages/Lembretes.jsx";
 import Devtool from "./pages/Devtool.jsx";
 import Arquivo from "./pages/Arquivo.jsx";
+import Computador from "./pages/Computador.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import { AuthProvider } from "./auth.jsx";
 
@@ -38,6 +39,8 @@ export default function App() {
         <Route path="/lembretes" element={<Lembretes />} />
         <Route path="/devtool" element={<Devtool />} />
         <Route path="/arquivo" element={<Arquivo />} />
+        <Route path="/computador" element={<Computador />} />
+        <Route path="/inspecionar" element={<Computador />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/integracoes" element={<Integracoes />} />
         {/* rotas que exigem conta */}

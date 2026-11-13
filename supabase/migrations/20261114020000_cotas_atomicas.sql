@@ -1,16 +1,18 @@
 -- Cotas atômicas: fecha o buraco de cota que não gravava nada e versiona as RPCs
 -- do limitador (rate_bater/rate_contar existiam só no banco de produção, criadas
 -- à mão — um deploy limpo derrubava tudo com 429 porque liberar() falha fechado).
+--
+-- Corrigida em 13/11/2026 para refletir EXATAMENTE o banco de produção:
+-- rate_hits é tabela de contadores por bucket (chave, bucket, n) com PK
+-- (chave, bucket) — não a tabela de linhas por evento da primeira versão, que
+-- dava erro 42703 ("column janela does not exist") ao ser aplicada.
 
--- ---------------------------------------------------------------- limitador
 create table if not exists public.rate_hits (
   chave text not null,
-  janela text not null,
-  criado_em timestamp with time zone not null default now()
+  bucket timestamp with time zone not null,
+  n integer not null default 0,
+  constraint rate_hits_pkey primary key (chave, bucket)
 );
-
-create index if not exists rate_hits_chave_janela_idx
-  on public.rate_hits using btree (chave, janela, criado_em desc);
 
 alter table public.rate_hits enable row level security;
 
@@ -18,63 +20,51 @@ create or replace function public.rate_bater(p_chave text, p_janela text)
 returns integer
 language plpgsql
 security definer
-set search_path = public
+set search_path to 'pg_catalog'
 as $$
 declare
-  v_desde timestamp with time zone;
-  v_total integer;
+  b timestamptz;
+  total integer;
 begin
-  v_desde := case p_janela
-    when 'minute' then now() - interval '1 minute'
-    when 'hour'   then now() - interval '1 hour'
-    when 'day'    then now() - interval '1 day'
-    else now() - interval '1 hour'
+  b := case p_janela
+    when 'minute' then pg_catalog.date_trunc('minute', pg_catalog.now())
+    when 'hour'   then pg_catalog.date_trunc('hour', pg_catalog.now())
+    else               pg_catalog.date_trunc('day', pg_catalog.now())
   end;
 
-  delete from public.rate_hits
-   where chave = p_chave and janela = p_janela and criado_em < v_desde;
+  insert into public.rate_hits as rh (chave, bucket, n)
+  values (p_chave, b, 1)
+  on conflict (chave, bucket)
+  do update set n = rh.n + 1
+  returning n into total;
 
-  insert into public.rate_hits (chave, janela) values (p_chave, p_janela);
-
-  select count(*) into v_total
-    from public.rate_hits
-   where chave = p_chave and janela = p_janela and criado_em >= v_desde;
-
-  return v_total;
+  return total;
 end $$;
 
 create or replace function public.rate_contar(p_chave text, p_janela text)
 returns integer
-language plpgsql
+language sql
 security definer
-set search_path = public
+set search_path to 'pg_catalog'
 as $$
-declare
-  v_desde timestamp with time zone;
-  v_total integer;
-begin
-  v_desde := case p_janela
-    when 'minute' then now() - interval '1 minute'
-    when 'hour'   then now() - interval '1 hour'
-    when 'day'    then now() - interval '1 day'
-    else now() - interval '1 hour'
-  end;
-
-  select count(*) into v_total
-    from public.rate_hits
-   where chave = p_chave and janela = p_janela and criado_em >= v_desde;
-
-  return v_total;
-end $$;
+  select coalesce(max(n), 0)
+  from public.rate_hits
+  where chave = p_chave
+    and bucket = case p_janela
+      when 'minute' then pg_catalog.date_trunc('minute', pg_catalog.now())
+      when 'hour'   then pg_catalog.date_trunc('hour', pg_catalog.now())
+      else               pg_catalog.date_trunc('day', pg_catalog.now())
+    end;
+$$;
 
 revoke all on function public.rate_bater(text, text) from public, anon, authenticated;
 revoke all on function public.rate_contar(text, text) from public, anon, authenticated;
 grant execute on function public.rate_bater(text, text) to service_role;
 grant execute on function public.rate_contar(text, text) to service_role;
 
--- ------------------------------------------------------------- cota diária
--- Soma 1 de forma atômica e devolve o contador pós-incremento.
--- Satura em p_limite + 1: passou do limite, o consumidor recebe > p_limite.
+-- cota diária: soma 1 atômico, satura em p_limite + 1.
+-- acc_uso.account_id não tem FK: aceita accounts.id (login por código) ou o uid
+-- do Supabase Auth (login por e-mail/senha), que é o caso em produção hoje.
 create or replace function public.acc_consumir_mensagem(
   p_account_id uuid,
   p_dia date,
@@ -83,7 +73,7 @@ create or replace function public.acc_consumir_mensagem(
 returns integer
 language plpgsql
 security definer
-set search_path = public
+set search_path to 'pg_catalog'
 as $$
 declare
   v integer;
@@ -106,7 +96,3 @@ end $$;
 
 revoke all on function public.acc_consumir_mensagem(uuid, date, integer) from public, anon, authenticated;
 grant execute on function public.acc_consumir_mensagem(uuid, date, integer) to service_role;
-
--- backfill: contas de e-mail criadas antes da coluna auth_user_id
--- (rodar depois de conferir quantas estão sem vínculo; só relata, não altera)
--- select count(*) from public.accounts where auth_user_id is null and recovery_email is not null;

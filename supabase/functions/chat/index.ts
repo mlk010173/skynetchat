@@ -121,6 +121,88 @@ function resumirResultado(nome: string, r: unknown): string {
   return JSON.stringify(d).slice(0, 150);
 }
 
+// ---------------------------------------------------------------------------
+// Chamada de ferramenta no formato do próprio modelo.
+// Alguns modelos pequenos, quando não recebem "tools" no corpo da requisição,
+// escrevem o pedido em XML dentro do texto: <tool_call><tool_name>buscar_web
+// </tool_name><arg_key>consulta</arg_key><arg_value>...</arg_value></tool_call>
+// Isso NÃO pode vazar para a tela e também não pode ser ignorado: aqui a gente
+// lê, executa de verdade e devolve o resultado ao modelo.
+const APELIDOS_DE_FERRAMENTA: Record<string, string> = {
+  buscar_web: "web_pesquisar",
+  buscar_site: "web_pesquisar",
+  web_search: "web_pesquisar",
+  search_web: "web_pesquisar",
+  google_search: "web_pesquisar",
+  pesquisar_web: "web_pesquisar",
+  pesquisar: "web_pesquisar",
+  abrir_url: "abrir",
+  open_url: "abrir",
+  navegar: "abrir",
+  browse: "abrir",
+  gerar_imagem: "imagem",
+  generate_image: "imagem",
+  previsao_tempo: "clima",
+  weather: "clima",
+  tempo_agora: "clima",
+  cotacao: "moeda",
+  exchange_rate: "moeda",
+  calculadora: "calcular",
+};
+
+// Só ferramentas de leitura/geração entram por aqui. Ação sensível continua
+// exigindo o fluxo de permissão normal (detectTools + cartão de autorização).
+const FERRAMENTAS_DO_MODELO = ["web_pesquisar", "abrir", "clima", "hora", "calcular", "moeda", "imagem", "github"];
+
+export function lerChamadasDoModelo(texto: string): { nome: string; args: Record<string, string> }[] {
+  const out: { nome: string; args: Record<string, string> }[] = [];
+  const blocos = String(texto ?? "").match(/<(tool_call|tool_use|function_call)>[\s\S]*?<\/\1>/gi) ?? [];
+  for (const b of blocos) {
+    const nome = (
+      b.match(/<tool_name>([\s\S]*?)<\/tool_name>/i)?.[1] ??
+      b.match(/<(?:tool_call|tool_use|function_call)>\s*([A-Za-z0-9_.-]+)/i)?.[1] ??
+      ""
+    ).trim().toLowerCase();
+    const args: Record<string, string> = {};
+    const re = /<arg_key>([\s\S]*?)<\/arg_key>\s*<arg_value>([\s\S]*?)<\/arg_value>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(b))) args[m[1].trim()] = m[2].trim();
+    if (nome) out.push({ nome, args });
+  }
+  return out;
+}
+
+// Emissor que nunca deixa markup de ferramenta chegar ao usuário.
+// Streama por diferença: acumula o bruto, limpa e emite apenas o que cresceu.
+export function criarEmissorLimpo(emitir: (t: string) => void) {
+  let cru = "";
+  let emitido = "";
+  const limpar = (s: string) => {
+    let t = s;
+    t = t.replace(/<(tool_call|tool_use|function_call)>[\s\S]*?<\/\1>/gi, "");
+    // bloco aberto e ainda não fechado: esconde da abertura até o fim
+    t = t.replace(/<(tool_call|tool_use|function_call)>[\s\S]*$/i, "");
+    t = t.replace(/<\/?(tool_call|tool_use|function_call|tool_name|arg_key|arg_value|arg_name|parameter)\b[^>]*>/gi, "");
+    return t;
+  };
+  return {
+    push(delta: string) {
+      cru += delta;
+      const limpo = limpar(cru);
+      if (limpo.length > emitido.length) {
+        emitir(limpo.slice(emitido.length));
+        emitido = limpo;
+      }
+    },
+    get texto() {
+      return limpar(cru).trim();
+    },
+    get bruto() {
+      return cru;
+    },
+  };
+}
+
 function detectTools(text: string): DetectedTool[] {
   const tools: DetectedTool[] = [];
 
@@ -1306,6 +1388,8 @@ Deno.serve(async (req) => {
   const rotaP = pickChain(svc, body.model, {
     // pedido curto e sem ferramenta não precisa do modelo mais forte: começa pelo rápido
     rapido: content.length <= 180 && ferramentasPrevistas.length === 0,
+    // pedido com ferramenta precisa sintetizar conteúdo real: modelo leve erra o formato
+    forte: ferramentasPrevistas.length > 0 || content.length > 400,
   });
   const rota = await rotaP;
   if (!rota.fila.length) {
@@ -1543,7 +1627,7 @@ Deno.serve(async (req) => {
       const inicioDoPedido = Date.now();
       try {
         // abertura canônica: a interface sabe imediatamente que a geração começou
-        enviaEvento("response.created", { response: { id: conversationId ?? null, status: "in_progress", model: (typeof model === "string" ? model : null) } });
+        enviaEvento("response.created", { response: { id: convId ?? null, status: "in_progress", model: (typeof model === "string" ? model : null) } });
         enviaEvento("response.in_progress", { response: { status: "in_progress" } });
         if (retomada) {
           enviaEtapa({
@@ -1968,6 +2052,7 @@ Deno.serve(async (req) => {
         const decoder = new TextDecoder();
         let full = "";
         let buffer = "";
+        const emissor = criarEmissorLimpo(enviaTexto);
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -1986,7 +2071,7 @@ Deno.serve(async (req) => {
               if (pensamento) enviaRaciocinio(String(pensamento));
               if (delta) {
                 full += delta;
-                enviaTexto(delta);
+                emissor.push(delta);
               }
             } catch { /* ignora fragmentos parciais */ }
           }
@@ -1994,6 +2079,49 @@ Deno.serve(async (req) => {
 
         // modelo de raciocínio às vezes devolve só o "pensamento" e nenhum texto:
         // nesse caso pede de novo, sem raciocínio, para o usuário não ficar no vazio.
+        // texto limpo (sem markup de ferramenta) é o que conta como resposta
+        full = full ? emissor.texto : "";
+
+        // o modelo pediu uma ferramenta em XML: executa de verdade e devolve o resultado a ele
+        if (!entregaDireta && !full) {
+          const pedidos = lerChamadasDoModelo(emissor.bruto);
+          for (const p of pedidos.slice(0, 2)) {
+            const nome = APELIDOS_DE_FERRAMENTA[p.nome] ?? p.nome;
+            if (!FERRAMENTAS_DO_MODELO.includes(nome)) continue;
+            const t0 = Date.now();
+            enviaEtapa({
+              ferramenta: nome,
+              titulo: `Ferramenta pedida pelo modelo: ${nome}`,
+              estado: "executando",
+              detalhe: JSON.stringify(p.args).slice(0, 120),
+            });
+            try {
+              const r = await callTool({ name: nome, payload: p.args }, userId ?? contaId, jwtDoUsuario);
+              const saida = processToolResult(nome, p.args, r);
+              for (const f of saida.fontes) fontesColetadas.push(f);
+              llmMessages.push({
+                role: "system",
+                content: `${saida.contextText}\n\nColetado agora: ${new Date().toISOString()}. Ao responder, cite cada fonte com link e a data de publicacao dela.`,
+              });
+              enviaEtapa({
+                ferramenta: nome,
+                titulo: `Ferramenta pedida pelo modelo: ${nome}`,
+                estado: (r as any)?.ok === false ? "falhou" : "concluida",
+                detalhe: (r as any)?.ok === false ? String((r as any)?.erro ?? "falha") : `${saida.fontes.length} fonte(s)`,
+                ms: Date.now() - t0,
+              });
+            } catch (e) {
+              enviaEtapa({
+                ferramenta: nome,
+                titulo: `Ferramenta pedida pelo modelo: ${nome}`,
+                estado: "falhou",
+                detalhe: String((e as Error)?.message ?? e).slice(0, 120),
+                ms: Date.now() - t0,
+              });
+            }
+          }
+        }
+
         if (!full && !entregaDireta) {
           enviaEtapa({
             ferramenta: "conferindo",
@@ -2112,7 +2240,12 @@ Deno.serve(async (req) => {
         }
         controller.close();
       } catch (err) {
-        enviaErro("Sem conexão com o provedor de IA.");
+        // erro real precisa aparecer: antes a exceção era engolida e o usuario
+        // recebia sempre a mesma frase, sem log e sem pista para o suporte
+        const nome = String((err as Error)?.name ?? "erro");
+        const msg = String((err as Error)?.message ?? err).slice(0, 160);
+        console.error("[chat] falha no stream:", nome, msg);
+        enviaErro(`Sem conexão com o provedor de IA (${nome}: ${msg}).`);
         controller.close();
       }
     },

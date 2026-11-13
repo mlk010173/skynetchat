@@ -1,8 +1,11 @@
 {
   "name": "skynet",
   "private": true,
-  "description": "SKYNETchat \u2014 frontend oficial em frontend/ (Vite), backend Supabase (Edge Functions) + server/ (agente). Auth unica: codigo de 12 digitos.",
+  "description": "SKYNETchat — frontend oficial em frontend/ (Vite), backend Supabase (Edge Functions) + server/ (agente). Auth unica: codigo de 12 digitos.",
   "scripts": {
     "anon": "node tests/anon.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
   }
 }

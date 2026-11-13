@@ -7,7 +7,8 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: npm install
+    # o SKYNET COMPUTER precisa do Chromium instalado para controlar um navegador real
+    buildCommand: npm install && (npx playwright install chromium --with-deps || npx playwright install chromium)
     startCommand: node server/agent.mjs
     healthCheckPath: /health
     autoDeploy: true

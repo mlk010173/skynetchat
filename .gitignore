@@ -26,3 +26,4 @@ android/release.keystore
 supabase/.temp/
 *.keystore
 *.jks
+dist-ui
