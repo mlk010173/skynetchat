@@ -1,7 +1,7 @@
 // SKYNET · clima na experiência inicial: abrir, minimizar (vira pílula) e remover, com
 // restauração. A escolha fica salva no navegador. A posição é "antes/depois" dos atalhos,
 // ajustável por botões (teclado e toque) ou arrastando.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useRef, useState } from "react";
 import ClimaGoogle, { IconeTempo } from "./ClimaGoogle.jsx";
 import { carregarClima, formatarTemperatura, lerPreferenciasClima, tempoDoCodigo } from "./clima-api.js";
 import "./widgets-novos.css";
@@ -78,7 +78,31 @@ export function RestaurarClima() {
   );
 }
 
+/** Se o widget quebrar por qualquer motivo, só ele some; a Home continua de pé. */
+class FronteiraClima extends Component {
+  state = { quebrou: false };
+  static getDerivedStateFromError() { return { quebrou: true }; }
+  componentDidCatch(erro) { console.error("[clima] widget falhou:", erro); }
+  render() {
+    if (!this.state.quebrou) return this.props.children;
+    return (
+      <div className="wx wx-erro" role="alert">
+        <b>Clima indisponível agora</b>
+        <button type="button" className="wx-btn" onClick={() => this.setState({ quebrou: false })}>Tentar de novo</button>
+      </div>
+    );
+  }
+}
+
 export default function ClimaHome() {
+  return (
+    <FronteiraClima>
+      <ClimaHomeInterno />
+    </FronteiraClima>
+  );
+}
+
+function ClimaHomeInterno() {
   const [s, mudar] = useClimaHome();
   const [confirmando, setConfirmando] = useState(false);
   const arraste = useRef(null);

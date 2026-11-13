@@ -376,7 +376,7 @@ export default function ClimaGoogle({ config, onConfig, compacto = false, onMini
 
           <div className="wx-detalhes">
             <Detalhe rotulo="Umidade" valor={a.umidade !== null ? `${Math.round(a.umidade)}%` : "—"} />
-            <Detalhe rotulo="Vento" valor={formatarVento(a.ventoKmh)} extra={a.ventoGraus !== null ? direcaoVento(a.ventoGraus) : null} />
+            <Detalhe rotulo="Vento" valor={formatarVento(a.ventoKmh)} extra={a.ventoGraus !== null ? `de ${direcaoVento(a.ventoGraus).sigla} (${direcaoVento(a.ventoGraus).nome})` : null} />
             <Detalhe rotulo="Pressão" valor={formatarPressao(a.pressaoHpa)} />
             <Detalhe rotulo="Índice UV" valor={uv ? `${Math.round(h.uv)} · ${uv.rotulo}` : "—"} />
             <Detalhe rotulo="Nascer do sol" valor={h.nascer || "—"} />
