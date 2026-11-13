@@ -29,6 +29,26 @@ const ABAS = [
 ];
 const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
+/** Alvo de localização (SVG próprio: o glifo ⌖ não existe na maioria das fontes). */
+function IconeAlvo() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+    </svg>
+  );
+}
+
+/** Seta de atualizar (o glifo ↻ varia entre fontes). */
+function IconeAtualizar() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  );
+}
+
 /** Desenha um ícone de ICONES (formas geométricas, sem emoji). */
 export function IconeTempo({ nome, tamanho = 48, titulo }) {
   const def = ICONES[nome] ?? ICONES.nublado;
@@ -55,6 +75,28 @@ export function IconeTempo({ nome, tamanho = 48, titulo }) {
       })}
     </svg>
   );
+}
+
+/** Junta avisos repetidos (mesmo tipo/severidade/janela) e monta a janela legível. */
+function agruparAvisos(itens) {
+  const vistos = new Map();
+  for (const a of itens) {
+    const chave = [a.titulo, a.severidade, a.inicio, a.fim, a.abrangencia].join("|");
+    if (vistos.has(chave)) continue;
+    const dia = (t) => String(t ?? "").slice(0, 10).split("-").reverse().slice(0, 2).join("/");
+    const janela = a.inicio && a.fim ? `de ${dia(a.inicio)} a ${dia(a.fim)}` : "janela não informada";
+    vistos.set(chave, {
+      chave,
+      titulo: String(a.titulo ?? "Aviso meteorológico"),
+      severidade: String(a.severidade ?? ""),
+      cor: /^#[0-9a-f]{3,8}$/i.test(String(a.cor ?? "")) ? a.cor : null,
+      riscos: Array.isArray(a.riscos) ? a.riscos.map(String) : [],
+      janela,
+      abrangencia: a.abrangencia,
+    });
+  }
+  // aviso que vale para a cidade primeiro
+  return [...vistos.values()].sort((x, y) => (x.abrangencia === "municipio" ? 0 : 1) - (y.abrangencia === "municipio" ? 0 : 1)).slice(0, 3);
 }
 
 const horaDe = (iso) => {
@@ -284,7 +326,7 @@ export default function ClimaGoogle({ config, onConfig, compacto = false, onMini
   const tempoAgora = tempoDoCodigo(a.codigo, a.isDia);
   const uv = h.uv !== null ? classificarUv(h.uv) : null;
   const ar = dados.ar;
-  const avisos = dados.avisos?.disponivel ? dados.avisos.itens ?? [] : [];
+  const avisosUnicos = agruparAvisos(dados.avisos?.disponivel ? dados.avisos.itens ?? [] : []);
 
   return (
     <section className={`wx${compacto ? " wx-compacto" : ""}`} aria-label={`Clima em ${dados.local.nome}`}>
@@ -295,9 +337,9 @@ export default function ClimaGoogle({ config, onConfig, compacto = false, onMini
           <i aria-hidden="true">▾</i>
         </button>
         <div className="wx-acoes">
-          <button type="button" className="wx-icone-btn" onClick={usarMinhaLocalizacao} aria-label="Usar minha localização" title="Usar minha localização">⌖</button>
+          <button type="button" className="wx-icone-btn" onClick={usarMinhaLocalizacao} aria-label="Usar minha localização" title="Usar minha localização"><IconeAlvo /></button>
           <button type="button" className="wx-icone-btn wx-unid" onClick={alternarUnidade} aria-label={`Mudar para ${unidade === "C" ? "Fahrenheit" : "Celsius"}`} title="Alternar °C/°F">°{unidade}</button>
-          <button type="button" className={`wx-icone-btn${atualizando ? " girando" : ""}`} onClick={() => carregar(true)} disabled={atualizando} aria-label="Atualizar agora" title="Atualizar">↻</button>
+          <button type="button" className={`wx-icone-btn${atualizando ? " girando" : ""}`} onClick={() => carregar(true)} disabled={atualizando} aria-label="Atualizar agora" title="Atualizar"><IconeAtualizar /></button>
           {onMinimizar ? <button type="button" className="wx-icone-btn" onClick={onMinimizar} aria-label="Minimizar widget de clima" title="Minimizar">–</button> : null}
           {onRemover ? <button type="button" className="wx-icone-btn" onClick={onRemover} aria-label="Remover widget de clima" title="Remover">×</button> : null}
         </div>
@@ -329,10 +371,19 @@ export default function ClimaGoogle({ config, onConfig, compacto = false, onMini
       {aviso ? <p className="wx-aviso" role="status">{aviso}</p> : null}
       {erro ? <p className="wx-aviso wx-aviso-forte" role="status">{erro}</p> : null}
 
-      {avisos.length ? (
+      {avisosUnicos.length ? (
         <ul className="wx-alertas" aria-label="Alertas meteorológicos">
-          {avisos.slice(0, 3).map((x, i) => (
-            <li key={i}><b>{x.titulo ?? x.evento ?? "Alerta"}</b>{x.descricao ? <span>{x.descricao}</span> : null}</li>
+          {avisosUnicos.map((x) => (
+            <li key={x.chave} style={x.cor ? { borderColor: `${x.cor}66`, background: `${x.cor}14` } : undefined}>
+              <b style={x.cor ? { color: x.cor } : undefined}>
+                {x.titulo}{x.severidade ? ` · ${x.severidade.toLowerCase()}` : ""}
+              </b>
+              {x.riscos.length ? <span>{x.riscos.join(" · ")}</span> : null}
+              <small>
+                {x.janela}
+                {x.abrangencia === "municipio" ? " · vale para esta cidade" : " · aviso para o estado, pode não atingir a cidade"}
+              </small>
+            </li>
           ))}
         </ul>
       ) : null}

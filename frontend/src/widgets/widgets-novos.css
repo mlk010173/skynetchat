@@ -57,6 +57,7 @@
   border: 1px solid rgba(242, 176, 61, .4); background: rgba(242, 176, 61, .08); font-size: 13px; }
 .wx-alertas b { color: #f2b03d; font-size: 13px; }
 .wx-alertas span { color: var(--wx-fg2); }
+.wx-alertas small { color: var(--wx-fg3); font-size: 12px; }
 
 /* agora */
 .wx-agora { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 16px; }

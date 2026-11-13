@@ -1152,3 +1152,16 @@
 :root[data-theme="white"] .perm-alerta code {
   background: rgba(0, 0, 0, 0.06);
 }
+
+/* ESQUADRO · paridade visual: "Personalizar" tem a mesma moldura de aceitar e recusar */
+.ck-btn.ck-fantasma { border-color: var(--fio); }
+
+/* telas pequenas: banner mais baixo, nota some (continua na política), botões lado a lado */
+@media (max-width: 719px) {
+  .ck-banner { padding: 8px; }
+  .ck-banner-caixa { padding: 12px; gap: 8px; }
+  .ck-banner-texto { font-size: 13px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ck-banner-nota { display: none; }
+  .ck-banner-acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ck-banner-acoes .ck-fantasma { grid-column: 1 / -1; }
+}
