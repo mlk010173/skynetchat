@@ -5,7 +5,7 @@ import { FavReal, Marca, marcaDe } from "../marcas.jsx";
 import ClimaCard from "../clima.jsx";
 import { NavegadorAoVivo } from "../artefato.jsx";
 import { chaveStorage, criarWidget, carregarWidgets, daSpec, porPalavras, salvarWidgets } from "../widgets/registry.js";
-import { IconBell, IconBrain, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconTheme, IconWave } from "../components/Icons.jsx";
+import { IconBell, IconBrain, IconChatPlus, IconChevron, IconCode, IconEdit, IconGlobe, IconImage, IconMenu, IconMic, IconPlus, IconSearch, IconStop, IconTheme, IconTools, IconWave } from "../components/Icons.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import AcaoSheet, { ACOES } from "../components/AcaoSheet.jsx";
 
@@ -147,6 +147,7 @@ export default function Home() {
   };
   const [enviandoAnim, setEnviandoAnim] = useState(false);
   const canceladoRef = useRef(false);
+  const abortRef = useRef(null);
   const audioBlobRef = useRef(null);
   const gravadorRef = useRef(null);
   const [paleta, setPaleta] = useState(false);
@@ -582,7 +583,7 @@ export default function Home() {
         traco: aplicarEvento(tracoVazio(), { tipo: "abrir", chave: "fontes", detalhe: `${itens.length} fontes lidas` }),
       }]);
       setBusy(true);
-      await streamChatAuto({ conversationId: convIdRef.current, content: pedido, model }, {
+      await streamChatAuto({ conversationId: convIdRef.current, content: pedido, model, signal: abortRef.current?.signal }, {
         onDelta: (delta) => setMessages((prev) => {
           const i = prev.findIndex((m) => m.mid === mid2);
           if (i < 0) return prev;
@@ -608,7 +609,11 @@ export default function Home() {
       setBusy(false);
     };
 
-    await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar }, {
+    if (!opcoes.continuar) {
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+    }
+    await streamChatAuto({ conversationId: convIdRef.current, content: conteudo, model, continuar: opcoes.continuar, signal: abortRef.current?.signal }, {
       onEvento: (ev) => {
         const g = gerenteRef.current;
         if (!g) return;
@@ -1254,7 +1259,7 @@ export default function Home() {
 
         <div className="m-top-acoes">
           <button type="button" className="icon-btn" onClick={() => pick("Novo chat")} aria-label="Nova conversa" title="Nova conversa">
-            <IconEdit />
+            <IconChatPlus />
           </button>
           <button
             type="button"
@@ -1263,7 +1268,7 @@ export default function Home() {
             aria-label="Opções"
             aria-expanded={opcoesOpen}
           >
-            <span aria-hidden="true">⋯</span>
+            <IconTools width={18} height={18} />
           </button>
         </div>
 
@@ -1356,7 +1361,7 @@ export default function Home() {
                   aria-haspopup="dialog"
                   onClick={() => (ACOES[label] ? setAcaoSheet(label) : setDraft(label))}
                 >
-                  <span className="hero-card-icone" style={{ color, borderColor: `${color}44`, background: `${color}14` }}>
+                  <span className="hero-card-icone">
                     <Icon width={18} height={18} />
                   </span>
                   <span className="hero-card-texto">
@@ -1776,11 +1781,11 @@ export default function Home() {
           aoRemover={(i) => setPrints((l) => l.filter((_, k) => k !== i))}
         />
         <div className="m-tools" role="toolbar" aria-label="Pesquisa e recursos">
-          <button type="button" className="m-tool" onClick={() => setAcaoSheet("Pesquisar na web agora")}>🔍 Pesquisar web</button>
-          <button type="button" className="m-tool" onClick={() => setAcaoSheet("Gerar uma imagem")}>🖼 Criar imagem</button>
-          <button type="button" className="m-tool" onClick={() => setDraft("Investigue com atenção: ")}>🔎 Investigar</button>
-          <button type="button" className="m-tool" onClick={() => setDraft("Gere o código: ")}>⌨ Código</button>
-          <button type="button" className="m-tool" onClick={() => { window.location.hash = "#/ferramentas"; }}>🧪 Ferramentas</button>
+          <button type="button" className="m-tool" onClick={() => setAcaoSheet("Pesquisar na web agora")}><IconSearch width={13} height={13} /> Pesquisar web</button>
+          <button type="button" className="m-tool" onClick={() => setAcaoSheet("Gerar uma imagem")}><IconImage width={13} height={13} /> Criar imagem</button>
+          <button type="button" className="m-tool" onClick={() => setDraft("Investigue com atenção: ")}><IconGlobe width={13} height={13} /> Investigar</button>
+          <button type="button" className="m-tool" onClick={() => setDraft("Gere o código: ")}><IconCode width={13} height={13} /> Código</button>
+          <button type="button" className="m-tool" onClick={() => { window.location.hash = "#/ferramentas"; }}><IconTools width={13} height={13} /> Ferramentas</button>
         </div>
 
         <div className={`m-campo${expandido ? " expandido" : ""}`}>
@@ -1789,6 +1794,12 @@ export default function Home() {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onPaste={aoColar}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                if (draft.trim() || prints.length) event.currentTarget.form?.requestSubmit();
+              }
+            }}
             placeholder={PLACEHOLDERS[ph]}
             aria-label="Mensagem"
             rows={5}
@@ -1826,13 +1837,13 @@ export default function Home() {
           <button type="button" className="dock-plus" aria-label="Mais" onClick={() => { setPlusOpen((v) => !v); setModelOpen(false); }}><IconPlus /></button>
           {plusOpen && (
             <div className="plus-menu">
-              <button type="button" onClick={() => { setPlusOpen(false); setAnexosOpen(true); }}>📎 Anexar foto, câmera ou arquivo</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Gerar uma imagem"); }}>🖼 Criar imagem</button>
-              <button type="button" onClick={() => { setPlusOpen(false); window.location.hash = "#/ferramentas"; }}>🧪 Ferramentas do agente</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Pesquisar na web agora"); }}>💡 Pensar</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Investigue com atenção: "); }}>🔍 Investigar</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Gere o código: "); }}>⌨ Gerar código</button>
-              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Traduza para português: "); }}>文 Traduzir texto</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setAnexosOpen(true); }}><IconPlus width={14} height={14} /> Anexar foto, câmera ou arquivo</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Gerar uma imagem"); }}><IconImage width={14} height={14} /> Criar imagem</button>
+              <button type="button" onClick={() => { setPlusOpen(false); window.location.hash = "#/ferramentas"; }}><IconTools width={14} height={14} /> Ferramentas do agente</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setAcaoSheet("Pesquisar na web agora"); }}><IconBrain width={14} height={14} /> Pensar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Investigue com atenção: "); }}><IconSearch width={14} height={14} /> Investigar</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Gere o código: "); }}><IconCode width={14} height={14} /> Gerar código</button>
+              <button type="button" onClick={() => { setPlusOpen(false); setDraft("Traduza para português: "); }}><IconGlobe width={14} height={14} /> Traduzir texto</button>
             </div>
           )}
           {imgPrompt !== null && (
@@ -2000,9 +2011,9 @@ export default function Home() {
             type="button"
             className="dock-send cancelar"
             aria-label="Cancelar o envio"
-            onClick={() => { canceladoRef.current = true; setBusy(false); setFase("pensando"); say("Envio cancelado aqui. O servidor pode concluir o pedido em segundo plano."); }}
+            onClick={() => { canceladoRef.current = true; abortRef.current?.abort(); setBusy(false); setFase("pensando"); say("Geração interrompida."); }}
           >
-            ✕
+            <IconStop width={14} height={14} />
           </button>
         ) : (
           <button

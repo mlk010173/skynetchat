@@ -6,6 +6,7 @@ import Guarda from "./components/Guarda.jsx";
 import "./fonts.css";
 import "./styles.css";
 import "./design-ui.css";
+import "./sistema.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

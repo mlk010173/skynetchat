@@ -42,7 +42,7 @@ export async function streamChat(opcoes, handlers) {
   if (segunda === "retry") handlers.onError("Sem conexão com o servidor.");
 }
 
-async function streamChatInterno({ conversationId, content, model, continuar }, handlers) {
+async function streamChatInterno({ conversationId, content, model, continuar, signal }, handlers) {
   const session = await getSession();
   let res;
   try {
@@ -55,8 +55,10 @@ async function streamChatInterno({ conversationId, content, model, continuar }, 
       },
       // conversa nova: o campo vai ausente (null faz o servidor recusar)
       body: JSON.stringify({ ...(conversationId ? { conversationId } : {}), ...(continuar ? { continuar } : {}), content, model }),
+      ...(signal ? { signal } : {}),
     });
-  } catch {
+  } catch (erro) {
+    if (erro?.name === "AbortError") return "abortado";
     return "retry";
   }
   const ctype = res.headers.get("content-type") ?? "";
@@ -102,7 +104,14 @@ async function streamChatInterno({ conversationId, content, model, continuar }, 
   };
 
   while (true) {
-    const { done, value } = await reader.read();
+    let quadro;
+    try {
+      quadro = await reader.read();
+    } catch (erro) {
+      if (erro?.name === "AbortError") { try { reader.cancel(); } catch { /* já fechado */ } handlers.onAbort?.(); return "abortado"; }
+      return "retry";
+    }
+    const { done, value } = quadro;
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     // os quadros do AI SDK terminam em "\n" simples; o formato antigo usa "\n\n"
@@ -226,7 +235,7 @@ let MODEL_LIST = [];
 export function setModelList(list) { MODEL_LIST = Array.isArray(list) ? list : []; }
 
 /** Chama streamChat e, se o modelo falhar sem produzir texto, tenta o proximo da reserva. */
-export async function streamChatAuto({ conversationId, content, model, continuar }, handlers) {
+export async function streamChatAuto({ conversationId, content, model, continuar, signal }, handlers) {
   const { fallbackChain } = await import("./models.js");
   if (!MODEL_LIST.length) {
     try { const d = await api("models"); if (d?.ok && Array.isArray(d.models) && d.models.length) MODEL_LIST = d.models; } catch { /* segue com o escolhido */ }
@@ -239,7 +248,8 @@ export async function streamChatAuto({ conversationId, content, model, continuar
   for (const tentativa of chain) {
     let recebeuTexto = false;
     const r = await new Promise((resolve) => {
-      streamChat({ conversationId, content, model: tentativa, continuar }, {
+      if (signal?.aborted) { resolve({ ok: false, abortado: true }); return; }
+      streamChat({ conversationId, content, model: tentativa, continuar, signal }, {
         onTool: (toolEv) => handlers.onTool?.(toolEv),
         onImage: (url) => handlers.onImage?.(url),
         onMidia: (m) => handlers.onMidia?.(m),
@@ -258,8 +268,10 @@ export async function streamChatAuto({ conversationId, content, model, continuar
         onDelta: (t) => { recebeuTexto = true; handlers.onDelta(t); },
         onDone: (info) => resolve({ ok: true, info: info ?? {} }),
         onError: (msg, configured) => resolve({ ok: false, erro: msg, configured }),
+        onAbort: () => resolve({ ok: false, abortado: true }),
       });
     });
+    if (r.abortado) return;
     if (r.ok) { handlers.onDone({ ...(r.info ?? {}), model: tentativa, switched: tentativa !== model }); return; }
     ultimoErro = r.erro ?? ultimoErro;
     if (recebeuTexto || r.configured === false) break;   // ja respondeu algo, ou IA nem configurada

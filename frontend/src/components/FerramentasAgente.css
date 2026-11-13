@@ -12,44 +12,44 @@
 .ferr-pedido { display: flex; flex-direction: column; gap: 5px; }
 .ferr-pedido label { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #7d7d7d; }
 .ferr-pedido input {
-  background: #141414; border: 1px solid var(--line); border-radius: 10px; color: #eee;
+  background: var(--sk-surface-2); border: 1px solid var(--line); border-radius: 10px; color: var(--sk-fg);
   padding: 10px 12px; font-size: 13px; outline: none;
 }
 .ferr-pedido input:focus { border-color: #3a3a3a; }
-.ferr-pedido small { font-size: 11px; color: #6f6f6f; }
+.ferr-pedido small { font-size: 11px; color: var(--sk-fg-4); }
 
 .ferr-lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .ferr-lista li {
-  border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; background: #0d0d0d;
+  border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; background: var(--sk-surface);
   display: flex; flex-direction: column; gap: 6px; position: relative;
 }
 .ferr-lista li.ok { border-color: #1f3a26; }
 .ferr-lista li.falha { border-color: #3a1f1f; }
 .ferr-cabeca { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.ferr-cabeca b { font-size: 12.5px; font-weight: 600; color: #f0f0f0; }
-.ferr-status { font-size: 10.5px; color: #8d8d8d; font-variant-numeric: tabular-nums; }
+.ferr-cabeca b { font-size: 12.5px; font-weight: 600; color: var(--sk-fg); }
+.ferr-status { font-size: 10.5px; color: var(--sk-fg-3); font-variant-numeric: tabular-nums; }
 .ferr-lista li.ok .ferr-status { color: #6fbf8b; }
 .ferr-lista li.falha .ferr-status { color: #d97a7a; }
 .ferr-lista p { margin: 0; font-size: 11.5px; line-height: 1.45; color: #9a9a9a; }
 .ferr-amostra {
-  font-size: 11px; color: #c9b3b3; background: #161212; border: 1px solid #2a1e1e;
+  font-size: 11px; color: var(--sk-fg-2); background: var(--sk-acc-soft); border: 1px solid var(--sk-line-2);
   border-radius: 6px; padding: 3px 7px; align-self: flex-start; max-width: 100%;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ferr-lista button {
-  margin-top: auto; align-self: flex-start; background: #191919; border: 1px solid var(--line);
+  margin-top: auto; align-self: flex-start; background: var(--sk-surface-2); border: 1px solid var(--line);
   color: #ddd; font-size: 11.5px; padding: 5px 11px; border-radius: 8px; cursor: pointer;
 }
-.ferr-lista button:hover { border-color: #333; }
+.ferr-lista button:hover { border-color: var(--sk-line-2); }
 
 .ferr-config, .ferr-como { border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; background: #0b0b0b; }
 .ferr-config h3, .ferr-como h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: #eaeaea; }
 .ferr-niveis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 14px; }
 .ferr-niveis button {
-  text-align: left; background: #121212; border: 1px solid var(--line); border-radius: 10px;
+  text-align: left; background: var(--sk-surface); border: 1px solid var(--line); border-radius: 10px;
   padding: 9px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 3px;
 }
-.ferr-niveis button.on { border-color: var(--red); background: #17100f; }
+.ferr-niveis button.on { border-color: var(--red); background: var(--sk-acc-soft); }
 .ferr-niveis b { font-size: 12.5px; }
 .ferr-niveis small { font-size: 10.5px; color: var(--muted); line-height: 1.35; }
 
@@ -70,29 +70,29 @@
 
 /* abas, comportamento, memória e prompts */
 .ferr-abas { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; }
-.ferr-abas button { background: #101010; border: 1px solid #1f1f1f; color: #b9b9b9; border-radius: 999px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
-.ferr-abas button.on { background: #1b1b1b; color: #fff; border-color: #2c2c2c; }
+.ferr-abas button { background: var(--sk-surface); border: 1px solid var(--sk-line); color: var(--sk-fg-2); border-radius: 999px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+.ferr-abas button.on { background: var(--sk-surface-2); color: var(--sk-fg); border-color: var(--sk-line-2); }
 .ferr-comportamento .ferr-grupo { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-.ferr-comportamento h4 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #8d8d8d; font-weight: 500; }
+.ferr-comportamento h4 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--sk-fg-3); font-weight: 500; }
 .ferr-opcoes { display: flex; flex-wrap: wrap; gap: 6px; }
-.ferr-opcoes button { background: #0d0d0d; border: 1px solid #1f1f1f; color: #b9b9b9; border-radius: 10px; padding: 7px 12px; font-size: 13px; }
-.ferr-opcoes button.on { background: #dc2626; border-color: #dc2626; color: #fff; }
+.ferr-opcoes button { background: var(--sk-surface); border: 1px solid var(--sk-line); color: var(--sk-fg-2); border-radius: 10px; padding: 7px 12px; font-size: 13px; }
+.ferr-opcoes button.on { background: var(--sk-acc); border-color: var(--sk-acc); color: #fff; }
 .ferr-toggles { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
 .ferr-toggles label { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cfcfcf; }
-.ferr-toggles input { width: 18px; height: 18px; accent-color: #dc2626; }
-.ferr-resumo { margin: 0 0 10px; color: #8d8d8d; font-size: 13px; }
+.ferr-toggles input { width: 18px; height: 18px; accent-color: var(--sk-acc); }
+.ferr-resumo { margin: 0 0 10px; color: var(--sk-fg-3); font-size: 13px; }
 .ferr-linha { display: flex; gap: 8px; margin-bottom: 10px; }
-.ferr-linha input { flex: 1; background: #0d0d0d; border: 1px solid #1f1f1f; color: #eee; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
-.ferr-linha button, .ferr-apagar { background: #1b1b1b; border: 1px solid #2a2a2a; color: #e5e5e5; border-radius: 10px; padding: 10px 14px; font-size: 13px; }
+.ferr-linha input { flex: 1; background: var(--sk-surface); border: 1px solid var(--sk-line); color: var(--sk-fg); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.ferr-linha button, .ferr-apagar { background: var(--sk-surface-2); border: 1px solid var(--sk-line-2); color: var(--sk-fg); border-radius: 10px; padding: 10px 14px; font-size: 13px; }
 .ferr-memoria, .ferr-meus-prompts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.ferr-memoria li, .ferr-meus-prompts li { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #0d0d0d; border: 1px solid #1c1c1c; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #d6d6d6; }
-.ferr-memoria button, .ferr-meus-prompts button { background: none; border: none; color: #8d8d8d; font-size: 12px; cursor: pointer; }
+.ferr-memoria li, .ferr-meus-prompts li { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--sk-surface); border: 1px solid var(--sk-line); border-radius: 10px; padding: 10px 12px; font-size: 13px; color: var(--sk-fg-2); }
+.ferr-memoria button, .ferr-meus-prompts button { background: none; border: none; color: var(--sk-fg-3); font-size: 12px; cursor: pointer; }
 .ferr-prompts { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.ferr-prompts li { display: flex; gap: 12px; justify-content: space-between; background: #0d0d0d; border: 1px solid #1c1c1c; border-radius: 12px; padding: 12px; }
-.ferr-prompts b { font-size: 13px; color: #fff; }
-.ferr-prompts small { color: #8d8d8d; font-size: 11px; margin-left: 8px; }
+.ferr-prompts li { display: flex; gap: 12px; justify-content: space-between; background: var(--sk-surface); border: 1px solid var(--sk-line); border-radius: 12px; padding: 12px; }
+.ferr-prompts b { font-size: 13px; color: var(--sk-fg); }
+.ferr-prompts small { color: var(--sk-fg-3); font-size: 11px; margin-left: 8px; }
 .ferr-prompts p { margin: 6px 0 0; font-size: 12px; color: #a8a8a8; line-height: 1.45; }
-.ferr-prompts button { background: #1b1b1b; border: 1px solid #2a2a2a; color: #e5e5e5; border-radius: 8px; padding: 6px 10px; font-size: 12px; align-self: flex-start; }
+.ferr-prompts button { background: var(--sk-surface-2); border: 1px solid var(--sk-line-2); color: var(--sk-fg); border-radius: 8px; padding: 6px 10px; font-size: 12px; align-self: flex-start; }
 .ferr-novo-prompt { display: flex; flex-direction: column; gap: 8px; }
-.ferr-novo-prompt input, .ferr-novo-prompt textarea { background: #0d0d0d; border: 1px solid #1f1f1f; color: #eee; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: vertical; }
-.ferr-novo-prompt button { background: #dc2626; border: none; color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; }
+.ferr-novo-prompt input, .ferr-novo-prompt textarea { background: var(--sk-surface); border: 1px solid var(--sk-line); color: var(--sk-fg); border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: vertical; }
+.ferr-novo-prompt button { background: var(--sk-acc); border: none; color: #fff; border-radius: 10px; padding: 10px 14px; font-size: 13px; font-weight: 500; }

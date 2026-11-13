@@ -44,3 +44,17 @@ export const IconInstagram = (props) => (
 
 export const IconClock = make(<><circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/></>);
 export const IconZap = make(<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>);
+export const IconCheck = make(<path d="M20 6L9 17l-5-5"/>);
+export const IconSpark = make(<><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></>);
+export const IconWrench = make(<><path d="M14.7 6.3a4.5 4.5 0 0 0 5.9 5.9l-8.4 8.4a2.6 2.6 0 0 1-3.7 0l-2.1-2.1a2.6 2.6 0 0 1 0-3.7z"/><path d="M14.7 6.3L18 3l3 3-3.3 3.3"/></>);
+export const IconSearch = make(<><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></>);
+export const IconStop = make(<rect x="6" y="6" width="12" height="12" rx="2.5"/>);
+export const IconArrowUp = make(<><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></>);
+export const IconCopy = make(<><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A2.5 2.5 0 0 0 12.5 3H6a2 2 0 0 0-2 2v8.5A2.5 2.5 0 0 0 6.5 16"/></>);
+export const IconDownload = make(<><path d="M12 4v11"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></>);
+export const IconSpeaker = make(<><path d="M4 9.5h3l4.5-4v13L7 14.5H4z"/><path d="M16 8.5a4.5 4.5 0 0 1 0 7"/><path d="M19 6a8 8 0 0 1 0 12"/></>);
+export const IconSun = make(<><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></>);
+export const IconMoon = make(<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>);
+export const IconChatPlus = make(<><path d="M21 11.5a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 11.5z"/><path d="M12 8.5v6M9 11.5h6"/></>);
+export const IconPaperclip = make(<path d="M20 11.5l-8.2 8.2a4.6 4.6 0 0 1-6.5-6.5l8.5-8.5a3.1 3.1 0 0 1 4.4 4.4l-8.5 8.5a1.6 1.6 0 0 1-2.2-2.2l7.8-7.8"/>);
+export const IconTools = make(<><path d="M4 20l6-6"/><path d="M14.7 6.3a4.5 4.5 0 0 0 5.9 5.9l-8.4 8.4a2.6 2.6 0 0 1-3.7 0l-2.1-2.1a2.6 2.6 0 0 1 0-3.7z"/></>);
