@@ -46,3 +46,14 @@
   /* mesma borda do conteúdo: o composer acompanha o hero (12px) */
   .dock, .dock.m-dock { width: calc(100% - 24px); }
 }
+
+/* menu lateral: grupos recolhíveis */
+.dl-grupo-btn {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  min-height: 40px; background: transparent; border: 0; cursor: pointer; text-align: left;
+}
+.dl-grupo-btn:hover { color: var(--sk-fg); }
+.dl-grupo-btn:focus-visible, .drawer-item:focus-visible, .dl-cta:focus-visible { outline: 2px solid var(--sk-acc); outline-offset: -2px; }
+.dl-seta { transition: transform 0.15s ease; font-size: 11px; }
+.dl-grupo-btn[aria-expanded="false"] .dl-seta { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .dl-seta { transition: none; } }

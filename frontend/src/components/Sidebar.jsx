@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   IconBell, IconBook, IconBrain, IconChat, IconClose, IconCode, IconEdit, IconFolder,
@@ -11,13 +11,12 @@ import AutomationsPanel from "./AutomationsPanel.jsx";
 import MemoriaPanel from "./MemoriaPanel.jsx";
 
 const GRUPOS = [
-  { titulo: "Conversas", itens: ["Novo chat", "Prompts"] },
-  { titulo: "Histórico", itens: ["Histórico de conversas", "Arquivo"] },
-  { titulo: "Recursos de IA", itens: ["Imagens", "Memória"] },
-  { titulo: "Ferramentas do agente", itens: ["Computador", "Codex", "Widgets", "Ferramentas do Agente", "Permissões"] },
-  { titulo: "Integrações", itens: ["Integrações", "Automações", "E-mail"] },
-  { titulo: "Produtividade", itens: ["CRM", "Lembretes", "Devtool", "Inspecionar"] },
-  { titulo: "Conta e configurações", itens: ["Conheça o SKYNETchat", "Atualizações", "Suporte"] },
+  { titulo: "Conversas", itens: ["Novo chat", "Histórico de conversas", "Prompts", "Arquivo"] },
+  { titulo: "Agente", itens: ["Computador", "Inspecionar", "Codex", "Ferramentas do Agente", "Permissões"] },
+  { titulo: "Criar", itens: ["Imagens", "Widgets", "Devtool"] },
+  { titulo: "Dados e memória", itens: ["Memória", "CRM", "Lembretes"] },
+  { titulo: "Conexões", itens: ["Integrações", "Automações", "E-mail"] },
+  { titulo: "Ajuda", itens: ["Conheça o SKYNETchat", "Atualizações", "Suporte"] },
 ];
 
 const items = [
@@ -54,6 +53,40 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   const [supOk, setSupOk] = useState("");
   const [supErro, setSupErro] = useState("");
   const [busca, setBusca] = useState("");
+  const [fechados, setFechados] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("skynet-menu-fechados") || "[]"); } catch { return []; }
+  });
+  const gaveta = useRef(null);
+  const quemAbriu = useRef(null);
+  const alternarGrupo = (t) => setFechados((atual) => {
+    const novo = atual.includes(t) ? atual.filter((x) => x !== t) : [...atual, t];
+    try { localStorage.setItem("skynet-menu-fechados", JSON.stringify(novo)); } catch { /* sem storage */ }
+    return novo;
+  });
+
+  // acessibilidade do drawer: Esc fecha, foco entra ao abrir, Tab fica preso, foco volta ao fechar
+  useEffect(() => {
+    if (!open) return undefined;
+    quemAbriu.current = document.activeElement;
+    const el = gaveta.current;
+    const alvos = () => [...(el?.querySelectorAll('button:not([disabled]), a[href], input, textarea, [tabindex]:not([tabindex="-1"])') ?? [])].filter((n) => n.offsetParent !== null);
+    const t = setTimeout(() => (el?.querySelector(".dl-busca") ?? alvos()[0])?.focus(), 60);
+    const tecla = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
+      if (e.key !== "Tab") return;
+      const lista = alvos();
+      if (!lista.length) return;
+      const primeiro = lista[0], ultimo = lista[lista.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+    };
+    document.addEventListener("keydown", tecla);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("keydown", tecla);
+      quemAbriu.current?.focus?.();
+    };
+  }, [open, onClose]);
   const [convs, setConvs] = useState([]);
   const [buscaConv, setBuscaConv] = useState("");
 
@@ -310,7 +343,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
   return (
     <>
       <div className={`scrim ${open ? "show" : ""}`} onClick={onClose} />
-      <aside className={`drawer ${open ? "open" : ""}`} aria-hidden={!open}>
+      <aside ref={gaveta} className={`drawer ${open ? "open" : ""}`} aria-hidden={!open} {...(open ? { role: "dialog", "aria-modal": "true", "aria-label": "Menu principal" } : { inert: "" })}>
         <div className="drawer-head">
           <div className="brand">
             <img src={`${import.meta.env.BASE_URL}skynet-logo-vermelha.png`} alt="" className="brand-logo" />
@@ -346,6 +379,7 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
             </button>
 
             {GRUPOS.map((grupo) => {
+              const buscando = Boolean(busca.trim());
               const visiveis = grupo.itens
                 .map((label) => items.find((i) => i.label === label))
                 .filter(Boolean)
@@ -357,8 +391,16 @@ export default function Sidebar({ open, onClose, active, onSelect, logged, onLog
               if (!visiveis.length) return null;
               return (
                 <div className="dl-grupo-bloco" key={grupo.titulo}>
-                  <p className="dl-grupo">{grupo.titulo}</p>
-                  {visiveis.map(({ label, desc, tag, icon: Icon }) => (
+                  <button
+                    type="button"
+                    className="dl-grupo dl-grupo-btn"
+                    aria-expanded={buscando || !fechados.includes(grupo.titulo)}
+                    onClick={() => alternarGrupo(grupo.titulo)}
+                  >
+                    <span>{grupo.titulo}</span>
+                    <span className="dl-seta" aria-hidden="true">▾</span>
+                  </button>
+                  {(buscando || !fechados.includes(grupo.titulo)) && visiveis.map(({ label, desc, tag, icon: Icon }) => (
                     <button
                       key={label}
                       type="button"
