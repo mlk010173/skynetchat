@@ -268,6 +268,20 @@ describe("inventário", () => {
     expect(porNome._ga).toMatchObject({ onde: "cookie", party: "terceiro", desconhecido: true });
   });
 
+  it("chave do próprio SKYNET nunca é acusada de terceiro (regressão do cache de clima)", () => {
+    globalThis.localStorage.setItem("skynet.clima.cache.v1", "{}");
+    globalThis.localStorage.setItem("skynet.clima.v1", "{}");
+    globalThis.localStorage.setItem("skynet.widget.clima.home.v1", "{}");
+    globalThis.localStorage.setItem("skynet.chave.nova.sem.catalogo", "x");
+    const porNome = Object.fromEntries(mod.inventarioCookies().map((i) => [i.nome, i]));
+    for (const nome of ["skynet.clima.cache.v1", "skynet.clima.v1", "skynet.widget.clima.home.v1"]) {
+      expect(porNome[nome], nome).toMatchObject({ party: "propria", categoria: "preferencias" });
+      expect(porNome[nome].desconhecido, nome).toBeFalsy();
+    }
+    // chave nossa sem catálogo continua própria; só sinaliza que falta descrever
+    expect(porNome["skynet.chave.nova.sem.catalogo"]).toMatchObject({ party: "propria", desconhecido: true });
+  });
+
   it("conta bytes e ordena por categoria", () => {
     globalThis.localStorage.setItem("skynet-theme-bg", "white");
     globalThis.document.cookie = "_ga=valor-longo-para-contar";

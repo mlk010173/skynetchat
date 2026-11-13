@@ -134,6 +134,27 @@ const POR_PREFIXO = [
     validade: "até você apagar",
   },
   {
+    prefixo: "skynet.clima.",
+    categoria: "preferencias",
+    party: "propria",
+    finalidade: "Cidade, unidade e última leitura do clima, para abrir mais rápido (cache de 10 minutos).",
+    validade: "10 minutos (cache); preferências até você apagar",
+  },
+  {
+    prefixo: "skynet.widget",
+    categoria: "preferencias",
+    party: "propria",
+    finalidade: "Estado e posição dos widgets da tela inicial.",
+    validade: "até você apagar",
+  },
+  {
+    prefixo: "skynet.memoria",
+    categoria: "preferencias",
+    party: "propria",
+    finalidade: "Memória local do agente quando você não está logado.",
+    validade: "até você apagar",
+  },
+  {
     prefixo: "sb-",
     categoria: "essenciais",
     party: "propria",
@@ -411,6 +432,18 @@ function classificar(nome, onde) {
         validade: null,
       };
     }
+  }
+  // Tudo que está no storage da NOSSA origem foi gravado por este site (ou por um script
+  // que ele carregou, que o navegador não distingue). Chamar de "terceiro" sem prova seria
+  // acusar sem evidência: marca como própria e aponta que a finalidade não foi catalogada.
+  if (nome.startsWith("skynet")) {
+    return {
+      categoria: "preferencias",
+      party: "propria",
+      finalidade: "Dado do SKYNETchat sem descrição catalogada ainda.",
+      validade: null,
+      desconhecido: true,
+    };
   }
   return { ...DESCONHECIDO };
 }
