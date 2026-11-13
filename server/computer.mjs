@@ -16,6 +16,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { timingSafeEqual } from "node:crypto";
+import { execFile } from "node:child_process";
 
 export const VERSAO = "1.0.0";
 
@@ -93,7 +94,7 @@ export function candidatosChromium() {
     }
   }
 
-  for (const p of [
+  for (const p of process.env.SKYNET_SEM_CHROME_SISTEMA === "1" ? [] : [
     "/usr/bin/google-chrome",
     "/usr/bin/google-chrome-stable",
     "/usr/bin/chromium",
@@ -124,6 +125,25 @@ async function importar(nome) {
   } catch {
     return null;
   }
+}
+
+// Em hospedagem gerenciada (Render) o build instala o pacote playwright mas nao
+// baixa o binario do Chromium. Na primeira vez que um navegador for pedido, baixamos
+// o headless shell para o cache do usuario (uma unica vez, com trava).
+let _instalacao = null;
+export function instalarChromium() {
+  if (_instalacao) return _instalacao;
+  _instalacao = new Promise((resolve) => {
+    const bin = join(process.cwd(), "node_modules", ".bin", "playwright");
+    const comando = existsSync(bin) ? bin : "npx";
+    const args = existsSync(bin) ? ["install", "chromium-headless-shell"] : ["playwright", "install", "chromium-headless-shell"];
+    execFile(comando, args, { timeout: 240_000, env: process.env, maxBuffer: 4_000_000 }, (erro, saida, err) => {
+      const texto = sanitizarTexto(String(err || saida || erro?.message || "")).slice(-300);
+      resolve(erro ? { ok: false, erro: texto || "falha ao baixar o Chromium" } : { ok: true });
+      if (erro) _instalacao = null; // permite tentar de novo depois
+    });
+  });
+  return _instalacao;
 }
 
 // ---------------------------------------------------------------- driver
@@ -169,9 +189,11 @@ export async function abrirNavegador() {
   if (!pw) {
     tentativas.push({ motor: "playwright", alvo: "import", ok: false, erro: "módulo playwright não encontrado (npm i playwright)" });
   } else {
-    const alvos = candidatosChromium();
+    let alvos = candidatosChromium();
     alvos.push(null); // null = deixa o playwright escolher o browser que ele baixou
-    for (const executavel of alvos) {
+    let baixou = false;
+    for (let i = 0; i < alvos.length; i++) {
+      const executavel = alvos[i];
       try {
         const navegador = await pw.chromium.launch({
           args: ARGS_CHROMIUM,
@@ -196,6 +218,14 @@ export async function abrirNavegador() {
           erro: erroDe(e),
           libs_faltando: libsFaltando(e?.message),
         });
+        // ultimo candidato falhou por binario ausente: baixa o Chromium e tenta de novo
+        const semBinario = /Executable doesn't exist|playwright install/i.test(String(e?.message ?? ""));
+        if (executavel === null && semBinario && !baixou) {
+          baixou = true;
+          const inst = await instalarChromium();
+          tentativas.push({ motor: "playwright", alvo: "instalar chromium-headless-shell", ok: inst.ok, ...(inst.ok ? {} : { erro: inst.erro }) });
+          if (inst.ok) { alvos = [null]; i = -1; }
+        }
       }
     }
   }
