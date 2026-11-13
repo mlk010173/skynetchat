@@ -84,7 +84,7 @@ export default function Permissoes() {
 
       {erro && (
         <div className="permissoes-erro">
-          {erro} <Link to="/login">Entrar</Link>
+          {erro} <Link to="/login" className="acao-toque">Entrar</Link>
         </div>
       )}
 
@@ -147,7 +147,7 @@ export default function Permissoes() {
         <button type="button" onClick={restaurar} disabled={salvando === "reset"}>
           Restaurar padrão
         </button>
-        <Link to="/">Voltar ao chat</Link>
+        <Link to="/" className="acao-toque">Voltar ao chat</Link>
       </footer>
     </div>
   );

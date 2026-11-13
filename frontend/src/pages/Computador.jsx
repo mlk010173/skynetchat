@@ -54,7 +54,33 @@ export default function Computador() {
     return ok ? r : null;
   };
 
-  const iniciar = async () => { const r = await rodar("iniciar", { url }); if (r) setSessao(true); };
+  // sessão que o servidor já tem aberta para esta conta (sobrevive a recarregar a página)
+  useEffect(() => {
+    let vivo = true;
+    api("computer").then((r) => {
+      if (!vivo || !r?.ok || !r.sessao) return;
+      setSessao(true);
+      if (r.sessao.url) setUrl(r.sessao.url);
+      chamar("tela").then((t) => vivo && aplicar(t));
+    }).catch(() => {});
+    return () => { vivo = false; };
+  }, [aplicar]);
+
+  // o Render gratuito dorme: o primeiro "iniciar" pode estourar o tempo enquanto o navegador sobe.
+  // Tenta de novo sozinho (a 2ª chamada reaproveita a sessão que o servidor acabou de abrir).
+  const iniciar = async () => {
+    setBusy(true); setErro("Acordando o servidor e abrindo o navegador… pode levar até 1 minuto.");
+    let r = null;
+    for (let i = 0; i < 3; i++) {
+      r = await chamar("iniciar", { url });
+      if (r?.ok !== false) break;
+      if (!["worker_indisponivel", "browser_indisponivel"].includes(r?.motivo)) break;
+      await new Promise((ok) => setTimeout(ok, 4000));
+    }
+    const ok = aplicar(r);
+    if (ok) setSessao(true);
+    setBusy(false);
+  };
   const encerrar = async () => { await rodar("encerrar"); setSessao(false); setTela(""); setAbas([]); };
 
   // tela ao vivo: atualiza a cada 2s enquanto a aba está visível

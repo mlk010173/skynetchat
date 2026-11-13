@@ -115,7 +115,7 @@ export default function Crm() {
 
       {erro && (
         <div className="crm-erro" role="alert">
-          {erro} <button type="button" onClick={carregar}>tentar de novo</button>
+          {erro} <button type="button" className="acao-toque" onClick={carregar}>tentar de novo</button>
         </div>
       )}
       {aviso && <div className="crm-aviso" role="status">{aviso}</div>}
@@ -397,7 +397,7 @@ export default function Crm() {
 
       <footer className="crm-rodape">
         <span>{painel ? `${(painel.negocios ?? []).length} negócios · ${(painel.contatos ?? []).length} contatos` : ""}</span>
-        <button type="button" onClick={() => navigate("/")}>Voltar ao chat</button>
+        <button type="button" className="acao-toque" onClick={() => navigate("/")}>Voltar ao chat</button>
       </footer>
     </div>
   );

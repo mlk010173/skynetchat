@@ -57,3 +57,27 @@
 .dl-seta { transition: transform 0.15s ease; font-size: 11px; }
 .dl-grupo-btn[aria-expanded="false"] .dl-seta { transform: rotate(-90deg); }
 @media (prefers-reduced-motion: reduce) { .dl-seta { transition: none; } }
+
+/* alvos de toque: 40px mínimo em tela de toque, em qualquer página interna
+   (o composer, o menu e o chat têm tamanhos próprios e ficam de fora) */
+@media (pointer: coarse), (max-width: 760px) {
+  main button, main a.pagina-voltar, main .pagina-voltar,
+  main select, main input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: 40px;
+  }
+  main button { min-width: 40px; }
+  /* cabeçalhos, navegação e estados vazios das páginas internas */
+  .permissoes-topo button, .permissoes-topo a, .wg-nav a, .wg-nav button,
+  .crm-topo button, .crm-topo a, .crm-vazio button, .crm-erro button, .crm-page button {
+    min-height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .permissoes-topo button, .crm-topo button { min-width: 40px; }
+  .wg-nav a { padding-inline: 8px; }
+  .pagina-voltar { display: inline-flex; align-items: center; padding-block: 8px; }
+}
+
+/* ação isolada em estado vazio ou de erro: alvo de toque confortável */
+.acao-toque {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 40px; padding-inline: 12px;
+}
