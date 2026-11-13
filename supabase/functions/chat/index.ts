@@ -1190,14 +1190,14 @@ Deno.serve(async (req) => {
   if (!conta && userId && papel !== "dev") {
     // A cota é da CONTA (accounts.id). Usar o uid do Auth gravava órfãos em
     // acc_uso e, quando a conta ainda não existia, o upsert falhava calado.
+    // Quem entra por e-mail/senha normalmente ainda NÃO tem linha em accounts
+    // (só o login por código cria). Nesse caso a cota é chaveada pelo uid do
+    // Auth — que é o que já acontece hoje — em vez de barrar o usuário.
     const dono = await contaPorAuthUserId(userId);
-    if (!dono) {
-      return json({ ok: false, error: "Conta não sincronizada. Saia e entre de novo." }, 403);
-    }
-    if (dono.bloqueada) return json({ ok: false, error: "Esta conta está bloqueada." }, 403);
-    contaId = dono.id;
-    if (dono.role === "admin") papel = "dev";
-    const usoEmail = await consumirMensagem(dono.id, dono.role === "admin" ? "admin" : dono.tier);
+    if (dono?.bloqueada) return json({ ok: false, error: "Esta conta está bloqueada." }, 403);
+    const chaveCota = dono?.id ?? userId;
+    const tierCota = dono ? (dono.role === "admin" ? "admin" : dono.tier) : "free";
+    const usoEmail = await consumirMensagem(chaveCota, tierCota);
     if (!usoEmail.pode) {
       return json({
         ok: false,
